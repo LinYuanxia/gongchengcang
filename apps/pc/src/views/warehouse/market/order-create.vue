@@ -294,18 +294,18 @@ onMounted(() => {
 })
 
 function loadOrderData() {
-  const { supplierId: sid, supplierName: sname, items } = route.query
+  const { supplierId: sid, supplierName: sname, items } = route.query as Record<string, string>
   
   if (sid) {
-    supplierId.value = sid as string
+    supplierId.value = sid
   }
   if (sname) {
-    supplierName.value = sname as string
+    supplierName.value = sname
   }
   
   if (items) {
     try {
-      orderItems.value = JSON.parse(items as string)
+      orderItems.value = JSON.parse(items)
     } catch (e) {
       console.error('解析订单数据失败', e)
       orderItems.value = []

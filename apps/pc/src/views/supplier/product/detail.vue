@@ -599,7 +599,9 @@ async function loadAttrList() {
 
 function loadPlatformSkuData() {
   try {
-    const skuData = JSON.parse(decodeURIComponent(route.query.skuData as string))
+    const skuDataStr = route.query.skuData as string
+    if (!skuDataStr) return
+    const skuData = JSON.parse(decodeURIComponent(skuDataStr))
     
     if (skuData && skuData.length > 0) {
       const firstSku = skuData[0]
