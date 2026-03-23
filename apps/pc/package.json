@@ -1,0 +1,33 @@
+{
+  "name": "@gongchengcang/pc",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit",
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix"
+  },
+  "dependencies": {
+    "@arco-design/web-vue": "^2.55.0",
+    "@gongchengcang/api": "workspace:*",
+    "@gongchengcang/constants": "workspace:*",
+    "@gongchengcang/types": "workspace:*",
+    "@gongchengcang/utils": "workspace:*",
+    "dayjs": "^1.11.10",
+    "pinia": "^2.1.7",
+    "vue": "^3.4.21",
+    "vue-router": "^4.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "@vitejs/plugin-vue": "^5.0.4",
+    "@vue/tsconfig": "^0.5.1",
+    "less": "^4.2.0",
+    "typescript": "~5.4.2",
+    "vite": "^5.1.5",
+    "vue-tsc": "^2.0.6"
+  }
+}

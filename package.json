@@ -1,0 +1,22 @@
+{
+  "name": "gongchengcang-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "采供一体化平台 - 工程仓SaaS系统",
+  "scripts": {
+    "dev:pc": "pnpm -F @gongchengcang/pc dev",
+    "dev:mp": "pnpm -F @gongchengcang/mp dev:mp-weixin",
+    "build:pc": "pnpm -F @gongchengcang/pc build",
+    "build:mp": "pnpm -F @gongchengcang/mp build:mp-weixin",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "keywords": [
+    "saas",
+    "procurement",
+    "supply-chain",
+    "warehouse"
+  ],
+  "author": "",
+  "license": "MIT"
+}

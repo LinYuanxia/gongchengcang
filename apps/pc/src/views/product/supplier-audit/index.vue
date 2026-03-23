@@ -1,0 +1,756 @@
+<template>
+  <div class="page-container">
+    <a-card :bordered="false">
+      <template #title>
+        <span>供应商商品审核</span>
+      </template>
+      <template #extra>
+        <a-space>
+          <a-radio-group v-model="currentTab" type="button" @change="handleTabChange">
+            <a-radio value="spu">SPU审核</a-radio>
+            <a-radio value="sku">SKU审核</a-radio>
+          </a-radio-group>
+        </a-space>
+      </template>
+
+      <div v-if="currentTab === 'spu'">
+        <div class="table-actions">
+          <a-space>
+            <a-input-search
+              v-model="spuSearchForm.keyword"
+              placeholder="搜索SPU名称/编码/供应商"
+              style="width: 280px"
+              @search="handleSpuSearch"
+            />
+            <a-cascader
+              v-model="spuSearchForm.categoryId"
+              :options="categoryTree"
+              placeholder="商品分类"
+              style="width: 200px"
+              allow-clear
+              :field-names="{ value: 'categoryId', label: 'categoryName', children: 'children' }"
+            />
+            <a-select v-model="spuSearchForm.auditStatus" placeholder="审核状态" style="width: 120px" allow-clear>
+              <a-option v-for="item in SUPPLIER_PRODUCT_AUDIT_STATUS_OPTIONS" :key="item.value" :value="item.value">
+                {{ item.label }}
+              </a-option>
+            </a-select>
+          </a-space>
+          <a-space>
+            <a-button 
+              type="primary" 
+              status="success"
+              :disabled="selectedSpuKeys.length === 0"
+              @click="handleBatchAudit(SupplierProductAuditStatus.APPROVED)"
+            >
+              批量通过 ({{ selectedSpuKeys.length }})
+            </a-button>
+            <a-button 
+              status="danger"
+              :disabled="selectedSpuKeys.length === 0"
+              @click="handleBatchAudit(SupplierProductAuditStatus.REJECTED)"
+            >
+              批量驳回 ({{ selectedSpuKeys.length }})
+            </a-button>
+          </a-space>
+        </div>
+
+        <a-table
+          :data="spuTableData"
+          :loading="spuLoading"
+          :pagination="spuPagination"
+          :row-selection="spuRowSelection"
+          row-key="id"
+          @page-change="handleSpuPageChange"
+        >
+          <template #columns>
+            <a-table-column title="主图" :width="80">
+              <template #cell="{ record }">
+                <a-image :src="record.mainImage" :width="48" :height="48" fit="cover">
+                  <template #error>
+                    <div class="image-placeholder">
+                      <icon-image :size="24" />
+                    </div>
+                  </template>
+                </a-image>
+              </template>
+            </a-table-column>
+            <a-table-column title="SPU编码" data-index="spuCode" :width="120" />
+            <a-table-column title="SPU名称" data-index="spuName" :width="180" />
+            <a-table-column title="供应商" data-index="supplierName" :width="120" />
+            <a-table-column title="所属分类" data-index="categoryName" :width="100" />
+            <a-table-column title="SKU数量" data-index="skuCount" :width="80" />
+            <a-table-column title="审核状态" :width="100">
+              <template #cell="{ record }">
+                <a-tag :color="getAuditStatusColor(record.auditStatus)">
+                  {{ getAuditStatusText(record.auditStatus) }}
+                </a-tag>
+              </template>
+            </a-table-column>
+            <a-table-column title="提交时间" data-index="createdAt" :width="160" />
+            <a-table-column title="操作" :width="200" fixed="right">
+              <template #cell="{ record }">
+                <a-space>
+                  <a-button type="text" size="small" @click="handleViewSpu(record)">详情</a-button>
+                  <a-button 
+                    v-if="record.auditStatus === SupplierProductAuditStatus.PENDING"
+                    type="text" 
+                    size="small" 
+                    status="success"
+                    @click="handleAuditSpu(record, SupplierProductAuditStatus.APPROVED)"
+                  >
+                    通过
+                  </a-button>
+                  <a-button 
+                    v-if="record.auditStatus === SupplierProductAuditStatus.PENDING"
+                    type="text" 
+                    size="small" 
+                    status="danger"
+                    @click="handleAuditSpu(record, SupplierProductAuditStatus.REJECTED)"
+                  >
+                    驳回
+                  </a-button>
+                  <a-button 
+                    v-if="record.auditStatus === SupplierProductAuditStatus.APPROVED"
+                    type="text" 
+                    size="small"
+                    @click="handleAddToLibrary(record)"
+                  >
+                    加入商品库
+                  </a-button>
+                </a-space>
+              </template>
+            </a-table-column>
+          </template>
+        </a-table>
+      </div>
+
+      <div v-else>
+        <div class="table-actions">
+          <a-space>
+            <a-input-search
+              v-model="skuSearchForm.keyword"
+              placeholder="搜索SKU名称/编码/供应商"
+              style="width: 280px"
+              @search="handleSkuSearch"
+            />
+            <a-cascader
+              v-model="skuSearchForm.categoryId"
+              :options="categoryTree"
+              placeholder="商品分类"
+              style="width: 200px"
+              allow-clear
+              :field-names="{ value: 'categoryId', label: 'categoryName', children: 'children' }"
+            />
+            <a-select v-model="skuSearchForm.auditStatus" placeholder="审核状态" style="width: 120px" allow-clear>
+              <a-option v-for="item in SUPPLIER_PRODUCT_AUDIT_STATUS_OPTIONS" :key="item.value" :value="item.value">
+                {{ item.label }}
+              </a-option>
+            </a-select>
+          </a-space>
+        </div>
+
+        <a-table
+          :data="skuTableData"
+          :loading="skuLoading"
+          :pagination="skuPagination"
+          row-key="id"
+          @page-change="handleSkuPageChange"
+        >
+          <template #columns>
+            <a-table-column title="主图" :width="80">
+              <template #cell="{ record }">
+                <a-image :src="record.mainImage" :width="48" :height="48" fit="cover">
+                  <template #error>
+                    <div class="image-placeholder">
+                      <icon-image :size="24" />
+                    </div>
+                  </template>
+                </a-image>
+              </template>
+            </a-table-column>
+            <a-table-column title="SKU编码" data-index="skuCode" :width="130" />
+            <a-table-column title="SKU名称" data-index="skuName" :width="160" />
+            <a-table-column title="供应商" data-index="supplierName" :width="100" />
+            <a-table-column title="所属SPU" data-index="spuName" :width="130" />
+            <a-table-column title="规格" :width="150">
+              <template #cell="{ record }">
+                <span v-for="(value, key) in record.specs" :key="key" style="margin-right: 4px">
+                  <a-tag size="small">{{ value }}</a-tag>
+                </span>
+              </template>
+            </a-table-column>
+            <a-table-column title="建议售价" :width="90">
+              <template #cell="{ record }">
+                <span v-if="record.suggestPrice">¥{{ record.suggestPrice.toFixed(2) }}</span>
+                <span v-else>-</span>
+              </template>
+            </a-table-column>
+            <a-table-column title="审核状态" :width="90">
+              <template #cell="{ record }">
+                <a-tag :color="getAuditStatusColor(record.auditStatus)">
+                  {{ getAuditStatusText(record.auditStatus) }}
+                </a-tag>
+              </template>
+            </a-table-column>
+            <a-table-column title="操作" :width="150" fixed="right">
+              <template #cell="{ record }">
+                <a-space>
+                  <a-button type="text" size="small" @click="handleViewSku(record)">详情</a-button>
+                  <a-button 
+                    v-if="record.auditStatus === SupplierProductAuditStatus.PENDING"
+                    type="text" 
+                    size="small" 
+                    status="success"
+                    @click="handleAuditSku(record, SupplierProductAuditStatus.APPROVED)"
+                  >
+                    通过
+                  </a-button>
+                  <a-button 
+                    v-if="record.auditStatus === SupplierProductAuditStatus.PENDING"
+                    type="text" 
+                    size="small" 
+                    status="danger"
+                    @click="handleAuditSku(record, SupplierProductAuditStatus.REJECTED)"
+                  >
+                    驳回
+                  </a-button>
+                </a-space>
+              </template>
+            </a-table-column>
+          </template>
+        </a-table>
+      </div>
+    </a-card>
+
+    <SpuAuditDetailDrawer
+      v-model:visible="spuDetailVisible"
+      :spu="currentSpu"
+      @audit="handleAuditFromDetail"
+    />
+
+    <SkuAuditDetailDrawer
+      v-model:visible="skuDetailVisible"
+      :sku="currentSku"
+      @audit="handleSkuAuditFromDetail"
+    />
+
+    <a-modal
+      v-model:visible="rejectModalVisible"
+      title="驳回原因"
+      @ok="handleRejectConfirm"
+      @cancel="rejectModalVisible = false"
+    >
+      <a-form :model="rejectForm" layout="vertical">
+        <a-form-item label="驳回原因" required>
+          <a-textarea
+            v-model="rejectForm.reason"
+            placeholder="请输入驳回原因"
+            :max-length="200"
+            show-word-limit
+            :auto-size="{ minRows: 3, maxRows: 5 }"
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <a-modal
+      v-model:visible="addToLibraryVisible"
+      title="加入商品库"
+      :width="600"
+      @ok="handleAddToLibraryConfirm"
+      @cancel="addToLibraryVisible = false"
+    >
+      <a-alert type="info" style="margin-bottom: 16px;">
+        审核通过的商品将加入平台商品库，供所有采购方查看和采购。
+      </a-alert>
+      <a-descriptions :column="2" bordered>
+        <a-descriptions-item label="SPU名称">{{ addToLibrarySpu?.spuName }}</a-descriptions-item>
+        <a-descriptions-item label="SPU编码">{{ addToLibrarySpu?.spuCode }}</a-descriptions-item>
+        <a-descriptions-item label="所属分类">{{ addToLibrarySpu?.categoryName }}</a-descriptions-item>
+        <a-descriptions-item label="SKU数量">{{ addToLibrarySpu?.skuCount }}</a-descriptions-item>
+        <a-descriptions-item label="供应商" :span="2">{{ addToLibrarySpu?.supplierName }}</a-descriptions-item>
+      </a-descriptions>
+      <a-form :model="addToLibraryForm" layout="vertical" style="margin-top: 16px;">
+        <a-form-item label="平台SPU编码（可选）">
+          <a-input v-model="addToLibraryForm.platformSpuCode" placeholder="留空则自动生成" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, reactive, computed, onMounted } from 'vue'
+import { Message, Modal } from '@arco-design/web-vue'
+import { 
+  SupplierProductAuditStatus, 
+  SUPPLIER_PRODUCT_AUDIT_STATUS_OPTIONS,
+  type SupplierProductSpu,
+  type SupplierProductSku,
+  type ProductCategory,
+} from '@gongchengcang/types'
+import SpuAuditDetailDrawer from './components/SpuAuditDetailDrawer.vue'
+import SkuAuditDetailDrawer from './components/SkuAuditDetailDrawer.vue'
+
+const currentTab = ref('spu')
+
+const spuLoading = ref(false)
+const spuTableData = ref<SupplierProductSpu[]>([])
+const categoryTree = ref<ProductCategory[]>([])
+const selectedSpuKeys = ref<string[]>([])
+
+const spuPagination = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+})
+
+const spuSearchForm = reactive({
+  keyword: '',
+  categoryId: undefined as string[] | undefined,
+  auditStatus: undefined as string | undefined,
+})
+
+const skuLoading = ref(false)
+const skuTableData = ref<SupplierProductSku[]>([])
+
+const skuPagination = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+})
+
+const skuSearchForm = reactive({
+  keyword: '',
+  categoryId: undefined as string[] | undefined,
+  auditStatus: undefined as string | undefined,
+})
+
+const spuDetailVisible = ref(false)
+const skuDetailVisible = ref(false)
+const currentSpu = ref<SupplierProductSpu | null>(null)
+const currentSku = ref<SupplierProductSku | null>(null)
+
+const rejectModalVisible = ref(false)
+const rejectForm = reactive({
+  reason: '',
+  targetIds: [] as string[],
+  targetType: 'spu' as 'spu' | 'sku',
+})
+
+const addToLibraryVisible = ref(false)
+const addToLibrarySpu = ref<SupplierProductSpu | null>(null)
+const addToLibraryForm = reactive({
+  platformSpuCode: '',
+})
+
+const spuRowSelection = computed(() => ({
+  type: 'checkbox' as const,
+  selectedRowKeys: selectedSpuKeys.value,
+  onlyCurrent: true,
+  onChange: (keys: string[]) => {
+    selectedSpuKeys.value = keys
+  },
+}))
+
+const mockSpuData: SupplierProductSpu[] = [
+  {
+    id: 'sspu001',
+    supplierId: 'supplier001',
+    supplierName: '优质建材供应商',
+    spuName: '高强度螺纹钢',
+    spuCode: 'SPU-LWG-001',
+    categoryId: 'cat001',
+    categoryName: '钢材',
+    unit: '吨',
+    attrIds: ['attr001', 'attr002'],
+    attrNames: ['规格', '材质'],
+    mainImage: 'https://picsum.photos/200/200?random=30',
+    description: '高强度螺纹钢，适用于建筑结构',
+    auditStatus: SupplierProductAuditStatus.PENDING,
+    skuCount: 4,
+    createdAt: '2024-01-15 10:30:00',
+    updatedAt: '2024-01-15 10:30:00',
+  },
+  {
+    id: 'sspu002',
+    supplierId: 'supplier001',
+    supplierName: '优质建材供应商',
+    spuName: '普通硅酸盐水泥',
+    spuCode: 'SPU-SN-001',
+    categoryId: 'cat002',
+    categoryName: '水泥',
+    unit: '吨',
+    attrIds: ['attr003'],
+    attrNames: ['强度等级'],
+    mainImage: 'https://picsum.photos/200/200?random=31',
+    description: '普通硅酸盐水泥，P.O 42.5',
+    auditStatus: SupplierProductAuditStatus.PENDING,
+    skuCount: 2,
+    createdAt: '2024-01-14 09:20:00',
+    updatedAt: '2024-01-16 14:00:00',
+  },
+  {
+    id: 'sspu003',
+    supplierId: 'supplier002',
+    supplierName: '华东水泥厂',
+    spuName: '复合硅酸盐水泥',
+    spuCode: 'SPU-FH-001',
+    categoryId: 'cat002',
+    categoryName: '水泥',
+    unit: '吨',
+    attrIds: ['attr003'],
+    attrNames: ['强度等级'],
+    mainImage: 'https://picsum.photos/200/200?random=32',
+    description: '复合硅酸盐水泥',
+    auditStatus: SupplierProductAuditStatus.APPROVED,
+    auditRemark: '审核通过，商品信息完整',
+    auditedAt: '2024-01-13 16:00:00',
+    auditedByName: '平台管理员',
+    skuCount: 3,
+    createdAt: '2024-01-10 08:00:00',
+    updatedAt: '2024-01-13 16:00:00',
+  },
+  {
+    id: 'sspu004',
+    supplierId: 'supplier003',
+    supplierName: '砂石供应商',
+    spuName: '建筑用砂',
+    spuCode: 'SPU-SHA-001',
+    categoryId: 'cat004',
+    categoryName: '砂石',
+    unit: '方',
+    attrIds: ['attr005'],
+    attrNames: ['类型'],
+    mainImage: 'https://picsum.photos/200/200?random=33',
+    description: '优质河砂，适用于混凝土搅拌',
+    auditStatus: SupplierProductAuditStatus.REJECTED,
+    auditRemark: '商品信息不完整，请补充规格参数',
+    auditedAt: '2024-01-12 11:30:00',
+    auditedByName: '平台管理员',
+    skuCount: 2,
+    createdAt: '2024-01-11 14:00:00',
+    updatedAt: '2024-01-12 11:30:00',
+  },
+]
+
+const mockSkuData: SupplierProductSku[] = [
+  {
+    id: 'ssku001',
+    supplierId: 'supplier001',
+    supplierName: '优质建材供应商',
+    spuId: 'spu001',
+    supplierSpuId: 'sspu001',
+    spuName: '高强度螺纹钢',
+    skuCode: 'SKU-LWG-001-12',
+    skuName: '螺纹钢 HRB400E 12mm',
+    specs: { '规格': '12mm', '材质': 'HRB400E' },
+    unit: '吨',
+    mainImage: 'https://picsum.photos/200/200?random=34',
+    suggestPrice: 3850,
+    supplyPrice: 3700,
+    auditStatus: SupplierProductAuditStatus.PENDING,
+    createdAt: '2024-01-15 10:35:00',
+    updatedAt: '2024-01-15 10:35:00',
+  },
+  {
+    id: 'ssku002',
+    supplierId: 'supplier001',
+    supplierName: '优质建材供应商',
+    spuId: 'spu001',
+    supplierSpuId: 'sspu001',
+    spuName: '高强度螺纹钢',
+    skuCode: 'SKU-LWG-001-16',
+    skuName: '螺纹钢 HRB400E 16mm',
+    specs: { '规格': '16mm', '材质': 'HRB400E' },
+    unit: '吨',
+    mainImage: 'https://picsum.photos/200/200?random=35',
+    suggestPrice: 3800,
+    supplyPrice: 3650,
+    auditStatus: SupplierProductAuditStatus.PENDING,
+    createdAt: '2024-01-15 10:36:00',
+    updatedAt: '2024-01-15 10:36:00',
+  },
+]
+
+const mockCategoryTree: ProductCategory[] = [
+  {
+    categoryId: 'cat001',
+    categoryName: '钢材',
+    level: 1,
+    sortOrder: 1,
+    status: 1,
+    createdAt: '2024-01-01',
+    updatedAt: '2024-01-01',
+    children: [
+      { categoryId: 'cat001-1', categoryName: '螺纹钢', parentId: 'cat001', level: 2, sortOrder: 1, status: 1, createdAt: '2024-01-01', updatedAt: '2024-01-01' },
+    ],
+  },
+  {
+    categoryId: 'cat002',
+    categoryName: '水泥',
+    level: 1,
+    sortOrder: 2,
+    status: 1,
+    createdAt: '2024-01-01',
+    updatedAt: '2024-01-01',
+  },
+  {
+    categoryId: 'cat004',
+    categoryName: '砂石',
+    level: 1,
+    sortOrder: 4,
+    status: 1,
+    createdAt: '2024-01-01',
+    updatedAt: '2024-01-01',
+  },
+]
+
+function getAuditStatusColor(status: SupplierProductAuditStatus) {
+  const colorMap: Record<string, string> = {
+    [SupplierProductAuditStatus.DRAFT]: 'gray',
+    [SupplierProductAuditStatus.PENDING]: 'orange',
+    [SupplierProductAuditStatus.APPROVED]: 'green',
+    [SupplierProductAuditStatus.REJECTED]: 'red',
+  }
+  return colorMap[status] || 'gray'
+}
+
+function getAuditStatusText(status: SupplierProductAuditStatus) {
+  const textMap: Record<string, string> = {
+    [SupplierProductAuditStatus.DRAFT]: '草稿',
+    [SupplierProductAuditStatus.PENDING]: '待审核',
+    [SupplierProductAuditStatus.APPROVED]: '已通过',
+    [SupplierProductAuditStatus.REJECTED]: '已驳回',
+  }
+  return textMap[status] || status
+}
+
+function handleTabChange() {
+  if (currentTab.value === 'spu') {
+    loadSpuData()
+  } else {
+    loadSkuData()
+  }
+}
+
+async function loadSpuData() {
+  spuLoading.value = true
+  try {
+    await new Promise(resolve => setTimeout(resolve, 300))
+    spuTableData.value = mockSpuData
+    spuPagination.total = mockSpuData.length
+  } finally {
+    spuLoading.value = false
+  }
+}
+
+async function loadSkuData() {
+  skuLoading.value = true
+  try {
+    await new Promise(resolve => setTimeout(resolve, 300))
+    skuTableData.value = mockSkuData
+    skuPagination.total = mockSkuData.length
+  } finally {
+    skuLoading.value = false
+  }
+}
+
+function handleSpuSearch() {
+  spuPagination.current = 1
+  loadSpuData()
+}
+
+function handleSpuPageChange(page: number) {
+  spuPagination.current = page
+  loadSpuData()
+}
+
+function handleSkuSearch() {
+  skuPagination.current = 1
+  loadSkuData()
+}
+
+function handleSkuPageChange(page: number) {
+  skuPagination.current = page
+  loadSkuData()
+}
+
+function handleViewSpu(record: SupplierProductSpu) {
+  currentSpu.value = record
+  spuDetailVisible.value = true
+}
+
+function handleViewSku(record: SupplierProductSku) {
+  currentSku.value = record
+  skuDetailVisible.value = true
+}
+
+function handleAuditSpu(record: SupplierProductSpu, status: SupplierProductAuditStatus) {
+  if (status === SupplierProductAuditStatus.APPROVED) {
+    Modal.confirm({
+      title: '审核通过',
+      content: `确定通过SPU「${record.spuName}」的审核吗？`,
+      okText: '确定通过',
+      cancelText: '取消',
+      onOk: () => {
+        record.auditStatus = SupplierProductAuditStatus.APPROVED
+        record.auditedAt = new Date().toISOString()
+        record.auditedByName = '平台管理员'
+        Message.success('审核通过')
+      },
+    })
+  } else {
+    rejectForm.targetIds = [record.id]
+    rejectForm.targetType = 'spu'
+    rejectForm.reason = ''
+    rejectModalVisible.value = true
+  }
+}
+
+function handleAuditSku(record: SupplierProductSku, status: SupplierProductAuditStatus) {
+  if (status === SupplierProductAuditStatus.APPROVED) {
+    Modal.confirm({
+      title: '审核通过',
+      content: `确定通过SKU「${record.skuName}」的审核吗？`,
+      okText: '确定通过',
+      cancelText: '取消',
+      onOk: () => {
+        record.auditStatus = SupplierProductAuditStatus.APPROVED
+        record.auditedAt = new Date().toISOString()
+        record.auditedByName = '平台管理员'
+        Message.success('审核通过')
+      },
+    })
+  } else {
+    rejectForm.targetIds = [record.id]
+    rejectForm.targetType = 'sku'
+    rejectForm.reason = ''
+    rejectModalVisible.value = true
+  }
+}
+
+function handleBatchAudit(status: SupplierProductAuditStatus) {
+  if (status === SupplierProductAuditStatus.APPROVED) {
+    Modal.confirm({
+      title: '批量审核通过',
+      content: `确定批量通过 ${selectedSpuKeys.value.length} 个SPU的审核吗？`,
+      okText: '确定通过',
+      cancelText: '取消',
+      onOk: () => {
+        selectedSpuKeys.value.forEach(id => {
+          const item = spuTableData.value.find(s => s.id === id)
+          if (item) {
+            item.auditStatus = SupplierProductAuditStatus.APPROVED
+            item.auditedAt = new Date().toISOString()
+            item.auditedByName = '平台管理员'
+          }
+        })
+        selectedSpuKeys.value = []
+        Message.success('批量审核通过')
+      },
+    })
+  } else {
+    rejectForm.targetIds = selectedSpuKeys.value
+    rejectForm.targetType = 'spu'
+    rejectForm.reason = ''
+    rejectModalVisible.value = true
+  }
+}
+
+function handleRejectConfirm() {
+  if (!rejectForm.reason.trim()) {
+    Message.warning('请输入驳回原因')
+    return
+  }
+
+  if (rejectForm.targetType === 'spu') {
+    rejectForm.targetIds.forEach(id => {
+      const item = spuTableData.value.find(s => s.id === id)
+      if (item) {
+        item.auditStatus = SupplierProductAuditStatus.REJECTED
+        item.auditRemark = rejectForm.reason
+        item.auditedAt = new Date().toISOString()
+        item.auditedByName = '平台管理员'
+      }
+    })
+    selectedSpuKeys.value = []
+  } else {
+    rejectForm.targetIds.forEach(id => {
+      const item = skuTableData.value.find(s => s.id === id)
+      if (item) {
+        item.auditStatus = SupplierProductAuditStatus.REJECTED
+        item.auditRemark = rejectForm.reason
+        item.auditedAt = new Date().toISOString()
+        item.auditedByName = '平台管理员'
+      }
+    })
+  }
+
+  rejectModalVisible.value = false
+  Message.success('已驳回')
+}
+
+function handleAuditFromDetail(data: { id: string; status: SupplierProductAuditStatus; reason?: string }) {
+  const item = spuTableData.value.find(s => s.id === data.id)
+  if (item) {
+    item.auditStatus = data.status
+    item.auditRemark = data.reason
+    item.auditedAt = new Date().toISOString()
+    item.auditedByName = '平台管理员'
+    spuDetailVisible.value = false
+    Message.success(data.status === SupplierProductAuditStatus.APPROVED ? '审核通过' : '已驳回')
+  }
+}
+
+function handleSkuAuditFromDetail(data: { id: string; status: SupplierProductAuditStatus; reason?: string }) {
+  const item = skuTableData.value.find(s => s.id === data.id)
+  if (item) {
+    item.auditStatus = data.status
+    item.auditRemark = data.reason
+    item.auditedAt = new Date().toISOString()
+    item.auditedByName = '平台管理员'
+    skuDetailVisible.value = false
+    Message.success(data.status === SupplierProductAuditStatus.APPROVED ? '审核通过' : '已驳回')
+  }
+}
+
+function handleAddToLibrary(record: SupplierProductSpu) {
+  addToLibrarySpu.value = record
+  addToLibraryForm.platformSpuCode = ''
+  addToLibraryVisible.value = true
+}
+
+function handleAddToLibraryConfirm() {
+  Message.success(`SPU「${addToLibrarySpu.value?.spuName}」已成功加入平台商品库`)
+  addToLibraryVisible.value = false
+}
+
+onMounted(() => {
+  categoryTree.value = mockCategoryTree
+  loadSpuData()
+})
+</script>
+
+<style scoped lang="less">
+.page-container {
+  padding: 16px;
+}
+
+.table-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.image-placeholder {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-fill-2);
+  border-radius: 4px;
+}
+</style>

@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@gongchengcang/types": ["../../packages/types/src"],
+      "@gongchengcang/utils": ["../../packages/utils/src"],
+      "@gongchengcang/api": ["../../packages/api/src"],
+      "@gongchengcang/constants": ["../../packages/constants/src"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}
