@@ -281,7 +281,7 @@ function handleViewDetail(record: WarehouseProduct) {
 
 function handleViewRecords(record: WarehouseProduct) {
   router.push({
-    path: '/warehouse/record',
+    path: '/stock/record',
     query: { warehouseId: record.warehouseId, skuId: record.skuId }
   })
 }

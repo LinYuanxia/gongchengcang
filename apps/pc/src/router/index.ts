@@ -218,43 +218,37 @@ const routes: RouteRecordRaw[] = [
         ],
       },
       {
-        path: 'warehouse',
-        name: 'Warehouse',
-        redirect: '/warehouse/list',
-        meta: { title: '仓库管理', icon: 'icon-storage' },
+        path: 'stock',
+        name: 'Stock',
+        redirect: '/stock/warehouse',
+        meta: { title: '库存管理', icon: 'icon-storage' },
         children: [
           {
-            path: 'list',
+            path: 'warehouse',
             name: 'WarehouseList',
             component: () => import('@/views/warehouse/list/index.vue'),
             meta: { title: '仓库列表' },
           },
           {
-            path: 'stock',
+            path: 'product',
             name: 'WarehouseProduct',
             component: () => import('@/views/warehouse/stock/index.vue'),
-            meta: { title: '仓库商品' },
+            meta: { title: '库存商品' },
           },
           {
             path: 'record',
             name: 'StockRecord',
             component: () => import('@/views/warehouse/record/index.vue'),
-            meta: { title: '库存记录' },
+            meta: { title: '出入库记录' },
           },
         ],
       },
       {
         path: 'construction',
         name: 'Construction',
-        redirect: '/construction/list',
+        redirect: '/construction/market',
         meta: { title: '工程仓管理', icon: 'icon-home' },
         children: [
-          {
-            path: 'list',
-            name: 'ConstructionList',
-            component: () => import('@/views/construction/list/index.vue'),
-            meta: { title: '工程仓列表' },
-          },
           {
             path: 'market',
             name: 'ConstructionMarket',

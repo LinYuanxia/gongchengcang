@@ -256,21 +256,21 @@ function handlePageChange(page: number) {
 
 function handleViewWarehouse(record: WarehouseItem) {
   router.push({
-    path: '/construction/list',
+    path: '/merchant/list',
     query: { id: record.constructionId }
   })
 }
 
 function handleViewStock(record: WarehouseItem) {
   router.push({
-    path: '/warehouse/stock',
+    path: '/stock/product',
     query: { warehouseId: record.id, warehouseName: record.name }
   })
 }
 
 function handleViewRecord(record: WarehouseItem) {
   router.push({
-    path: '/warehouse/record',
+    path: '/stock/record',
     query: { warehouseId: record.id, warehouseName: record.name }
   })
 }

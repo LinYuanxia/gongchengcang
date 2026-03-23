@@ -96,7 +96,7 @@ const statistics = reactive([
 const quickLinks = reactive([
   { title: '创建订单', icon: 'icon-plus-circle', color: '#165dff', path: '/order/list' },
   { title: '采购计划', icon: 'icon-calendar', color: '#00b42a', path: '/plan/list' },
-  { title: '库存管理', icon: 'icon-storage', color: '#ff7d00', path: '/warehouse/stock' },
+  { title: '库存管理', icon: 'icon-storage', color: '#ff7d00', path: '/stock/product' },
   { title: '商品市场', icon: 'icon-tags', color: '#722ed1', path: '/market/list' },
 ])
 
