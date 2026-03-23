@@ -288,11 +288,17 @@ const routes: RouteRecordRaw[] = [
             meta: { title: '资金托管' },
             children: [
               {
-                path: 'list',
-                name: 'CustodyAccountList',
-                component: () => import('@/views/finance/custody/index.vue'),
-                meta: { title: '账户列表' },
-              },
+            path: 'list',
+            name: 'CustodyAccountList',
+            component: () => import('@/views/finance/custody/index.vue'),
+            meta: { title: '账户列表' },
+          },
+          {
+            path: 'detail/:accountId',
+            name: 'CustodyAccountDetail',
+            component: () => import('@/views/finance/custody/detail.vue'),
+            meta: { title: '账户详情', hideInMenu: true },
+          },
               {
                 path: 'open-record',
                 name: 'CustodyOpenRecord',

@@ -102,11 +102,6 @@
         </template>
       </a-table>
     </a-card>
-
-    <CustodyAccountDetail
-      v-model:visible="detailVisible"
-      :account-id="currentAccountId"
-    />
   </div>
 </template>
 
@@ -124,7 +119,6 @@ import {
 } from '@gongchengcang/constants'
 import { getCustodyAccountList, applyOpenAccount, retryOpenAccount, syncAccountBalance } from '@gongchengcang/api'
 import type { CustodyAccount } from '@gongchengcang/types'
-import CustodyAccountDetail from './components/CustodyAccountDetail.vue'
 
 const router = useRouter()
 const loading = ref(false)
@@ -142,9 +136,6 @@ const searchForm = reactive({
   bindCardStatus: undefined as number | undefined,
   accountStatus: undefined as number | undefined,
 })
-
-const detailVisible = ref(false)
-const currentAccountId = ref('')
 
 onMounted(() => {
   loadData()
@@ -189,8 +180,9 @@ function handleViewMerchant(record: CustodyAccount) {
 }
 
 function handleDetail(record: CustodyAccount) {
-  currentAccountId.value = record.accountId
-  detailVisible.value = true
+  router.push({
+    path: `/finance/custody/detail/${record.accountId}`
+  })
 }
 
 async function handleApplyOpen(record: CustodyAccount) {
