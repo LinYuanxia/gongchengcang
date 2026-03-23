@@ -106,6 +106,10 @@ export function getMockCustodyAccountByTenant(tenantId: string): CustodyAccount 
   return MOCK_CUSTODY_ACCOUNTS.find(a => a.tenantId === tenantId) || null
 }
 
+export function getMockCustodyAccountDetail(accountId: string): CustodyAccount | null {
+  return MOCK_CUSTODY_ACCOUNTS.find(a => a.accountId === accountId) || null
+}
+
 export function getMockCustodyAccountList(params: PaginationParams): PaginationResult<CustodyAccount> {
   const list = [...MOCK_CUSTODY_ACCOUNTS]
   const total = list.length

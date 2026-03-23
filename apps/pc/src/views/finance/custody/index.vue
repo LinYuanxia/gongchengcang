@@ -43,7 +43,7 @@
           <a-table-column title="账户ID" data-index="accountId" :width="180" />
           <a-table-column title="商户名称" :width="180">
             <template #cell="{ record }">
-              <a-link @click="handleViewMerchant(record)">{{ record.merchantName || record.tenantId }}</a-link>
+              <a-link @click="handleDetail(record)">{{ record.merchantName || record.tenantId }}</a-link>
             </template>
           </a-table-column>
           <a-table-column title="开户状态" :width="100">
@@ -170,13 +170,6 @@ function handleSearch() {
 function handlePageChange(page: number) {
   pagination.current = page
   loadData()
-}
-
-function handleViewMerchant(record: CustodyAccount) {
-  router.push({
-    path: '/merchant/list',
-    query: { tenantId: record.tenantId }
-  })
 }
 
 function handleDetail(record: CustodyAccount) {

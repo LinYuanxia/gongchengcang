@@ -9,6 +9,7 @@ import type {
 } from '@gongchengcang/types'
 import {
   getMockCustodyAccountList,
+  getMockCustodyAccountDetail,
   getMockCustodyAccountByTenant,
   createMockOpenRecord,
   getMockOpenRecordList,
@@ -25,6 +26,11 @@ export function getCustodyAccountList(params: PaginationParams & { keyword?: str
 }
 
 export function getCustodyAccountDetail(accountId: string) {
+  if (isMock) {
+    const account = getMockCustodyAccountDetail(accountId)
+    if (!account) return Promise.reject(new Error('托管账户不存在'))
+    return Promise.resolve(account)
+  }
   return get<CustodyAccount>(`/custody/account/${accountId}`)
 }
 

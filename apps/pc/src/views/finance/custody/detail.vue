@@ -48,11 +48,6 @@
             <a-descriptions :column="2" bordered>
               <a-descriptions-item label="账户ID">{{ accountInfo.accountId }}</a-descriptions-item>
               <a-descriptions-item label="商户名称">{{ accountInfo.merchantName }}</a-descriptions-item>
-              <a-descriptions-item label="商户类型">
-                <a-tag :color="accountInfo.merchantType === 'warehouse' ? 'blue' : 'purple'">
-                  {{ accountInfo.merchantType === 'warehouse' ? '工程仓' : '供应商' }}
-                </a-tag>
-              </a-descriptions-item>
               <a-descriptions-item label="开户状态">
                 <a-tag :color="CUSTODY_OPEN_STATUS_MAP[accountInfo.openStatus]?.color">
                   {{ CUSTODY_OPEN_STATUS_MAP[accountInfo.openStatus]?.label }}
