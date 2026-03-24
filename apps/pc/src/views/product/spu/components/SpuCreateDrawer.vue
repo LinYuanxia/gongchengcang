@@ -197,8 +197,6 @@ async function handleSubmit() {
         suggestPrice: sku.suggestPrice,
         supplyPrice: sku.supplyPrice,
         salePrice: sku.salePrice,
-        costPrice: sku.costPrice,
-        marketPrice: sku.marketPrice,
       })
     }
 

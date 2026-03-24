@@ -1146,7 +1146,7 @@ export function createMockSku(data: CreateSkuParams): Sku {
     unit: data.unit,
     mainImage: data.mainImage,
     images: data.images,
-    status: SkuStatus.OFF_SHELF,
+    status: SkuStatus.ON_SHELF,
     supplierCount: 0,
     stockTotal: 0,
     createdAt: new Date().toISOString().replace('T', ' ').slice(0, 19),

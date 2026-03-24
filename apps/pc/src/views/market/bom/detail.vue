@@ -16,9 +16,6 @@
         <a-descriptions-item label="状态">
           <a-tag :color="getStatusColor(bom.status)">{{ getStatusText(bom.status) }}</a-tag>
         </a-descriptions-item>
-        <a-descriptions-item label="供应商策略">
-          <a-tag :color="getStrategyColor(bom.strategy)">{{ getStrategyText(bom.strategy) }}</a-tag>
-        </a-descriptions-item>
         <a-descriptions-item label="创建时间">{{ bom.createTime }}</a-descriptions-item>
         <a-descriptions-item label="BOM标签">
           <a-tag v-for="tag in bom.tags" :key="tag" color="arcoblue" size="small">{{ tag }}</a-tag>
@@ -41,7 +38,7 @@
       <h3>SKU明细</h3>
       <div class="sku-summary-bar">
         <span>共 <strong>{{ bom.skuList.length }}</strong> 种SKU</span>
-        <span>SKU总价：<strong class="price">¥{{ totalSkuPrice }}</strong></span>
+        <span>SKU单价总计：<strong class="price">¥{{ totalSkuPrice }}</strong></span>
       </div>
       <a-table :data="bom.skuList" :pagination="false">
         <template #columns>
@@ -55,32 +52,12 @@
             </template>
           </a-table-column>
           <a-table-column title="规格" data-index="spec" :width="100" />
-          <a-table-column title="供应商" :width="120">
-            <template #cell="{ record }">
-              <div>
-                <div>{{ record.supplierName }}</div>
-                <div v-if="record.backupSuppliers?.length" class="backup-supplier">
-                  备选: {{ record.backupSuppliers.join('、') }}
-                </div>
-              </div>
-            </template>
-          </a-table-column>
           <a-table-column title="单价" :width="100" align="right">
             <template #cell="{ record }">
               <span class="price">¥{{ record.price }}</span>
             </template>
           </a-table-column>
-          <a-table-column title="购买数量" :width="100" align="center">
-            <template #cell="{ record }">
-              {{ record.quantity }}
-            </template>
-          </a-table-column>
           <a-table-column title="单位" data-index="unit" :width="60" align="center" />
-          <a-table-column title="小计" :width="100" align="right">
-            <template #cell="{ record }">
-              <span class="subtotal">¥{{ (record.price * record.quantity).toFixed(2) }}</span>
-            </template>
-          </a-table-column>
           <a-table-column title="必选" :width="70" align="center">
             <template #cell="{ record }">
               <a-tag :color="record.required ? 'green' : 'gray'" size="small">
@@ -90,35 +67,6 @@
           </a-table-column>
         </template>
       </a-table>
-
-      <a-divider />
-
-      <h3>供应商策略详情</h3>
-      <a-descriptions :column="2" bordered>
-        <a-descriptions-item label="策略类型">{{ getStrategyText(bom.strategy) }}</a-descriptions-item>
-        <a-descriptions-item label="指定供应商" v-if="bom.strategy === 'single'">
-          {{ bom.defaultSupplierName || '-' }}
-        </a-descriptions-item>
-      </a-descriptions>
-
-      <div v-if="bom.strategy === 'sku'" class="mt-16">
-        <a-table :data="bom.skuList" :pagination="false" size="small">
-          <template #columns>
-            <a-table-column title="SKU编码" data-index="skuCode" :width="120" />
-            <a-table-column title="商品名称" data-index="name" :width="180" />
-            <a-table-column title="指定供应商" :width="150">
-              <template #cell="{ record }">
-                {{ record.fixedSupplierName || '未指定' }}
-              </template>
-            </a-table-column>
-            <a-table-column title="备选供应商">
-              <template #cell="{ record }">
-                {{ record.backupSupplierNames?.join('、') || '-' }}
-              </template>
-            </a-table-column>
-          </template>
-        </a-table>
-      </div>
 
       <a-divider />
 
@@ -173,7 +121,7 @@ const bom = ref({
 })
 
 const totalSkuPrice = computed(() => {
-  const total = bom.value.skuList.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const total = bom.value.skuList.reduce((sum, item) => sum + item.price, 0)
   return total.toLocaleString('zh-CN', { minimumFractionDigits: 2 })
 })
 

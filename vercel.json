@@ -1,0 +1,6 @@
+{
+  "buildCommand": "pnpm build:pc",
+  "installCommand": "pnpm install",
+  "outputDirectory": "apps/pc/dist",
+  "framework": null
+}

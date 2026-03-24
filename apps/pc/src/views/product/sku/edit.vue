@@ -130,34 +130,16 @@
 
           <a-card title="价格信息" class="section-card">
             <a-row :gutter="24">
-              <a-col :span="6">
+              <a-col :span="12">
                 <a-form-item field="supplyPrice" label="供货价">
                   <a-input-number v-model="formData.supplyPrice" placeholder="供货价" :min="0" :precision="2" style="width: 100%">
                     <template #prefix>¥</template>
                   </a-input-number>
                 </a-form-item>
               </a-col>
-              <a-col :span="6">
+              <a-col :span="12">
                 <a-form-item field="salePrice" label="销售价">
                   <a-input-number v-model="formData.salePrice" placeholder="销售价" :min="0" :precision="2" style="width: 100%">
-                    <template #prefix>¥</template>
-                  </a-input-number>
-                </a-form-item>
-              </a-col>
-              <a-col :span="6">
-                <a-form-item field="costPrice" label="销售成本价">
-                  <a-input-number v-model="formData.costPrice" placeholder="销售成本价" :min="0" :precision="2" style="width: 100%">
-                    <template #prefix>¥</template>
-                  </a-input-number>
-                </a-form-item>
-              </a-col>
-              <a-col :span="6">
-                <a-form-item field="marketPrice">
-                  <template #label>
-                    <span>市场价</span>
-                    <span style="text-decoration: line-through; margin-left: 4px; color: var(--color-text-3); font-size: 12px;">价格</span>
-                  </template>
-                  <a-input-number v-model="formData.marketPrice" placeholder="市场价" :min="0" :precision="2" style="width: 100%">
                     <template #prefix>¥</template>
                   </a-input-number>
                 </a-form-item>

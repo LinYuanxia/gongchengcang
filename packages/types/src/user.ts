@@ -32,7 +32,6 @@ export enum UserType {
   PLATFORM = 1,
   TENANT_ADMIN = 2,
   TENANT_USER = 3,
-  MERCHANT = 4
 }
 
 export enum UserStatus {

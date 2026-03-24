@@ -37,7 +37,6 @@
             </a-descriptions-item>
             <a-descriptions-item label="条形码">{{ skuData.barcode || '-' }}</a-descriptions-item>
             <a-descriptions-item label="供应商数">{{ skuData.supplierCount || 0 }} 个</a-descriptions-item>
-            <a-descriptions-item label="总库存">{{ skuData.stockTotal || 0 }} {{ skuData.unit }}</a-descriptions-item>
           </a-descriptions>
 
           <a-row :gutter="24" style="margin-top: 24px">
@@ -79,25 +78,13 @@
         </a-card>
 
         <a-card title="价格信息" class="section-card">
-          <a-descriptions :column="4" bordered>
+          <a-descriptions :column="2" bordered>
             <a-descriptions-item label="供货价">
               <span v-if="skuData.supplyPrice" class="price-value">¥{{ skuData.supplyPrice.toFixed(2) }}</span>
               <span v-else>-</span>
             </a-descriptions-item>
             <a-descriptions-item label="销售价">
               <span v-if="skuData.salePrice" class="price-value">¥{{ skuData.salePrice.toFixed(2) }}</span>
-              <span v-else>-</span>
-            </a-descriptions-item>
-            <a-descriptions-item label="销售成本价">
-              <span v-if="skuData.costPrice" class="price-value">¥{{ skuData.costPrice.toFixed(2) }}</span>
-              <span v-else>-</span>
-            </a-descriptions-item>
-            <a-descriptions-item>
-              <template #label>
-                <span>市场价</span>
-                <span style="text-decoration: line-through; margin-left: 4px; color: var(--color-text-3); font-size: 12px;">价格</span>
-              </template>
-              <span v-if="skuData.marketPrice" class="price-value">¥{{ skuData.marketPrice.toFixed(2) }}</span>
               <span v-else>-</span>
             </a-descriptions-item>
           </a-descriptions>

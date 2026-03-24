@@ -17,11 +17,6 @@
             allow-clear
             :field-names="{ value: 'categoryId', label: 'categoryName', children: 'children' }"
           />
-          <a-select v-model="searchForm.status" placeholder="状态" style="width: 120px" allow-clear>
-            <a-option v-for="item in SPU_STATUS_OPTIONS" :key="item.value" :value="item.value">
-              {{ item.label }}
-            </a-option>
-          </a-select>
         </a-space>
         <a-button type="primary" @click="handleAdd">
           <template #icon><icon-plus /></template>
@@ -52,13 +47,6 @@
             </template>
           </a-table-column>
           <a-table-column title="SKU数量" data-index="skuCount" :width="100" />
-          <a-table-column title="状态" :width="80">
-            <template #cell="{ record }">
-              <a-tag :color="record.status === SpuStatus.ENABLED ? 'green' : 'red'">
-                {{ record.status === SpuStatus.ENABLED ? '启用' : '禁用' }}
-              </a-tag>
-            </template>
-          </a-table-column>
           <a-table-column title="创建时间" data-index="createdAt" :width="180" />
           <a-table-column title="操作" :width="200" fixed="right">
             <template #cell="{ record }">
@@ -80,7 +68,6 @@
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Message, Modal } from '@arco-design/web-vue'
-import { SpuStatus, SPU_STATUS_OPTIONS } from '@gongchengcang/types'
 import type { Spu, ProductCategory } from '@gongchengcang/types'
 import { getSpuList, deleteSpu, getCategoryTree } from '@gongchengcang/api'
 
@@ -97,7 +84,6 @@ const pagination = reactive({
 const searchForm = reactive({
   keyword: '',
   categoryId: undefined as string[] | undefined,
-  status: undefined as number | undefined,
 })
 
 watch(
@@ -135,7 +121,6 @@ async function loadData() {
       pageSize: pagination.pageSize,
       keyword: searchForm.keyword,
       categoryId,
-      status: searchForm.status,
     })
     tableData.value = result.list
     pagination.total = result.total

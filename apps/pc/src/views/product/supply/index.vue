@@ -73,9 +73,21 @@
                 </span>
               </template>
             </a-table-column>
-            <a-table-column title="平台供货价" :width="100">
+            <a-table-column title="供应价格" :width="120">
               <template #cell="{ record }">
-                <span class="price-value">¥{{ record.platformPrice?.toFixed(2) }}</span>
+                <template v-if="record.supplierCount > 0">
+                  <template v-if="record.supplyPriceMin === record.supplyPriceMax">
+                    <span class="price-value">¥{{ record.supplyPriceMin?.toFixed(2) }}</span>
+                  </template>
+                  <template v-else>
+                    <div class="price-range">
+                      <span class="price-min">¥{{ record.supplyPriceMin?.toFixed(2) }}</span>
+                      <span class="price-separator">-</span>
+                      <span class="price-max">¥{{ record.supplyPriceMax?.toFixed(2) }}</span>
+                    </div>
+                  </template>
+                </template>
+                <span v-else class="price-empty">-</span>
               </template>
             </a-table-column>
             <a-table-column title="供应商数量" :width="100">
@@ -194,7 +206,6 @@
                 v-model="productSelectorKeyword"
                 placeholder="搜索商品名称/编码"
                 style="width: 200px"
-                @search="handleProductSelectorSearch"
               />
               <a-cascader
                 v-model="productSelectorCategory"
@@ -351,7 +362,7 @@
         
         <div class="modal-footer">
           <a-button @click="addStep = 1">上一步</a-button>
-          <a-button type="primary" :disabled="tempSelectedSupplierIds.length === 0" @click="addStep = 3">
+          <a-button type="primary" :disabled="tempSelectedSupplierIds.length === 0" @click="goToStep3">
             下一步 (已选{{ tempSelectedSupplierIds.length }}家供应商)
           </a-button>
         </div>
@@ -360,59 +371,123 @@
       <div v-else-if="addStep === 3">
         <div class="supply-form-section">
           <a-alert type="info" style="margin-bottom: 16px">
-            供货价将使用平台标准供货价，供应商可在其端查看。以下信息将应用到所有选中的商品和供应商组合。
+            已选择 <strong>{{ tempSelectedSkuKeys.length }}</strong> 个SKU和 <strong>{{ tempSelectedSupplierIds.length }}</strong> 家供应商，将创建 <strong>{{ tempSelectedSkuKeys.length * tempSelectedSupplierIds.length }}</strong> 条供货关联。
           </a-alert>
           
-          <div class="summary-info">
-            <a-descriptions :column="3" bordered>
-              <a-descriptions-item label="已选商品">
-                <strong>{{ tempSelectedSkuKeys.length }}</strong> 个SKU
-              </a-descriptions-item>
-              <a-descriptions-item label="已选供应商">
-                <strong>{{ tempSelectedSupplierIds.length }}</strong> 家
-              </a-descriptions-item>
-              <a-descriptions-item label="将创建关联">
-                <strong class="highlight">{{ tempSelectedSkuKeys.length * tempSelectedSupplierIds.length }}</strong> 条
-              </a-descriptions-item>
-            </a-descriptions>
-          </div>
-          
-          <a-divider>设置供货信息</a-divider>
+          <a-divider>批量设置供货信息</a-divider>
           
           <a-form :model="supplyForm" layout="vertical">
             <a-row :gutter="16">
-              <a-col :span="8">
-                <a-form-item label="预计供货量" required>
-                  <a-input-number v-model="supplyForm.estimatedStock" :min="0" style="width: 100%" placeholder="请输入">
+              <a-col :span="6">
+                <a-form-item label="供货价">
+                  <a-input-number v-model="supplyForm.supplyPrice" :min="0" :precision="2" style="width: 100%" placeholder="批量设置">
+                    <template #prefix>¥</template>
+                  </a-input-number>
+                </a-form-item>
+              </a-col>
+              <a-col :span="6">
+                <a-form-item label="预计供货量">
+                  <a-input-number v-model="supplyForm.estimatedStock" :min="0" style="width: 100%" placeholder="批量设置">
                     <template #suffix>单位</template>
                   </a-input-number>
                 </a-form-item>
               </a-col>
-              <a-col :span="8">
-                <a-form-item label="最小起订量" required>
-                  <a-input-number v-model="supplyForm.minOrderQty" :min="1" style="width: 100%" placeholder="请输入">
+              <a-col :span="6">
+                <a-form-item label="最小起订量">
+                  <a-input-number v-model="supplyForm.minOrderQty" :min="1" style="width: 100%" placeholder="批量设置">
                     <template #suffix>单位</template>
                   </a-input-number>
                 </a-form-item>
               </a-col>
-              <a-col :span="8">
-                <a-form-item label="供货周期" required>
-                  <a-input-number v-model="supplyForm.leadTime" :min="1" style="width: 100%" placeholder="请输入">
+              <a-col :span="6">
+                <a-form-item label="供货周期">
+                  <a-input-number v-model="supplyForm.leadTime" :min="1" style="width: 100%" placeholder="批量设置">
                     <template #suffix>天</template>
                   </a-input-number>
                 </a-form-item>
               </a-col>
             </a-row>
-            <a-form-item label="自动进入商品市场">
-              <a-switch v-model="supplyForm.autoToMarket" />
-              <span class="form-tip" style="margin-left: 12px; color: var(--color-text-3)">
-                开启后，该商品将自动进入商品市场待上架列表
-              </span>
-            </a-form-item>
-            <a-form-item label="备注">
-              <a-textarea v-model="supplyForm.remark" placeholder="请输入备注（选填）" :max-length="200" />
-            </a-form-item>
+            <div style="margin-bottom: 16px">
+              <a-button type="outline" @click="applyBatchSupply">应用到所有SKU</a-button>
+              <a-switch v-model="supplyForm.autoToMarket" style="margin-left: 24px" />
+              <span class="form-tip" style="margin-left: 8px">自动进入商品市场</span>
+            </div>
           </a-form>
+
+          <a-divider>SKU供货详情</a-divider>
+          
+          <a-table 
+            :data="supplySkuList" 
+            :pagination="false" 
+            :max-height="280" 
+            :scroll="{ x: 1100 }" 
+            size="small"
+          >
+            <template #columns>
+              <a-table-column title="SKU编码" data-index="skuCode" :width="130" />
+              <a-table-column title="商品名称" data-index="skuName" :width="150" />
+              <a-table-column title="规格" :width="100">
+                <template #cell="{ record }">
+                  <span v-for="(value, key) in record.specs" :key="key" style="margin-right: 4px">
+                    <a-tag size="small">{{ value }}</a-tag>
+                  </span>
+                </template>
+              </a-table-column>
+              <a-table-column title="供货价" :width="120">
+                <template #cell="{ record }">
+                  <a-input-number 
+                    v-model="record.supplyPrice" 
+                    size="small" 
+                    :min="0" 
+                    :precision="2" 
+                    style="width: 100%"
+                    placeholder="必填"
+                  >
+                    <template #prefix>¥</template>
+                  </a-input-number>
+                </template>
+              </a-table-column>
+              <a-table-column title="预计供货量" :width="110">
+                <template #cell="{ record }">
+                  <a-input-number 
+                    v-model="record.estimatedStock" 
+                    size="small" 
+                    :min="0" 
+                    style="width: 100%"
+                    placeholder="选填"
+                  />
+                </template>
+              </a-table-column>
+              <a-table-column title="最小起订量" :width="110">
+                <template #cell="{ record }">
+                  <a-input-number 
+                    v-model="record.minOrderQty" 
+                    size="small" 
+                    :min="1" 
+                    style="width: 100%"
+                    placeholder="选填"
+                  />
+                </template>
+              </a-table-column>
+              <a-table-column title="供货周期" :width="100">
+                <template #cell="{ record }">
+                  <a-input-number 
+                    v-model="record.leadTime" 
+                    size="small" 
+                    :min="1" 
+                    style="width: 100%"
+                    placeholder="选填"
+                  >
+                    <template #suffix>天</template>
+                  </a-input-number>
+                </template>
+              </a-table-column>
+            </template>
+          </a-table>
+          
+          <a-form-item label="备注" style="margin-top: 16px">
+            <a-textarea v-model="supplyForm.remark" placeholder="请输入备注（选填）" :max-length="200" />
+          </a-form-item>
         </div>
         
         <div class="modal-footer">
@@ -425,7 +500,7 @@
     <a-modal 
       v-model:visible="productSuppliersVisible" 
       :title="`${currentSku?.skuName || ''} - 供货供应商`" 
-      :width="900"
+      :width="1000"
       :footer="false"
     >
       <template #extra>
@@ -445,7 +520,7 @@
               </div>
             </template>
           </a-table-column>
-          <a-table-column title="供货价" :width="100">
+          <a-table-column title="供货价" :width="120">
             <template #cell="{ record }">
               <span class="price-value">¥{{ record.supplyPrice.toFixed(2) }}</span>
             </template>
@@ -472,20 +547,37 @@
               </a-tag>
             </template>
           </a-table-column>
-          <a-table-column title="操作" :width="150" fixed="right">
+          <a-table-column title="操作" :width="220" fixed="right">
             <template #cell="{ record }">
               <a-space>
+                <a-button type="text" size="small" @click="handleEditSupplyPrice(record)">编辑供货价</a-button>
                 <a-button type="text" size="small" @click="handleEditSupply(record)">编辑</a-button>
-                <a-dropdown v-if="record.status !== 'stopped'" @select="(key: string) => handleSupplyAction(record, key)">
-                  <a-button type="text" size="small">
-                    操作<icon-down />
-                  </a-button>
-                  <template #content>
-                    <a-doption v-if="record.status === 'active'" value="platform_off">下架</a-doption>
-                    <a-doption v-if="record.status === 'platform_off'" value="active">恢复</a-doption>
-                    <a-doption v-if="record.status === 'paused'" value="active">恢复</a-doption>
-                  </template>
-                </a-dropdown>
+                <a-button 
+                  v-if="record.status === 'active'" 
+                  type="text" 
+                  size="small" 
+                  status="warning"
+                  @click="handleSupplyAction(record, 'paused')"
+                >
+                  暂停
+                </a-button>
+                <a-button 
+                  v-if="record.status === 'paused'" 
+                  type="text" 
+                  size="small" 
+                  status="success"
+                  @click="handleSupplyAction(record, 'active')"
+                >
+                  恢复
+                </a-button>
+                <a-button 
+                  type="text" 
+                  size="small" 
+                  status="danger"
+                  @click="handleDeleteSupply(record)"
+                >
+                  删除
+                </a-button>
               </a-space>
             </template>
           </a-table-column>
@@ -496,7 +588,7 @@
     <a-modal 
       v-model:visible="supplierProductsVisible" 
       :title="`${currentSupplier?.supplierName || ''} - 供货商品`" 
-      :width="1000"
+      :width="1100"
       :footer="false"
     >
       <template #extra>
@@ -508,10 +600,21 @@
       
       <a-table :data="supplierProducts" :pagination="false">
         <template #columns>
-          <a-table-column title="SKU编码" data-index="skuCode" :width="140" />
-          <a-table-column title="商品名称" data-index="skuName" :width="160" />
-          <a-table-column title="分类" data-index="categoryName" :width="80" />
-          <a-table-column title="供货价" :width="100">
+          <a-table-column title="SKU编码" data-index="skuCode" :width="120" />
+          <a-table-column title="商品名称" :width="180">
+            <template #cell="{ record }">
+              <div>{{ record.skuName }}</div>
+              <div class="sub-text">
+                <a-tag v-for="(value, key) in record.specs" :key="key" size="small">{{ value }}</a-tag>
+              </div>
+            </template>
+          </a-table-column>
+          <a-table-column title="平台供货价" :width="100">
+            <template #cell="{ record }">
+              ¥{{ record.platformPrice?.toFixed(2) }}
+            </template>
+          </a-table-column>
+          <a-table-column title="供应商供货价" :width="120">
             <template #cell="{ record }">
               <span class="price-value">¥{{ record.supplyPrice.toFixed(2) }}</span>
             </template>
@@ -538,20 +641,29 @@
               </a-tag>
             </template>
           </a-table-column>
-          <a-table-column title="操作" :width="150" fixed="right">
+          <a-table-column title="操作" :width="180" fixed="right">
             <template #cell="{ record }">
               <a-space>
+                <a-button type="text" size="small" @click="handleEditSupplyPrice(record)">编辑供货价</a-button>
                 <a-button type="text" size="small" @click="handleEditSupply(record)">编辑</a-button>
-                <a-dropdown v-if="record.status !== 'stopped'" @select="(key: string) => handleSupplyAction(record, key)">
-                  <a-button type="text" size="small">
-                    操作<icon-down />
-                  </a-button>
-                  <template #content>
-                    <a-doption v-if="record.status === 'active'" value="platform_off">下架</a-doption>
-                    <a-doption v-if="record.status === 'platform_off'" value="active">恢复</a-doption>
-                    <a-doption v-if="record.status === 'paused'" value="active">恢复</a-doption>
-                  </template>
-                </a-dropdown>
+                <a-button 
+                  v-if="record.status === 'active'" 
+                  type="text" 
+                  size="small" 
+                  status="warning"
+                  @click="handleSupplyAction(record, 'paused')"
+                >
+                  暂停
+                </a-button>
+                <a-button 
+                  v-if="record.status === 'paused'" 
+                  type="text" 
+                  size="small" 
+                  status="success"
+                  @click="handleSupplyAction(record, 'active')"
+                >
+                  恢复
+                </a-button>
               </a-space>
             </template>
           </a-table-column>
@@ -560,52 +672,104 @@
     </a-modal>
 
     <a-modal 
+      v-model:visible="editSupplyPriceVisible" 
+      title="编辑供货价" 
+      :width="500"
+      @ok="handleSaveSupplyPrice"
+      @cancel="editSupplyPriceVisible = false"
+    >
+      <a-form :model="editSupplyPriceForm" layout="vertical">
+        <a-form-item label="商品信息">
+          <div class="product-info-card">
+            <div class="info-row">
+              <span class="label">SKU编码：</span>
+              <span>{{ editSupplyPriceProduct?.skuCode }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">商品名称：</span>
+              <span>{{ editSupplyPriceProduct?.skuName }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">供应商：</span>
+              <span>{{ editSupplyPriceProduct?.supplierName }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">平台供货价：</span>
+              <span class="price-value">¥{{ editSupplyPriceProduct?.platformPrice?.toFixed(2) }}</span>
+            </div>
+          </div>
+        </a-form-item>
+        <a-form-item label="供应商供货价" required>
+          <a-input-number 
+            v-model="editSupplyPriceForm.supplyPrice" 
+            :min="0" 
+            :precision="2"
+            style="width: 100%"
+            placeholder="请输入供货价"
+          >
+            <template #prefix>¥</template>
+          </a-input-number>
+          <div class="form-tip">
+            建议供货价不高于平台供货价，当前平台供货价：¥{{ editSupplyPriceProduct?.platformPrice?.toFixed(2) }}
+          </div>
+        </a-form-item>
+        <a-form-item label="调价原因">
+          <a-textarea 
+            v-model="editSupplyPriceForm.priceReason" 
+            placeholder="请输入调价原因（选填）" 
+            :max-length="200" 
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <a-modal 
       v-model:visible="editSupplyVisible" 
       title="编辑供货信息" 
       :width="600"
       @ok="handleSaveEditSupply"
+      @cancel="editSupplyVisible = false"
     >
-      <a-descriptions :column="2" bordered size="small" style="margin-bottom: 16px">
-        <a-descriptions-item label="商品名称">{{ editSupplyProduct?.skuName }}</a-descriptions-item>
-        <a-descriptions-item label="供应商">{{ editSupplyProduct?.supplierName }}</a-descriptions-item>
-        <a-descriptions-item label="平台供货价">
-          <span class="price-value">¥{{ editSupplyProduct?.platformPrice?.toFixed(2) }}</span>
-        </a-descriptions-item>
-        <a-descriptions-item label="当前供货价">
-          <span class="price-value">¥{{ editSupplyProduct?.supplyPrice?.toFixed(2) }}</span>
-          <a-tag size="small" color="gray" style="margin-left: 8px">平台定价</a-tag>
-        </a-descriptions-item>
-      </a-descriptions>
-
-      <a-divider>可编辑信息</a-divider>
-
       <a-form :model="editSupplyForm" layout="vertical">
         <a-row :gutter="16">
-          <a-col :span="8">
+          <a-col :span="12">
             <a-form-item label="预计供货量" required>
-              <a-input-number v-model="editSupplyForm.estimatedStock" :min="0" style="width: 100%">
+              <a-input-number 
+                v-model="editSupplyForm.estimatedStock" 
+                :min="0" 
+                style="width: 100%"
+                placeholder="请输入"
+              >
                 <template #suffix>{{ editSupplyProduct?.unit }}</template>
               </a-input-number>
             </a-form-item>
           </a-col>
-          <a-col :span="8">
+          <a-col :span="12">
             <a-form-item label="最小起订量" required>
-              <a-input-number v-model="editSupplyForm.minOrderQty" :min="1" style="width: 100%">
+              <a-input-number 
+                v-model="editSupplyForm.minOrderQty" 
+                :min="1" 
+                style="width: 100%"
+                placeholder="请输入"
+              >
                 <template #suffix>{{ editSupplyProduct?.unit }}</template>
-              </a-input-number>
-            </a-form-item>
-          </a-col>
-          <a-col :span="8">
-            <a-form-item label="供货周期" required>
-              <a-input-number v-model="editSupplyForm.leadTime" :min="1" style="width: 100%">
-                <template #suffix>天</template>
               </a-input-number>
             </a-form-item>
           </a-col>
         </a-row>
+        <a-form-item label="供货周期" required>
+          <a-input-number 
+            v-model="editSupplyForm.leadTime" 
+            :min="1" 
+            style="width: 100%"
+            placeholder="请输入"
+          >
+            <template #suffix>天</template>
+          </a-input-number>
+        </a-form-item>
         <a-form-item label="自动进入商品市场">
           <a-switch v-model="editSupplyForm.autoToMarket" />
-          <span class="form-tip" style="margin-left: 12px; color: var(--color-text-3)">
+          <span class="form-tip" style="margin-left: 12px">
             开启后，该商品将自动进入商品市场待上架列表
           </span>
         </a-form-item>
@@ -618,204 +782,168 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
-import type { ProductCategory } from '@gongchengcang/types'
 
 const loading = ref(false)
-const supplierLoading = ref(false)
 const viewMode = ref('product')
-const addSupplyVisible = ref(false)
-const productSuppliersVisible = ref(false)
-const supplierProductsVisible = ref(false)
-const editSupplyVisible = ref(false)
-const batchMode = ref(false)
-const addStep = ref(1)
-const currentSku = ref<any>(null)
-const currentSupplier = ref<any>(null)
-const editSupplyProduct = ref<any>(null)
-const selectedSkuKeys = ref<string[]>([])
-
-const productSelectMode = ref<'spu' | 'sku'>('spu')
-const productSelectorKeyword = ref('')
-const productSelectorCategory = ref<string[] | undefined>()
-const expandedSpuIds = ref<string[]>([])
-const tempSelectedSkuKeys = ref<string[]>([])
-const tempSelectedSupplierIds = ref<string[]>([])
-const supplierSelectorKeyword = ref('')
-
-const pagination = reactive({ current: 1, pageSize: 10, total: 0 })
-const supplierPagination = reactive({ current: 1, pageSize: 10, total: 0 })
 
 const searchForm = reactive({
   keyword: '',
-  categoryId: undefined as string[] | undefined,
-  hasSupplier: undefined as string | undefined,
+  categoryId: '',
+  hasSupplier: ''
 })
 
-const supplierSearchForm = reactive({
-  keyword: '',
-  status: undefined as string | undefined,
+const pagination = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 50
 })
+
+const categoryTree = ref([
+  { categoryId: '1', categoryName: '水泥建材', children: [
+    { categoryId: '1-1', categoryName: '水泥' },
+    { categoryId: '1-2', categoryName: '砂石' }
+  ]},
+  { categoryId: '2', categoryName: '钢材钢筋', children: [
+    { categoryId: '2-1', categoryName: '螺纹钢' },
+    { categoryId: '2-2', categoryName: '线材' }
+  ]},
+  { categoryId: '3', categoryName: '陶瓷瓷砖', children: [] },
+  { categoryId: '4', categoryName: '涂料油漆', children: [] }
+])
+
+const productList = ref([
+  {
+    skuId: 'SKU001', skuCode: 'SKU001', skuName: '普通硅酸盐水泥P.O42.5', spuName: '普通硅酸盐水泥',
+    mainImage: 'https://via.placeholder.com/48', categoryName: '水泥', specs: { 规格: '50kg/袋' },
+    platformPrice: 28, supplierCount: 3, autoToMarket: true,
+    supplyPriceMin: 26, supplyPriceMax: 28
+  },
+  {
+    skuId: 'SKU002', skuCode: 'SKU002', skuName: '螺纹钢HRB400 Φ12mm', spuName: '螺纹钢HRB400',
+    mainImage: 'https://via.placeholder.com/48', categoryName: '螺纹钢', specs: { 规格: 'Φ12mm' },
+    platformPrice: 4200, supplierCount: 2, autoToMarket: true,
+    supplyPriceMin: 4150, supplyPriceMax: 4180
+  },
+  {
+    skuId: 'SKU003', skuCode: 'SKU003', skuName: '抛光砖 800×800mm', spuName: '抛光砖',
+    mainImage: 'https://via.placeholder.com/48', categoryName: '陶瓷瓷砖', specs: { 规格: '800×800mm' },
+    platformPrice: 45, supplierCount: 5, autoToMarket: true,
+    supplyPriceMin: 38, supplyPriceMax: 44
+  },
+  {
+    skuId: 'SKU004', skuCode: 'SKU004', skuName: '内墙乳胶漆 20L', spuName: '内墙乳胶漆',
+    mainImage: 'https://via.placeholder.com/48', categoryName: '涂料油漆', specs: { 规格: '20L/桶' },
+    platformPrice: 380, supplierCount: 0, autoToMarket: false,
+    supplyPriceMin: undefined, supplyPriceMax: undefined
+  }
+])
+
+const filteredProducts = computed(() => productList.value)
+
+const selectedSkuKeys = ref<string[]>([])
+
+const productRowSelection = computed(() => ({
+  type: 'checkbox' as const,
+  selectedRowKeys: selectedSkuKeys.value,
+  onlyCurrent: false,
+  onChange: (keys: string[]) => { selectedSkuKeys.value = keys }
+}))
+
+const supplierSearchForm = reactive({ keyword: '', status: '' })
+const supplierLoading = ref(false)
+const supplierPagination = reactive({ current: 1, pageSize: 10, total: 20 })
+
+const supplierList = ref([
+  { supplierId: 'SUP001', supplierName: '广东建材供应商', contactPerson: '张经理', contactPhone: '13800138001', productCount: 15, activeCount: 12, pausedCount: 3, status: 'active' },
+  { supplierId: 'SUP002', supplierName: '深圳钢材供应商', contactPerson: '李经理', contactPhone: '13800138002', productCount: 8, activeCount: 8, pausedCount: 0, status: 'active' },
+  { supplierId: 'SUP003', supplierName: '佛山陶瓷供应商', contactPerson: '王经理', contactPhone: '13800138003', productCount: 22, activeCount: 18, pausedCount: 4, status: 'active' },
+  { supplierId: 'SUP004', supplierName: '广州涂料供应商', contactPerson: '赵经理', contactPhone: '13800138004', productCount: 5, activeCount: 5, pausedCount: 0, status: 'inactive' }
+])
+
+const filteredSuppliers = computed(() => supplierList.value)
+
+const addSupplyVisible = ref(false)
+const batchMode = ref(false)
+const addStep = ref(1)
+const productSelectMode = ref('spu')
+const productSelectorKeyword = ref('')
+const productSelectorCategory = ref('')
+const supplierSelectorKeyword = ref('')
+const tempSelectedSkuKeys = ref<string[]>([])
+const tempSelectedSupplierIds = ref<string[]>([])
+const expandedSpuIds = ref<string[]>([])
+
+const spuList = ref([
+  { spuId: 'SPU001', spuName: '普通硅酸盐水泥', skuList: [
+    { skuId: 'SKU001', skuCode: 'SKU001', skuName: '普通硅酸盐水泥P.O42.5', specs: { 规格: '50kg/袋' }, platformPrice: 28, mainImage: 'https://via.placeholder.com/40' },
+    { skuId: 'SKU001-2', skuCode: 'SKU001-2', skuName: '普通硅酸盐水泥P.O42.5', specs: { 规格: '25kg/袋' }, platformPrice: 15, mainImage: 'https://via.placeholder.com/40' }
+  ]},
+  { spuId: 'SPU002', spuName: '螺纹钢HRB400', skuList: [
+    { skuId: 'SKU002', skuCode: 'SKU002', skuName: '螺纹钢HRB400 Φ12mm', specs: { 规格: 'Φ12mm' }, platformPrice: 4200, mainImage: 'https://via.placeholder.com/40' },
+    { skuId: 'SKU002-2', skuCode: 'SKU002-2', skuName: '螺纹钢HRB400 Φ16mm', specs: { 规格: 'Φ16mm' }, platformPrice: 4150, mainImage: 'https://via.placeholder.com/40' }
+  ]},
+  { spuId: 'SPU003', spuName: '抛光砖', skuList: [
+    { skuId: 'SKU003', skuCode: 'SKU003', skuName: '抛光砖 800×800mm', specs: { 规格: '800×800mm' }, platformPrice: 45, mainImage: 'https://via.placeholder.com/40' }
+  ]}
+])
+
+const filteredSpuList = computed(() => spuList.value)
+const filteredSkuList = computed(() => spuList.value.flatMap(s => s.skuList))
+const filteredSupplierList = computed(() => supplierList.value.filter(s => 
+  s.supplierName.includes(supplierSelectorKeyword.value)
+))
+
+const tempSelectedSkus = computed(() => 
+  spuList.value.flatMap(s => s.skuList).filter(sku => tempSelectedSkuKeys.value.includes(sku.skuId))
+)
+
+const tempSelectedSuppliers = computed(() => 
+  supplierList.value.filter(s => tempSelectedSupplierIds.value.includes(s.supplierId))
+)
 
 const supplyForm = reactive({
-  estimatedStock: 100,
-  minOrderQty: 10,
-  leadTime: 3,
+  supplyPrice: undefined as number | undefined,
+  estimatedStock: undefined as number | undefined,
+  minOrderQty: undefined as number | undefined,
+  leadTime: undefined as number | undefined,
   remark: '',
-  autoToMarket: true,
+  autoToMarket: true
 })
 
+const supplySkuList = ref<any[]>([])
+
+const productSuppliersVisible = ref(false)
+const currentSku = ref<any>(null)
+const productSuppliers = ref([
+  { supplierId: 'SUP001', supplierName: '广东建材供应商', contactPerson: '张经理', contactPhone: '13800138001', supplyPrice: 26, estimatedStock: 500, minOrderQty: 50, leadTime: 3, unit: '袋', status: 'active', platformPrice: 28 },
+  { supplierId: 'SUP002', supplierName: '深圳建材供应商', contactPerson: '李经理', contactPhone: '13800138002', supplyPrice: 27, estimatedStock: 300, minOrderQty: 30, leadTime: 2, unit: '袋', status: 'active', platformPrice: 28 },
+  { supplierId: 'SUP003', supplierName: '佛山建材供应商', contactPerson: '王经理', contactPhone: '13800138003', supplyPrice: 28, estimatedStock: 200, minOrderQty: 20, leadTime: 5, unit: '袋', status: 'paused', platformPrice: 28 }
+])
+
+const supplierProductsVisible = ref(false)
+const currentSupplier = ref<any>(null)
+const supplierProducts = ref([
+  { skuId: 'SKU001', skuCode: 'SKU001', skuName: '普通硅酸盐水泥P.O42.5', specs: { 规格: '50kg/袋' }, platformPrice: 28, supplyPrice: 26, estimatedStock: 500, minOrderQty: 50, leadTime: 3, unit: '袋', status: 'active' },
+  { skuId: 'SKU003', skuCode: 'SKU003', skuName: '抛光砖 800×800mm', specs: { 规格: '800×800mm' }, platformPrice: 45, supplyPrice: 42, estimatedStock: 1000, minOrderQty: 100, leadTime: 7, unit: '片', status: 'active' }
+])
+
+const editSupplyPriceVisible = ref(false)
+const editSupplyPriceProduct = ref<any>(null)
+const editSupplyPriceForm = reactive({
+  supplyPrice: 0,
+  priceReason: ''
+})
+
+const editSupplyVisible = ref(false)
+const editSupplyProduct = ref<any>(null)
 const editSupplyForm = reactive({
   estimatedStock: 0,
   minOrderQty: 0,
   leadTime: 0,
   remark: '',
-  autoToMarket: true,
-})
-
-const categoryTree = ref<ProductCategory[]>([])
-
-const productRowSelection = computed(() => ({
-  type: 'checkbox' as const,
-  selectedRowKeys: selectedSkuKeys.value,
-  onlyCurrent: true,
-  onChange: (keys: string[]) => {
-    selectedSkuKeys.value = keys
-  },
-}))
-
-const spuList = ref([
-  {
-    spuId: 'SPU001',
-    spuName: '螺纹钢 HRB400E',
-    categoryName: '螺纹钢',
-    skuList: [
-      { skuId: 'SKU001', skuCode: 'GJ-LWG-001-0001', skuName: '螺纹钢HRB400-12mm', specs: { '规格': '12mm' }, unit: '吨', platformPrice: 3500, mainImage: 'https://via.placeholder.com/200' },
-      { skuId: 'SKU002', skuCode: 'GJ-LWG-001-0002', skuName: '螺纹钢HRB400-16mm', specs: { '规格': '16mm' }, unit: '吨', platformPrice: 3550, mainImage: 'https://via.placeholder.com/200' },
-      { skuId: 'SKU003', skuCode: 'GJ-LWG-001-0003', skuName: '螺纹钢HRB400-20mm', specs: { '规格': '20mm' }, unit: '吨', platformPrice: 3600, mainImage: 'https://via.placeholder.com/200' },
-      { skuId: 'SKU004', skuCode: 'GJ-LWG-001-0004', skuName: '螺纹钢HRB400-25mm', specs: { '规格': '25mm' }, unit: '吨', platformPrice: 3650, mainImage: 'https://via.placeholder.com/200' },
-    ],
-  },
-  {
-    spuId: 'SPU002',
-    spuName: '螺纹钢 HRB500',
-    categoryName: '螺纹钢',
-    skuList: [
-      { skuId: 'SKU005', skuCode: 'GJ-LWG-002-0001', skuName: '螺纹钢HRB500-12mm', specs: { '规格': '12mm' }, unit: '吨', platformPrice: 3700, mainImage: 'https://via.placeholder.com/200' },
-      { skuId: 'SKU006', skuCode: 'GJ-LWG-002-0002', skuName: '螺纹钢HRB500-16mm', specs: { '规格': '16mm' }, unit: '吨', platformPrice: 3750, mainImage: 'https://via.placeholder.com/200' },
-    ],
-  },
-  {
-    spuId: 'SPU003',
-    spuName: '普通硅酸盐水泥',
-    categoryName: '水泥',
-    skuList: [
-      { skuId: 'SKU007', skuCode: 'SN-PT-001-0001', skuName: '水泥P.O42.5', specs: { '强度等级': 'P.O42.5' }, unit: '吨', platformPrice: 380, mainImage: 'https://via.placeholder.com/200' },
-      { skuId: 'SKU008', skuCode: 'SN-PT-001-0002', skuName: '水泥P.O52.5', specs: { '强度等级': 'P.O52.5' }, unit: '吨', platformPrice: 420, mainImage: 'https://via.placeholder.com/200' },
-    ],
-  },
-  {
-    spuId: 'SPU004',
-    spuName: '线材 HPB300',
-    categoryName: '线材',
-    skuList: [
-      { skuId: 'SKU009', skuCode: 'XC-HPB-001-0001', skuName: '线材HPB300-6mm', specs: { '规格': '6mm' }, unit: '吨', platformPrice: 3300, mainImage: 'https://via.placeholder.com/200' },
-      { skuId: 'SKU010', skuCode: 'XC-HPB-001-0002', skuName: '线材HPB300-8mm', specs: { '规格': '8mm' }, unit: '吨', platformPrice: 3350, mainImage: 'https://via.placeholder.com/200' },
-    ],
-  },
-])
-
-const allSkuList = computed(() => {
-  return spuList.value.flatMap(spu => spu.skuList.map(sku => ({ ...sku, spuId: spu.spuId, spuName: spu.spuName, categoryName: spu.categoryName })))
-})
-
-const filteredSpuList = computed(() => {
-  let result = spuList.value
-  if (productSelectorKeyword.value) {
-    const keyword = productSelectorKeyword.value.toLowerCase()
-    result = result.filter(spu => 
-      spu.spuName.toLowerCase().includes(keyword) ||
-      spu.skuList.some(sku => sku.skuCode.toLowerCase().includes(keyword) || sku.skuName.toLowerCase().includes(keyword))
-    )
-  }
-  return result
-})
-
-const filteredSkuList = computed(() => {
-  let result = allSkuList.value
-  if (productSelectorKeyword.value) {
-    const keyword = productSelectorKeyword.value.toLowerCase()
-    result = result.filter(sku => 
-      sku.skuName.toLowerCase().includes(keyword) || 
-      sku.skuCode.toLowerCase().includes(keyword) ||
-      sku.spuName?.toLowerCase().includes(keyword)
-    )
-  }
-  return result
-})
-
-const filteredSupplierList = computed(() => {
-  let result = suppliers.value
-  if (supplierSelectorKeyword.value) {
-    const keyword = supplierSelectorKeyword.value.toLowerCase()
-    result = result.filter(s => s.supplierName.toLowerCase().includes(keyword))
-  }
-  return result
-})
-
-const tempSelectedSkus = computed(() => {
-  return allSkuList.value.filter(sku => tempSelectedSkuKeys.value.includes(sku.skuId))
-})
-
-const tempSelectedSuppliers = computed(() => {
-  return suppliers.value.filter(s => tempSelectedSupplierIds.value.includes(s.supplierId))
-})
-
-const products = ref([
-  { skuId: 'SKU001', skuCode: 'GJ-LWG-001-0001', skuName: '螺纹钢HRB400-12mm', spuName: '螺纹钢 HRB400E', categoryName: '螺纹钢', specs: { '规格': '12mm' }, unit: '吨', mainImage: 'https://via.placeholder.com/200', platformPrice: 3500, supplierCount: 2 },
-  { skuId: 'SKU002', skuCode: 'GJ-LWG-001-0002', skuName: '螺纹钢HRB400-16mm', spuName: '螺纹钢 HRB400E', categoryName: '螺纹钢', specs: { '规格': '16mm' }, unit: '吨', mainImage: 'https://via.placeholder.com/200', platformPrice: 3550, supplierCount: 1 },
-  { skuId: 'SKU003', skuCode: 'GJ-LWG-001-0003', skuName: '螺纹钢HRB400-20mm', spuName: '螺纹钢 HRB400E', categoryName: '螺纹钢', specs: { '规格': '20mm' }, unit: '吨', mainImage: 'https://via.placeholder.com/200', platformPrice: 3600, supplierCount: 0 },
-  { skuId: 'SKU004', skuCode: 'GJ-LWG-001-0004', skuName: '螺纹钢HRB400-25mm', spuName: '螺纹钢 HRB400E', categoryName: '螺纹钢', specs: { '规格': '25mm' }, unit: '吨', mainImage: 'https://via.placeholder.com/200', platformPrice: 3650, supplierCount: 0 },
-  { skuId: 'SKU007', skuCode: 'SN-PT-001-0001', skuName: '水泥P.O42.5', spuName: '普通硅酸盐水泥', categoryName: '水泥', specs: { '强度等级': 'P.O42.5' }, unit: '吨', mainImage: 'https://via.placeholder.com/200', platformPrice: 380, supplierCount: 1 },
-  { skuId: 'SKU008', skuCode: 'SN-PT-001-0002', skuName: '水泥P.O52.5', spuName: '普通硅酸盐水泥', categoryName: '水泥', specs: { '强度等级': 'P.O52.5' }, unit: '吨', mainImage: 'https://via.placeholder.com/200', platformPrice: 420, supplierCount: 0 },
-])
-
-const suppliers = ref([
-  { supplierId: 'SUP001', supplierName: '宝钢集团有限公司', contactPerson: '张经理', contactPhone: '138-0000-0001', status: 'active', productCount: 3, activeCount: 2, pausedCount: 1 },
-  { supplierId: 'SUP002', supplierName: '海螺水泥股份有限公司', contactPerson: '李经理', contactPhone: '139-0000-0002', status: 'active', productCount: 2, activeCount: 1, pausedCount: 1 },
-  { supplierId: 'SUP003', supplierName: '鞍钢集团有限公司', contactPerson: '王经理', contactPhone: '137-0000-0003', status: 'active', productCount: 1, activeCount: 1, pausedCount: 0 },
-])
-
-const productSuppliers = ref([
-  { id: 'PS001', skuId: 'SKU001', supplierId: 'SUP001', supplierName: '宝钢集团有限公司', contactPerson: '张经理', contactPhone: '138-0000-0001', supplyPrice: 3500, platformPrice: 3500, estimatedStock: 500, minOrderQty: 10, leadTime: 3, unit: '吨', status: 'active' },
-  { id: 'PS002', skuId: 'SKU001', supplierId: 'SUP003', supplierName: '鞍钢集团有限公司', contactPerson: '王经理', contactPhone: '137-0000-0003', supplyPrice: 3500, platformPrice: 3500, estimatedStock: 300, minOrderQty: 5, leadTime: 5, unit: '吨', status: 'active' },
-])
-
-const supplierProducts = ref([
-  { id: 'SP001', skuId: 'SKU001', skuCode: 'GJ-LWG-001-0001', skuName: '螺纹钢HRB400-12mm', categoryName: '螺纹钢', unit: '吨', supplyPrice: 3500, platformPrice: 3500, estimatedStock: 500, minOrderQty: 10, leadTime: 3, status: 'active' },
-  { id: 'SP002', skuId: 'SKU002', skuCode: 'GJ-LWG-001-0002', skuName: '螺纹钢HRB400-16mm', categoryName: '螺纹钢', unit: '吨', supplyPrice: 3550, platformPrice: 3550, estimatedStock: 300, minOrderQty: 5, leadTime: 5, status: 'paused' },
-])
-
-const filteredProducts = computed(() => {
-  let result = products.value
-  if (searchForm.hasSupplier === 'yes') result = result.filter(p => p.supplierCount > 0)
-  else if (searchForm.hasSupplier === 'no') result = result.filter(p => p.supplierCount === 0)
-  if (searchForm.keyword) {
-    const keyword = searchForm.keyword.toLowerCase()
-    result = result.filter(p => p.skuName.toLowerCase().includes(keyword) || p.skuCode.toLowerCase().includes(keyword))
-  }
-  return result
-})
-
-const filteredSuppliers = computed(() => {
-  let result = suppliers.value
-  if (supplierSearchForm.status) result = result.filter(s => s.status === supplierSearchForm.status)
-  if (supplierSearchForm.keyword) {
-    const keyword = supplierSearchForm.keyword.toLowerCase()
-    result = result.filter(s => s.supplierName.toLowerCase().includes(keyword))
-  }
-  return result
+  autoToMarket: true
 })
 
 function handleViewModeChange() {
@@ -838,12 +966,13 @@ function handleSupplierPageChange(page: number) {
   supplierPagination.current = page
 }
 
-function handleProductSelectorSearch() {}
-
 function toggleSpuExpand(spuId: string) {
   const index = expandedSpuIds.value.indexOf(spuId)
-  if (index > -1) expandedSpuIds.value.splice(index, 1)
-  else expandedSpuIds.value.push(spuId)
+  if (index > -1) {
+    expandedSpuIds.value.splice(index, 1)
+  } else {
+    expandedSpuIds.value.push(spuId)
+  }
 }
 
 function isSpuSelected(spuId: string) {
@@ -860,20 +989,29 @@ function isSpuIndeterminate(spuId: string) {
 }
 
 function handleSpuSelect(spu: any, checked: boolean) {
-  const skuIds = spu.skuList.map((s: any) => s.skuId)
   if (checked) {
-    skuIds.forEach((id: string) => {
-      if (!tempSelectedSkuKeys.value.includes(id)) tempSelectedSkuKeys.value.push(id)
+    spu.skuList.forEach((sku: any) => {
+      if (!tempSelectedSkuKeys.value.includes(sku.skuId)) {
+        tempSelectedSkuKeys.value.push(sku.skuId)
+      }
     })
   } else {
-    tempSelectedSkuKeys.value = tempSelectedSkuKeys.value.filter(id => !skuIds.includes(id))
+    spu.skuList.forEach((sku: any) => {
+      const index = tempSelectedSkuKeys.value.indexOf(sku.skuId)
+      if (index > -1) {
+        tempSelectedSkuKeys.value.splice(index, 1)
+      }
+    })
   }
 }
 
 function handleSkuToggle(sku: any) {
   const index = tempSelectedSkuKeys.value.indexOf(sku.skuId)
-  if (index > -1) tempSelectedSkuKeys.value.splice(index, 1)
-  else tempSelectedSkuKeys.value.push(sku.skuId)
+  if (index > -1) {
+    tempSelectedSkuKeys.value.splice(index, 1)
+  } else {
+    tempSelectedSkuKeys.value.push(sku.skuId)
+  }
 }
 
 function clearSelectedSkus() {
@@ -882,29 +1020,37 @@ function clearSelectedSkus() {
 
 function removeSelectedSku(skuId: string) {
   const index = tempSelectedSkuKeys.value.indexOf(skuId)
-  if (index > -1) tempSelectedSkuKeys.value.splice(index, 1)
+  if (index > -1) {
+    tempSelectedSkuKeys.value.splice(index, 1)
+  }
 }
 
 function handleSupplierToggle(supplier: any) {
   const index = tempSelectedSupplierIds.value.indexOf(supplier.supplierId)
-  if (index > -1) tempSelectedSupplierIds.value.splice(index, 1)
-  else tempSelectedSupplierIds.value.push(supplier.supplierId)
+  if (index > -1) {
+    tempSelectedSupplierIds.value.splice(index, 1)
+  } else {
+    tempSelectedSupplierIds.value.push(supplier.supplierId)
+  }
 }
 
 function removeSelectedSupplier(supplierId: string) {
   const index = tempSelectedSupplierIds.value.indexOf(supplierId)
-  if (index > -1) tempSelectedSupplierIds.value.splice(index, 1)
+  if (index > -1) {
+    tempSelectedSupplierIds.value.splice(index, 1)
+  }
 }
 
 function handleAddSupply() {
-  batchMode.value = true
+  batchMode.value = false
   addStep.value = 1
   tempSelectedSkuKeys.value = []
   tempSelectedSupplierIds.value = []
   expandedSpuIds.value = []
   productSelectorKeyword.value = ''
   supplierSelectorKeyword.value = ''
-  Object.assign(supplyForm, { estimatedStock: 100, minOrderQty: 10, leadTime: 3, remark: '', autoToMarket: true })
+  Object.assign(supplyForm, { supplyPrice: undefined, estimatedStock: undefined, minOrderQty: undefined, leadTime: undefined, remark: '', autoToMarket: true })
+  supplySkuList.value = []
   addSupplyVisible.value = true
 }
 
@@ -914,40 +1060,65 @@ function handleBatchAddSupplier() {
     return
   }
   batchMode.value = true
-  addStep.value = 1
+  addStep.value = 2
   tempSelectedSkuKeys.value = [...selectedSkuKeys.value]
   tempSelectedSupplierIds.value = []
-  expandedSpuIds.value = []
-  productSelectorKeyword.value = ''
   supplierSelectorKeyword.value = ''
-  Object.assign(supplyForm, { estimatedStock: 100, minOrderQty: 10, leadTime: 3, remark: '', autoToMarket: true })
+  Object.assign(supplyForm, { supplyPrice: undefined, estimatedStock: undefined, minOrderQty: undefined, leadTime: undefined, remark: '', autoToMarket: true })
+  supplySkuList.value = tempSelectedSkuKeys.value.map(skuId => {
+    const sku = spuList.value.flatMap(s => s.skuList).find(s => s.skuId === skuId)
+    return sku ? { ...sku, supplyPrice: undefined, estimatedStock: undefined, minOrderQty: undefined, leadTime: undefined } : null
+  }).filter(Boolean)
   addSupplyVisible.value = true
 }
 
 function handleAddSupplyForSku(sku: any) {
   batchMode.value = false
-  addStep.value = 1
-  currentSku.value = sku
+  addStep.value = 2
   tempSelectedSkuKeys.value = [sku.skuId]
   tempSelectedSupplierIds.value = []
-  expandedSpuIds.value = []
-  productSelectorKeyword.value = ''
   supplierSelectorKeyword.value = ''
-  Object.assign(supplyForm, { estimatedStock: 100, minOrderQty: 10, leadTime: 3, remark: '', autoToMarket: true })
+  Object.assign(supplyForm, { supplyPrice: undefined, estimatedStock: undefined, minOrderQty: undefined, leadTime: undefined, remark: '', autoToMarket: true })
+  supplySkuList.value = [{ ...sku, supplyPrice: undefined, estimatedStock: undefined, minOrderQty: undefined, leadTime: undefined }]
+  productSuppliersVisible.value = false
   addSupplyVisible.value = true
 }
 
 function handleAddProductForSupplier(supplier: any) {
   batchMode.value = false
   addStep.value = 1
-  currentSupplier.value = supplier
   tempSelectedSkuKeys.value = []
   tempSelectedSupplierIds.value = [supplier.supplierId]
   expandedSpuIds.value = []
   productSelectorKeyword.value = ''
-  supplierSelectorKeyword.value = ''
-  Object.assign(supplyForm, { estimatedStock: 100, minOrderQty: 10, leadTime: 3, remark: '', autoToMarket: true })
+  Object.assign(supplyForm, { supplyPrice: undefined, estimatedStock: undefined, minOrderQty: undefined, leadTime: undefined, remark: '', autoToMarket: true })
+  supplySkuList.value = []
+  supplierProductsVisible.value = false
   addSupplyVisible.value = true
+}
+
+function goToStep3() {
+  supplySkuList.value = tempSelectedSkuKeys.value.map(skuId => {
+    const sku = spuList.value.flatMap(s => s.skuList).find(s => s.skuId === skuId)
+    return sku ? { ...sku, supplyPrice: undefined, estimatedStock: undefined, minOrderQty: undefined, leadTime: undefined } : null
+  }).filter(Boolean)
+  addStep.value = 3
+}
+
+function applyBatchSupply() {
+  if (supplyForm.supplyPrice !== undefined) {
+    supplySkuList.value.forEach(sku => { sku.supplyPrice = supplyForm.supplyPrice })
+  }
+  if (supplyForm.estimatedStock !== undefined) {
+    supplySkuList.value.forEach(sku => { sku.estimatedStock = supplyForm.estimatedStock })
+  }
+  if (supplyForm.minOrderQty !== undefined) {
+    supplySkuList.value.forEach(sku => { sku.minOrderQty = supplyForm.minOrderQty })
+  }
+  if (supplyForm.leadTime !== undefined) {
+    supplySkuList.value.forEach(sku => { sku.leadTime = supplyForm.leadTime })
+  }
+  Message.success('批量设置成功')
 }
 
 function handleSubmitSupply() {
@@ -959,11 +1130,19 @@ function handleSubmitSupply() {
     Message.error('请选择供应商')
     return
   }
+  const hasSupplyPrice = supplySkuList.value.every(sku => 
+    sku.supplyPrice !== undefined && sku.supplyPrice > 0
+  )
+  if (!hasSupplyPrice) {
+    Message.warning('请为所有SKU填写供货价')
+    return
+  }
   Message.success(`成功创建 ${tempSelectedSkuKeys.value.length * tempSelectedSupplierIds.value.length} 条供货关联`)
   addSupplyVisible.value = false
   selectedSkuKeys.value = []
   tempSelectedSkuKeys.value = []
   tempSelectedSupplierIds.value = []
+  supplySkuList.value = []
 }
 
 function handleViewSuppliers(sku: any) {
@@ -976,6 +1155,23 @@ function handleViewProducts(supplier: any) {
   supplierProductsVisible.value = true
 }
 
+function handleEditSupplyPrice(record: any) {
+  editSupplyPriceProduct.value = record
+  editSupplyPriceForm.supplyPrice = record.supplyPrice
+  editSupplyPriceForm.priceReason = ''
+  editSupplyPriceVisible.value = true
+}
+
+function handleSaveSupplyPrice() {
+  if (editSupplyPriceForm.supplyPrice < 0) {
+    Message.warning('供货价不能为负数')
+    return
+  }
+  editSupplyPriceProduct.value.supplyPrice = editSupplyPriceForm.supplyPrice
+  Message.success('供货价更新成功')
+  editSupplyPriceVisible.value = false
+}
+
 function handleEditSupply(record: any) {
   editSupplyProduct.value = record
   Object.assign(editSupplyForm, {
@@ -983,7 +1179,7 @@ function handleEditSupply(record: any) {
     minOrderQty: record.minOrderQty,
     leadTime: record.leadTime,
     remark: record.remark || '',
-    autoToMarket: record.autoToMarket ?? true,
+    autoToMarket: record.autoToMarket ?? true
   })
   editSupplyVisible.value = true
 }
@@ -994,21 +1190,56 @@ function handleSaveEditSupply() {
     minOrderQty: editSupplyForm.minOrderQty,
     leadTime: editSupplyForm.leadTime,
     remark: editSupplyForm.remark,
-    autoToMarket: editSupplyForm.autoToMarket,
+    autoToMarket: editSupplyForm.autoToMarket
   })
   Message.success('保存成功')
   editSupplyVisible.value = false
 }
 
 function handleSupplyAction(record: any, action: string) {
-  const actionTexts: Record<string, string> = { platform_off: '下架', active: '恢复' }
+  const actionTexts: Record<string, string> = { active: '恢复', paused: '暂停' }
   Modal.confirm({
     title: `${actionTexts[action]}确认`,
     content: `确定要${actionTexts[action]}该供货关联吗？`,
     onOk: () => {
       record.status = action
       Message.success(`${actionTexts[action]}成功`)
-    },
+    }
+  })
+}
+
+function handleDeleteSupply(record: any) {
+  Modal.confirm({
+    title: '删除确认',
+    content: `确定要删除供应商「${record.supplierName}」对该商品的供货关系吗？${
+      productSuppliers.value.length === 1 
+        ? '<br/><span style="color: rgb(var(--warning-6));">注意：该商品只有此一家供应商，删除后商品将自动从市场下架。</span>' 
+        : ''
+    }`,
+    onOk: () => {
+      const index = productSuppliers.value.findIndex(s => s.supplierId === record.supplierId)
+      if (index > -1) {
+        productSuppliers.value.splice(index, 1)
+        
+        if (productSuppliers.value.length === 0) {
+          if (currentSku.value) {
+            const skuIndex = filteredProducts.value.findIndex(p => p.skuId === currentSku.value!.skuId)
+            if (skuIndex > -1) {
+              filteredProducts.value[skuIndex].supplierCount = 0
+            }
+          }
+          Message.success('供应关系已删除，商品已从市场下架（暂无供应商供货）')
+        } else {
+          if (currentSku.value) {
+            const skuIndex = filteredProducts.value.findIndex(p => p.skuId === currentSku.value!.skuId)
+            if (skuIndex > -1) {
+              filteredProducts.value[skuIndex].supplierCount = productSuppliers.value.length
+            }
+          }
+          Message.success('供应关系已删除')
+        }
+      }
+    }
   })
 }
 
@@ -1027,6 +1258,15 @@ function getSupplyStatusText(status: string) {
 .page-container { padding: 16px; }
 .table-actions { margin-bottom: 16px; display: flex; justify-content: space-between; }
 .price-value { color: rgb(var(--primary-6)); font-weight: 500; }
+.price-range {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  .price-min { color: rgb(var(--success-6)); font-weight: 500; }
+  .price-separator { color: var(--color-text-3); margin: 0 2px; }
+  .price-max { color: rgb(var(--danger-6)); font-weight: 500; }
+}
+.price-empty { color: var(--color-text-4); }
 .status-active { color: rgb(var(--success-6)); font-weight: 500; }
 .status-paused { color: rgb(var(--warning-6)); font-weight: 500; }
 .sub-text { font-size: 12px; color: var(--color-text-3); }
@@ -1084,9 +1324,7 @@ function getSupplyStatusText(status: string) {
   margin-bottom: 8px;
   overflow: hidden;
   
-  &.is-expanded {
-    .expand-icon { transform: rotate(90deg); }
-  }
+  &.is-expanded .expand-icon { transform: rotate(90deg); }
 }
 
 .spu-header {
@@ -1097,11 +1335,7 @@ function getSupplyStatusText(status: string) {
   background: var(--color-fill-1);
   cursor: pointer;
   
-  .expand-icon {
-    transition: transform 0.2s;
-    color: var(--color-text-3);
-  }
-  
+  .expand-icon { transition: transform 0.2s; color: var(--color-text-3); }
   .spu-name { flex: 1; font-weight: 500; }
 }
 
@@ -1128,38 +1362,26 @@ function getSupplyStatusText(status: string) {
 }
 
 .sku-item-flat {
-  margin-bottom: 4px;
-  
-  .sku-info {
-    flex: 1;
-    .sku-name { font-weight: 500; margin-bottom: 2px; }
-    .sku-meta {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      color: var(--color-text-3);
-    }
-  }
+  .sku-info { flex: 1; }
+  .sku-name { font-weight: 500; }
+  .sku-meta { font-size: 12px; color: var(--color-text-3); margin-top: 4px; }
 }
 
 .supplier-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
-  border-radius: 4px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
   cursor: pointer;
   transition: background 0.2s;
   
-  &:hover { background: var(--color-fill-2); }
+  &:hover { background: var(--color-fill-1); }
   &.is-selected { background: rgb(var(--primary-1)); }
   
-  .supplier-info {
-    flex: 1;
-    .supplier-name { font-weight: 500; }
-    .supplier-contact { font-size: 12px; color: var(--color-text-3); margin-top: 2px; }
-  }
+  .supplier-info { flex: 1; }
+  .supplier-name { font-weight: 500; }
+  .supplier-contact { font-size: 12px; color: var(--color-text-3); margin-top: 2px; }
 }
 
 .selected-list {
@@ -1175,10 +1397,9 @@ function getSupplyStatusText(status: string) {
   padding: 8px 10px;
   background: var(--color-fill-1);
   border-radius: 4px;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
   
-  .selected-name { flex: 1; font-size: 13px; }
-  .selected-spec { display: flex; gap: 4px; }
+  .selected-name { flex: 1; }
 }
 
 .modal-footer {
@@ -1190,7 +1411,23 @@ function getSupplyStatusText(status: string) {
   border-top: 1px solid var(--color-border);
 }
 
-.supply-form-section {
-  .summary-info { margin-bottom: 16px; }
+.product-info-card {
+  background: var(--color-fill-1);
+  padding: 12px;
+  border-radius: 4px;
+  
+  .info-row {
+    display: flex;
+    margin-bottom: 8px;
+    
+    &:last-child { margin-bottom: 0; }
+    .label { color: var(--color-text-3); width: 80px; }
+  }
+}
+
+.form-tip {
+  font-size: 12px;
+  color: var(--color-text-3);
+  margin-top: 4px;
 }
 </style>

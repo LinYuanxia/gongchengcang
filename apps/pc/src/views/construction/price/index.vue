@@ -99,11 +99,6 @@
         <a-table-column title="商品编码" data-index="skuCode" :width="140" />
         <a-table-column title="商品名称" data-index="skuName" :ellipsis="true" />
         <a-table-column title="分类" data-index="categoryName" :width="100" />
-        <a-table-column title="市场价" :width="100" align="right">
-          <template #cell="{ record }">
-            ¥{{ record.marketPrice }}
-          </template>
-        </a-table-column>
         <a-table-column title="供货价" :width="100" align="right">
           <template #cell="{ record }">
             <span class="supply-price">¥{{ record.supplyPrice }}</span>
@@ -118,13 +113,6 @@
               style="width: 120px"
               :disabled="strategyForm.type !== 'custom'"
             />
-          </template>
-        </a-table-column>
-        <a-table-column title="价差" :width="100" align="right">
-          <template #cell="{ record }">
-            <span :class="getPriceDiffClass(record)">
-              {{ getPriceDiff(record) }}
-            </span>
           </template>
         </a-table-column>
         <a-table-column title="状态" :width="100" align="center">
@@ -148,7 +136,6 @@ interface Product {
   skuCode: string
   skuName: string
   categoryName: string
-  marketPrice: number
   supplyPrice: number
   warehousePrice: number
   priceStatus: 'synced' | 'pending'
@@ -178,7 +165,6 @@ const products = ref<Product[]>([
     skuCode: 'SKU-SN-001',
     skuName: '水泥 P.O 42.5 普通硅酸盐水泥',
     categoryName: '水泥',
-    marketPrice: 450,
     supplyPrice: 420,
     warehousePrice: 450,
     priceStatus: 'synced',
@@ -188,7 +174,6 @@ const products = ref<Product[]>([
     skuCode: 'SKU-GC-002',
     skuName: '螺纹钢 HRB400 16mm',
     categoryName: '钢材',
-    marketPrice: 4200,
     supplyPrice: 4000,
     warehousePrice: 4200,
     priceStatus: 'synced',
@@ -198,7 +183,6 @@ const products = ref<Product[]>([
     skuCode: 'SKU-SS-003',
     skuName: '黄砂 中砂',
     categoryName: '砂石',
-    marketPrice: 95,
     supplyPrice: 80,
     warehousePrice: 95,
     priceStatus: 'synced',
@@ -208,7 +192,6 @@ const products = ref<Product[]>([
     skuCode: 'SKU-HNT-004',
     skuName: '商品混凝土 C30',
     categoryName: '混凝土',
-    marketPrice: 420,
     supplyPrice: 380,
     warehousePrice: 420,
     priceStatus: 'synced',
@@ -218,7 +201,6 @@ const products = ref<Product[]>([
     skuCode: 'SKU-GC-005',
     skuName: '螺纹钢 HRB400 20mm',
     categoryName: '钢材',
-    marketPrice: 4250,
     supplyPrice: 3950,
     warehousePrice: 4250,
     priceStatus: 'synced',
@@ -280,17 +262,17 @@ function handleApplyStrategy() {
   products.value.forEach(p => {
     switch (strategyForm.type) {
       case 'default':
-        p.warehousePrice = p.marketPrice
+        p.warehousePrice = p.supplyPrice
         break
       case 'markup':
         if (strategyForm.markupType === 'fixed') {
-          p.warehousePrice = p.marketPrice + strategyForm.markupValue
+          p.warehousePrice = p.supplyPrice + strategyForm.markupValue
         } else {
-          p.warehousePrice = p.marketPrice * (1 + strategyForm.markupValue / 100)
+          p.warehousePrice = p.supplyPrice * (1 + strategyForm.markupValue / 100)
         }
         break
       case 'discount':
-        p.warehousePrice = p.marketPrice * (strategyForm.discountRate / 100)
+        p.warehousePrice = p.supplyPrice * (strategyForm.discountRate / 100)
         break
     }
     p.priceStatus = 'pending'
@@ -304,18 +286,6 @@ function handleSavePrices() {
     p.priceStatus = 'synced'
   })
   Message.success('价格保存成功')
-}
-
-function getPriceDiff(record: Product) {
-  const diff = record.warehousePrice - record.marketPrice
-  if (diff === 0) return '-'
-  return diff > 0 ? `+${diff.toFixed(2)}` : diff.toFixed(2)
-}
-
-function getPriceDiffClass(record: Product) {
-  const diff = record.warehousePrice - record.marketPrice
-  if (diff === 0) return 'price-diff-zero'
-  return diff > 0 ? 'price-diff-up' : 'price-diff-down'
 }
 </script>
 

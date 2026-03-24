@@ -241,20 +241,6 @@
                     <a-input-number v-model="record.salePrice" size="small" placeholder="销售价" :min="0" :precision="2" />
                   </template>
                 </a-table-column>
-                <a-table-column title="销售成本价" :width="120">
-                  <template #cell="{ record }">
-                    <a-input-number v-model="record.costPrice" size="small" placeholder="销售成本价" :min="0" :precision="2" />
-                  </template>
-                </a-table-column>
-                <a-table-column :width="140">
-                  <template #title>
-                    <span>市场价</span>
-                    <span style="text-decoration: line-through; margin-left: 4px; color: var(--color-text-3); font-size: 12px;">价格</span>
-                  </template>
-                  <template #cell="{ record }">
-                    <a-input-number v-model="record.marketPrice" size="small" placeholder="市场价" :min="0" :precision="2" />
-                  </template>
-                </a-table-column>
               </template>
             </a-table>
           </a-card>
@@ -273,22 +259,6 @@
           <a-col :span="12">
             <a-form-item label="销售价">
               <a-input-number v-model="batchPrice.salePrice" placeholder="销售价" :min="0" :precision="2" style="width: 100%" />
-            </a-form-item>
-          </a-col>
-        </a-row>
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-form-item label="销售成本价">
-              <a-input-number v-model="batchPrice.costPrice" placeholder="销售成本价" :min="0" :precision="2" style="width: 100%" />
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item>
-              <template #label>
-                <span>市场价</span>
-                <span style="text-decoration: line-through; margin-left: 4px; color: var(--color-text-3); font-size: 12px;">价格</span>
-              </template>
-              <a-input-number v-model="batchPrice.marketPrice" placeholder="市场价" :min="0" :precision="2" style="width: 100%" />
             </a-form-item>
           </a-col>
         </a-row>
@@ -327,8 +297,6 @@ const batchPriceVisible = ref(false)
 const batchPrice = reactive({
   supplyPrice: undefined as number | undefined,
   salePrice: undefined as number | undefined,
-  costPrice: undefined as number | undefined,
-  marketPrice: undefined as number | undefined,
 })
 
 interface SpecItem {
@@ -603,8 +571,6 @@ function applyBatchPrice() {
   formData.skuList.forEach(sku => {
     if (batchPrice.supplyPrice !== undefined) sku.supplyPrice = batchPrice.supplyPrice
     if (batchPrice.salePrice !== undefined) sku.salePrice = batchPrice.salePrice
-    if (batchPrice.costPrice !== undefined) sku.costPrice = batchPrice.costPrice
-    if (batchPrice.marketPrice !== undefined) sku.marketPrice = batchPrice.marketPrice
   })
   batchPriceVisible.value = false
   Message.success('批量设置价格成功')

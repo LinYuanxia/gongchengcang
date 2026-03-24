@@ -3,13 +3,25 @@
     {
       "path": "pages/index/index",
       "style": {
-        "navigationBarTitleText": "工程仓"
+        "navigationBarTitleText": "工作台"
       }
     },
     {
       "path": "pages/market/index",
       "style": {
-        "navigationBarTitleText": "商品市场"
+        "navigationBarTitleText": "采购市场"
+      }
+    },
+    {
+      "path": "pages/market/bom",
+      "style": {
+        "navigationBarTitleText": "BOM基装包"
+      }
+    },
+    {
+      "path": "pages/market/bom-detail",
+      "style": {
+        "navigationBarTitleText": "BOM包详情"
       }
     },
     {
@@ -21,25 +33,19 @@
     {
       "path": "pages/order/index",
       "style": {
-        "navigationBarTitleText": "我的订单"
+        "navigationBarTitleText": "订单管理"
       }
     },
     {
-      "path": "pages/mine/index",
+      "path": "pages/order/sale",
       "style": {
-        "navigationBarTitleText": "我的"
+        "navigationBarTitleText": "销售订单"
       }
     },
     {
-      "path": "pages/login/index",
+      "path": "pages/order/purchase",
       "style": {
-        "navigationBarTitleText": "登录"
-      }
-    },
-    {
-      "path": "pages/product/detail",
-      "style": {
-        "navigationBarTitleText": "商品详情"
+        "navigationBarTitleText": "采购订单"
       }
     },
     {
@@ -55,27 +61,135 @@
       }
     },
     {
-      "path": "pages/warehouse/market",
+      "path": "pages/order/ship",
       "style": {
-        "navigationBarTitleText": "工程仓市场"
+        "navigationBarTitleText": "发货处理"
       }
     },
     {
-      "path": "pages/warehouse/product-detail",
+      "path": "pages/order/receive",
+      "style": {
+        "navigationBarTitleText": "收货入库"
+      }
+    },
+    {
+      "path": "pages/product/detail",
       "style": {
         "navigationBarTitleText": "商品详情"
       }
     },
     {
-      "path": "pages/warehouse/order-create",
+      "path": "pages/mine/index",
       "style": {
-        "navigationBarTitleText": "确认订单"
+        "navigationBarTitleText": "我的"
       }
     },
     {
-      "path": "pages/warehouse/order-list",
+      "path": "pages/mine/profile",
       "style": {
-        "navigationBarTitleText": "我的订单"
+        "navigationBarTitleText": "主体信息"
+      }
+    },
+    {
+      "path": "pages/mine/custody",
+      "style": {
+        "navigationBarTitleText": "资金托管"
+      }
+    },
+    {
+      "path": "pages/mine/custody-recharge",
+      "style": {
+        "navigationBarTitleText": "充值"
+      }
+    },
+    {
+      "path": "pages/mine/custody-withdraw",
+      "style": {
+        "navigationBarTitleText": "提现"
+      }
+    },
+    {
+      "path": "pages/mine/invoice",
+      "style": {
+        "navigationBarTitleText": "发票管理"
+      }
+    },
+    {
+      "path": "pages/mine/product",
+      "style": {
+        "navigationBarTitleText": "商品管理"
+      }
+    },
+    {
+      "path": "pages/mine/stock",
+      "style": {
+        "navigationBarTitleText": "库存管理"
+      }
+    },
+    {
+      "path": "pages/mine/account",
+      "style": {
+        "navigationBarTitleText": "子账号管理"
+      }
+    },
+    {
+      "path": "pages/mine/bankcard",
+      "style": {
+        "navigationBarTitleText": "银行卡管理"
+      }
+    },
+    {
+      "path": "pages/mine/message",
+      "style": {
+        "navigationBarTitleText": "消息中心"
+      }
+    },
+    {
+      "path": "pages/mine/settings",
+      "style": {
+        "navigationBarTitleText": "设置"
+      }
+    },
+    {
+      "path": "pages/mine/custody-records",
+      "style": {
+        "navigationBarTitleText": "交易明细"
+      }
+    },
+    {
+      "path": "pages/mine/stock-records",
+      "style": {
+        "navigationBarTitleText": "出入库记录"
+      }
+    },
+    {
+      "path": "pages/mine/stock-check",
+      "style": {
+        "navigationBarTitleText": "库存盘点"
+      }
+    },
+    {
+      "path": "pages/mine/help",
+      "style": {
+        "navigationBarTitleText": "帮助中心"
+      }
+    },
+    {
+      "path": "pages/mine/about",
+      "style": {
+        "navigationBarTitleText": "关于我们"
+      }
+    },
+    {
+      "path": "pages/mine/invoice-records",
+      "style": {
+        "navigationBarTitleText": "开票记录"
+      }
+    },
+    {
+      "path": "pages/login/index",
+      "style": {
+        "navigationBarTitleText": "登录"
       }
     }
   ],
@@ -93,21 +207,15 @@
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "首页",
+        "text": "工作台",
         "iconPath": "static/tabbar/home.png",
         "selectedIconPath": "static/tabbar/home-active.png"
       },
       {
         "pagePath": "pages/market/index",
-        "text": "市场",
+        "text": "采购市场",
         "iconPath": "static/tabbar/market.png",
         "selectedIconPath": "static/tabbar/market-active.png"
-      },
-      {
-        "pagePath": "pages/cart/index",
-        "text": "购物车",
-        "iconPath": "static/tabbar/cart.png",
-        "selectedIconPath": "static/tabbar/cart-active.png"
       },
       {
         "pagePath": "pages/order/index",

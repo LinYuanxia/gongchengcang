@@ -110,22 +110,6 @@
                   <span v-else>-</span>
                 </template>
               </a-table-column>
-              <a-table-column title="销售成本价" :width="100">
-                <template #cell="{ record }">
-                  <span v-if="record.costPrice">¥{{ record.costPrice.toFixed(2) }}</span>
-                  <span v-else>-</span>
-                </template>
-              </a-table-column>
-              <a-table-column :width="120">
-                <template #title>
-                  <span>市场价</span>
-                  <span style="text-decoration: line-through; margin-left: 4px; color: var(--color-text-3); font-size: 12px;">价格</span>
-                </template>
-                <template #cell="{ record }">
-                  <span v-if="record.marketPrice">¥{{ record.marketPrice.toFixed(2) }}</span>
-                  <span v-else>-</span>
-                </template>
-              </a-table-column>
               <a-table-column title="状态" :width="80">
                 <template #cell="{ record }">
                   <a-tag :color="record.status === 'on_shelf' ? 'green' : 'red'">

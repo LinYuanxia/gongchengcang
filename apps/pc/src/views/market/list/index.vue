@@ -130,27 +130,6 @@
               </a-tag>
             </template>
           </a-table-column>
-          <a-table-column title="市场价" :width="120">
-            <template #cell="{ record }">
-              <template v-if="record.marketPrice">
-                <span class="price">¥{{ record.marketPrice.toFixed(2) }}</span>
-                <span v-if="record.priceStatus === 'pending'" class="price-status">
-                  <a-tag size="small" color="orange">待审批</a-tag>
-                </span>
-              </template>
-              <span v-else class="un-set">未设置</span>
-            </template>
-          </a-table-column>
-          <a-table-column title="毛利率" :width="80">
-            <template #cell="{ record }">
-              <template v-if="record.marketPrice && record.supplyPrice">
-                <span :class="getProfitRateClass(record)">
-                  {{ getProfitRate(record) }}%
-                </span>
-              </template>
-              <span v-else>-</span>
-            </template>
-          </a-table-column>
           <a-table-column title="上架状态" :width="80">
             <template #cell="{ record }">
               <a-switch
@@ -210,11 +189,12 @@
               <a-space>
                 <a-button type="text" size="small" @click="handleViewDetail(record)">详情</a-button>
                 <a-button type="text" size="small" @click="handleSetPermission(record)">权限</a-button>
-                <template v-if="currentTab === 'pending'">
+                <template v-if="record.marketStatus === 'pending'">
+                  <a-button type="text" size="small" @click="handleSetPrice(record)">调价</a-button>
                   <a-button type="text" size="small" @click="handleOnline(record)">上架</a-button>
                   <a-button type="text" size="small" status="danger" @click="handleRemove(record)">移除</a-button>
                 </template>
-                <template v-else-if="currentTab === 'online'">
+                <template v-else-if="record.marketStatus === 'online'">
                   <a-button type="text" size="small" @click="handleSetPrice(record)">调价</a-button>
                   <a-button type="text" size="small" @click="handleOffline(record)">下架</a-button>
                 </template>
@@ -336,11 +316,6 @@
           <a-descriptions-item label="供应商数量">{{ onlineProduct?.suppliers?.length || 1 }} 家</a-descriptions-item>
           <a-descriptions-item label="最低供货价">¥{{ getMinSupplyPrice(onlineProduct) }}</a-descriptions-item>
         </a-descriptions>
-        <a-form-item label="市场售价" required>
-          <a-input-number v-model="onlineForm.marketPrice" :min="0" :precision="2" style="width: 100%">
-            <template #prefix>¥</template>
-          </a-input-number>
-        </a-form-item>
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item label="设为热门商品">
@@ -369,47 +344,107 @@
       </a-form>
     </a-modal>
 
-    <a-modal v-model:visible="priceVisible" title="调整市场价" :width="500" @ok="handlePriceConfirm">
+    <a-modal v-model:visible="priceVisible" title="调整价格" :width="700" @ok="handlePriceConfirm">
       <a-form :model="priceForm" layout="vertical">
         <a-descriptions :column="2" bordered size="small" style="margin-bottom: 16px">
           <a-descriptions-item label="商品名称">{{ priceProduct?.skuName }}</a-descriptions-item>
-          <a-descriptions-item label="最低供货价">¥{{ getMinSupplyPrice(priceProduct) }}</a-descriptions-item>
-          <a-descriptions-item label="当前市场价">¥{{ priceProduct?.marketPrice?.toFixed(2) }}</a-descriptions-item>
-          <a-descriptions-item label="当前毛利率">{{ getProfitRate(priceProduct) }}%</a-descriptions-item>
+          <a-descriptions-item label="商品编码">{{ priceProduct?.skuCode }}</a-descriptions-item>
         </a-descriptions>
-        <a-form-item label="新市场售价" required>
-          <a-input-number v-model="priceForm.newPrice" :min="0" :precision="2" style="width: 100%">
-            <template #prefix>¥</template>
-          </a-input-number>
-        </a-form-item>
-        <a-form-item label="调价原因" required>
+        
+        <a-divider>供应商价格调整</a-divider>
+        
+        <a-table :data="priceProduct?.suppliers || []" :pagination="false" size="small">
+          <template #columns>
+            <a-table-column title="供应商" :width="150">
+              <template #cell="{ record }">
+                <div>{{ record.supplierName }}</div>
+                <a-tag v-if="record.supplyStatus === 'supplying'" color="green" size="small">供货中</a-tag>
+                <a-tag v-else-if="record.supplyStatus === 'paused'" color="orange" size="small">暂停供货</a-tag>
+                <a-tag v-else color="red" size="small">停止供货</a-tag>
+              </template>
+            </a-table-column>
+            <a-table-column title="当前供货价" :width="120" align="right">
+              <template #cell="{ record }">
+                <span class="price">¥{{ record.supplyPrice.toFixed(2) }}</span>
+              </template>
+            </a-table-column>
+            <a-table-column title="新供货价" :width="150">
+              <template #cell="{ record }">
+                <a-input-number 
+                  v-model="priceForm.supplierPrices[record.supplierId]"
+                  :min="0"
+                  :precision="2"
+                  placeholder="请输入"
+                  size="small"
+                  style="width: 100%"
+                >
+                  <template #prefix>¥</template>
+                </a-input-number>
+              </template>
+            </a-table-column>
+            <a-table-column title="调价幅度">
+              <template #cell="{ record }">
+                <span v-if="priceForm.supplierPrices[record.supplierId]">
+                  <span v-if="priceForm.supplierPrices[record.supplierId] > record.supplyPrice" class="price-up">
+                    +¥{{ (priceForm.supplierPrices[record.supplierId] - record.supplyPrice).toFixed(2) }}
+                    (+{{ ((priceForm.supplierPrices[record.supplierId] - record.supplyPrice) / record.supplyPrice * 100).toFixed(1) }}%)
+                  </span>
+                  <span v-else-if="priceForm.supplierPrices[record.supplierId] < record.supplyPrice" class="price-down">
+                    -¥{{ (record.supplyPrice - priceForm.supplierPrices[record.supplierId]).toFixed(2) }}
+                    (-{{ ((record.supplyPrice - priceForm.supplierPrices[record.supplierId]) / record.supplyPrice * 100).toFixed(1) }}%)
+                  </span>
+                  <span v-else class="price-same">无变化</span>
+                </span>
+                <span v-else class="no-change">-</span>
+              </template>
+            </a-table-column>
+          </template>
+        </a-table>
+        
+        <a-form-item label="调价原因" required style="margin-top: 16px">
           <a-textarea v-model="priceForm.reason" placeholder="请输入调价原因" :max-length="200" />
         </a-form-item>
         <a-alert type="warning">调价申请需要审批通过后才会生效</a-alert>
       </a-form>
     </a-modal>
 
-    <a-modal v-model:visible="batchPriceVisible" title="批量调价" :width="500" @ok="handleBatchPriceConfirm">
+    <a-modal v-model:visible="batchPriceVisible" title="批量调价" :width="600" @ok="handleBatchPriceConfirm">
       <a-form :model="batchPriceForm" layout="vertical">
         <a-alert type="info" style="margin-bottom: 16px">
           已选择 <strong>{{ selectedProducts.length }}</strong> 个商品进行批量调价
         </a-alert>
-        <a-form-item label="调价方式">
-          <a-radio-group v-model="batchPriceForm.type">
+        <a-form-item label="调价方式" required>
+          <a-radio-group v-model="batchPriceForm.type" type="button">
             <a-radio value="fixed">固定价格</a-radio>
-            <a-radio value="percent">按比例调整</a-radio>
+            <a-radio value="percent">百分比调整</a-radio>
           </a-radio-group>
         </a-form-item>
-        <a-form-item v-if="batchPriceForm.type === 'fixed'" label="统一市场价">
-          <a-input-number v-model="batchPriceForm.fixedPrice" :min="0" :precision="2" style="width: 100%">
+        <a-form-item v-if="batchPriceForm.type === 'fixed'" label="设置价格" required>
+          <a-input-number 
+            v-model="batchPriceForm.fixedPrice" 
+            :min="0" 
+            :precision="2"
+            placeholder="请输入价格"
+            style="width: 100%"
+          >
             <template #prefix>¥</template>
           </a-input-number>
+          <div class="form-tip">所有选中商品将设置为该价格</div>
         </a-form-item>
-        <a-form-item v-else label="调整比例">
-          <a-input-number v-model="batchPriceForm.percent" :precision="2" style="width: 100%">
+        <a-form-item v-if="batchPriceForm.type === 'percent'" label="调整比例" required>
+          <a-input-number 
+            v-model="batchPriceForm.percent" 
+            :min="-100"
+            :max="500"
+            :precision="1"
+            placeholder="请输入调整比例"
+            style="width: 100%"
+          >
             <template #suffix>%</template>
           </a-input-number>
-          <div class="form-tip">正数为涨价，负数为降价</div>
+          <div class="form-tip">
+            正数为涨价，负数为降价。例如：输入10表示涨价10%，输入-10表示降价10%
+          </div>
         </a-form-item>
         <a-form-item label="调价原因" required>
           <a-textarea v-model="batchPriceForm.reason" placeholder="请输入调价原因" :max-length="200" />
@@ -423,7 +458,6 @@
       </a-alert>
       <a-descriptions :column="1" bordered size="small">
         <a-descriptions-item label="商品名称">{{ offlineProduct?.skuName }}</a-descriptions-item>
-        <a-descriptions-item label="市场价">¥{{ offlineProduct?.marketPrice?.toFixed(2) }}</a-descriptions-item>
       </a-descriptions>
       <a-form :model="offlineForm" layout="vertical" style="margin-top: 16px">
         <a-form-item label="下架原因" required>
@@ -490,11 +524,6 @@
           <a-descriptions-item label="规格" :span="2">
             <a-tag v-for="(value, key) in detailProduct.specs" :key="key">{{ key }}: {{ value }}</a-tag>
           </a-descriptions-item>
-          <a-descriptions-item label="市场价">
-            <span v-if="detailProduct.marketPrice">¥{{ detailProduct.marketPrice.toFixed(2) }}</span>
-            <span v-else>未设置</span>
-          </a-descriptions-item>
-          <a-descriptions-item label="毛利率">{{ getProfitRate(detailProduct) }}%</a-descriptions-item>
           <a-descriptions-item label="市场状态">
             <a-tag :color="getMarketStatusColor(detailProduct.marketStatus)">
               {{ getMarketStatusText(detailProduct.marketStatus) }}
@@ -663,7 +692,6 @@ const importPagination = reactive({
 const onlineVisible = ref(false)
 const onlineProduct = ref<MarketProduct | null>(null)
 const onlineForm = reactive({
-  marketPrice: 0,
   isHot: false,
   isRecommend: false,
   tags: [] as string[],
@@ -673,13 +701,13 @@ const onlineForm = reactive({
 const priceVisible = ref(false)
 const priceProduct = ref<MarketProduct | null>(null)
 const priceForm = reactive({
-  newPrice: 0,
+  supplierPrices: {} as Record<string, number>,
   reason: '',
 })
 
 const batchPriceVisible = ref(false)
 const batchPriceForm = reactive({
-  type: 'fixed' as 'fixed' | 'percent',
+  type: 'fixed',
   fixedPrice: 0,
   percent: 0,
   reason: '',
@@ -1031,7 +1059,6 @@ function handleConfirmImport() {
 
 function handleOnline(record: MarketProduct) {
   onlineProduct.value = record
-  onlineForm.marketPrice = record.marketPrice || Math.ceil(record.supplyPrice * 1.15)
   onlineForm.isHot = record.isHot
   onlineForm.isRecommend = record.isRecommend
   onlineForm.tags = [...record.tags]
@@ -1040,18 +1067,12 @@ function handleOnline(record: MarketProduct) {
 }
 
 function handleOnlineConfirm() {
-  if (!onlineForm.marketPrice) {
-    Message.warning('请输入市场售价')
-    return
-  }
-  
   if (onlineProduct.value) {
     const index = mockProducts.value.findIndex(p => p.id === onlineProduct.value!.id)
     if (index > -1) {
       mockProducts.value[index] = {
         ...mockProducts.value[index],
         marketStatus: 'online',
-        marketPrice: onlineForm.marketPrice,
         isHot: onlineForm.isHot,
         isRecommend: onlineForm.isRecommend,
         tags: onlineForm.tags,
@@ -1074,24 +1095,46 @@ function handleRemove(record: MarketProduct) {
 
 function handleSetPrice(record: MarketProduct) {
   priceProduct.value = record
-  priceForm.newPrice = record.marketPrice || 0
+  priceForm.supplierPrices = {}
+  if (record.suppliers) {
+    record.suppliers.forEach(s => {
+      priceForm.supplierPrices[s.supplierId] = s.supplyPrice
+    })
+  }
   priceForm.reason = ''
   priceVisible.value = true
 }
 
 function handlePriceConfirm() {
-  if (!priceForm.newPrice) {
-    Message.warning('请输入新市场售价')
-    return
-  }
   if (!priceForm.reason.trim()) {
     Message.warning('请输入调价原因')
     return
   }
   
+  const hasPriceChange = Object.keys(priceForm.supplierPrices).some(supplierId => {
+    const supplier = priceProduct.value?.suppliers?.find(s => s.supplierId === supplierId)
+    return supplier && priceForm.supplierPrices[supplierId] !== supplier.supplyPrice
+  })
+  
+  if (!hasPriceChange) {
+    Message.warning('请至少调整一个供应商的价格')
+    return
+  }
+  
   if (priceProduct.value) {
     const index = mockProducts.value.findIndex(p => p.id === priceProduct.value!.id)
-    if (index > -1) {
+    if (index > -1 && priceProduct.value.suppliers) {
+      priceProduct.value.suppliers.forEach(supplier => {
+        if (priceForm.supplierPrices[supplier.supplierId] !== undefined) {
+          const supplierIndex = mockProducts.value[index].suppliers!.findIndex(
+            s => s.supplierId === supplier.supplierId
+          )
+          if (supplierIndex > -1) {
+            mockProducts.value[index].suppliers![supplierIndex].supplyPrice = 
+              priceForm.supplierPrices[supplier.supplierId]
+          }
+        }
+      })
       mockProducts.value[index].priceStatus = 'pending'
     }
     Message.success('调价申请已提交，等待审批')
@@ -1108,13 +1151,37 @@ function handleBatchSetPrice() {
 }
 
 function handleBatchPriceConfirm() {
+  if (batchPriceForm.type === 'fixed') {
+    if (!batchPriceForm.fixedPrice || batchPriceForm.fixedPrice <= 0) {
+      Message.warning('请输入有效的价格')
+      return
+    }
+  } else {
+    if (!batchPriceForm.percent || batchPriceForm.percent === 0) {
+      Message.warning('请输入有效的调整比例')
+      return
+    }
+  }
+  
   if (!batchPriceForm.reason.trim()) {
     Message.warning('请输入调价原因')
     return
   }
   
   selectedProducts.value.forEach(product => {
-    product.priceStatus = 'pending'
+    const index = mockProducts.value.findIndex(p => p.id === product.id)
+    if (index > -1) {
+      let newPrice = 0
+      if (batchPriceForm.type === 'fixed') {
+        newPrice = batchPriceForm.fixedPrice
+      } else {
+        const currentPrice = mockProducts.value[index].price || 0
+        newPrice = currentPrice * (1 + batchPriceForm.percent / 100)
+        newPrice = Math.max(0, Math.round(newPrice * 100) / 100)
+      }
+      mockProducts.value[index].price = newPrice
+      mockProducts.value[index].priceStatus = 'pending'
+    }
   })
   
   Message.success(`已提交 ${selectedProducts.value.length} 个商品的调价申请`)
@@ -1266,19 +1333,6 @@ function isAllSupplying(record: ImportProduct) {
 
 function hasSupplying(record: ImportProduct) {
   return record.suppliers?.some(s => s.supplyStatus === 'supplying')
-}
-
-function getProfitRate(record: MarketProduct | null) {
-  if (!record?.marketPrice || !record?.supplyPrice) return 0
-  return ((record.marketPrice - record.supplyPrice) / record.marketPrice * 100).toFixed(1)
-}
-
-function getProfitRateClass(record: MarketProduct) {
-  if (!record.marketPrice || !record.supplyPrice) return ''
-  const rate = (record.marketPrice - record.supplyPrice) / record.marketPrice * 100
-  if (rate >= 20) return 'profit-high'
-  if (rate >= 10) return 'profit-normal'
-  return 'profit-low'
 }
 
 function getSupplyStatusColor(status: string) {

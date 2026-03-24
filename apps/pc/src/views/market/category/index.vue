@@ -129,12 +129,6 @@
               ¥{{ record.supplyPrice?.toFixed(2) }}
             </template>
           </a-table-column>
-          <a-table-column title="市场价" :width="100">
-            <template #cell="{ record }">
-              <span v-if="record.marketPrice">¥{{ record.marketPrice.toFixed(2) }}</span>
-              <span v-else class="un-set">未设置</span>
-            </template>
-          </a-table-column>
           <a-table-column title="市场状态" :width="100">
             <template #cell="{ record }">
               <a-tag :color="getMarketStatusColor(record.marketStatus)">
@@ -448,7 +442,6 @@ function loadCategoryProducts() {
       supplyPrice: 100 + i * 10,
       supplyStatus: 'supplying',
       marketStatus: i % 3 === 0 ? 'pending' : 'online',
-      marketPrice: 120 + i * 12,
       isHot: i <= 3,
       isRecommend: i <= 5,
       tags: i <= 3 ? ['热门'] : i <= 5 ? ['推荐'] : [],

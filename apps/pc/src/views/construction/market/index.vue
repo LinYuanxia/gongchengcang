@@ -58,56 +58,58 @@
         row-key="id"
         @page-change="handlePageChange"
       >
-        <a-table-column title="商品编码" data-index="productCode" :width="120" />
-        <a-table-column title="商品名称" data-index="productName" :width="200" />
-        <a-table-column title="规格" data-index="spec" :width="120" />
-        <a-table-column title="所属工程仓" data-index="warehouseName" :width="150" />
-        <a-table-column title="销售价" :width="100" align="right">
-          <template #cell="{ record }">
-            <span class="price">¥{{ record.salePrice }}</span>
-          </template>
-        </a-table-column>
-        <a-table-column title="库存" data-index="stock" :width="80" align="center" />
-        <a-table-column title="上架状态" :width="100" align="center">
-          <template #cell="{ record }">
-            <a-switch 
-              v-model="record.status" 
-              checked-value="online" 
-              unchecked-value="offline"
-              @change="handleStatusChange(record)"
-            />
-          </template>
-        </a-table-column>
-        <a-table-column title="热门" :width="80" align="center">
-          <template #cell="{ record }">
-            <a-switch 
-              v-model="record.isHot" 
-              :disabled="record.status === 'offline'"
-              @change="handleHotChange(record)"
-            />
-          </template>
-        </a-table-column>
-        <a-table-column title="推荐" :width="80" align="center">
-          <template #cell="{ record }">
-            <a-switch 
-              v-model="record.isRecommend" 
-              :disabled="record.status === 'offline'"
-              @change="handleRecommendChange(record)"
-            />
-          </template>
-        </a-table-column>
-        <a-table-column title="排序" data-index="sort" :width="80" align="center" />
-        <a-table-column title="操作" :width="150" fixed="right">
-          <template #cell="{ record }">
-            <a-space>
-              <a-link @click="handleEditPrice(record)">调价</a-link>
-              <a-link @click="handleEditStock(record)">库存</a-link>
-              <a-popconfirm content="确定要移除该商品吗？" @ok="handleRemove(record)">
-                <a-link status="danger">移除</a-link>
-              </a-popconfirm>
-            </a-space>
-          </template>
-        </a-table-column>
+        <template #columns>
+          <a-table-column title="商品编码" data-index="productCode" :width="120" />
+          <a-table-column title="商品名称" data-index="productName" :width="200" />
+          <a-table-column title="规格" data-index="spec" :width="120" />
+          <a-table-column title="所属工程仓" data-index="warehouseName" :width="150" />
+          <a-table-column title="销售价" :width="100" align="right">
+            <template #cell="{ record }">
+              <span class="price">¥{{ record.salePrice }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="库存" data-index="stock" :width="80" align="center" />
+          <a-table-column title="上架状态" :width="100" align="center">
+            <template #cell="{ record }">
+              <a-switch 
+                v-model="record.status" 
+                checked-value="online" 
+                unchecked-value="offline"
+                @change="handleStatusChange(record)"
+              />
+            </template>
+          </a-table-column>
+          <a-table-column title="热门" :width="80" align="center">
+            <template #cell="{ record }">
+              <a-switch 
+                v-model="record.isHot" 
+                :disabled="record.status === 'offline'"
+                @change="handleHotChange(record)"
+              />
+            </template>
+          </a-table-column>
+          <a-table-column title="推荐" :width="80" align="center">
+            <template #cell="{ record }">
+              <a-switch 
+                v-model="record.isRecommend" 
+                :disabled="record.status === 'offline'"
+                @change="handleRecommendChange(record)"
+              />
+            </template>
+          </a-table-column>
+          <a-table-column title="排序" data-index="sort" :width="80" align="center" />
+          <a-table-column title="操作" :width="150" fixed="right">
+            <template #cell="{ record }">
+              <a-space>
+                <a-link @click="handleEditPrice(record)">调价</a-link>
+                <a-link @click="handleEditStock(record)">库存</a-link>
+                <a-popconfirm content="确定要移除该商品吗？" @ok="handleRemove(record)">
+                  <a-link status="danger">移除</a-link>
+                </a-popconfirm>
+              </a-space>
+            </template>
+          </a-table-column>
+        </template>
       </a-table>
     </a-card>
     
@@ -132,7 +134,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import AddProductModal from './components/AddProductModal.vue'
 import PriceEditDrawer from './components/PriceEditDrawer.vue'
@@ -175,6 +177,8 @@ const warehouses = ref([
   { id: 'w001', name: '深圳湾科技园项目仓' },
   { id: 'w002', name: '福田CBD项目仓' },
   { id: 'w003', name: '宝安新安项目仓' },
+  { id: 'w004', name: '龙岗中心城项目仓' },
+  { id: 'w005', name: '南山科技园项目仓' },
 ])
 
 const products = ref<MarketProduct[]>([
@@ -220,6 +224,174 @@ const products = ref<MarketProduct[]>([
     isRecommend: false,
     sort: 3,
   },
+  {
+    id: 'mp004',
+    productCode: 'SKU-SN-002',
+    productName: '水泥 P.O 52.5',
+    spec: '50kg/袋',
+    warehouseId: 'w001',
+    warehouseName: '深圳湾科技园项目仓',
+    salePrice: 520,
+    stock: 300,
+    status: 'online',
+    isHot: true,
+    isRecommend: false,
+    sort: 4,
+  },
+  {
+    id: 'mp005',
+    productCode: 'SKU-LG-002',
+    productName: '螺纹钢 HRB400 20mm',
+    spec: '20mm',
+    warehouseId: 'w002',
+    warehouseName: '福田CBD项目仓',
+    salePrice: 4150,
+    stock: 150,
+    status: 'online',
+    isHot: false,
+    isRecommend: true,
+    sort: 5,
+  },
+  {
+    id: 'mp006',
+    productCode: 'SKU-HNT-001',
+    productName: '商品混凝土 C30',
+    spec: 'C30',
+    warehouseId: 'w003',
+    warehouseName: '宝安新安项目仓',
+    salePrice: 420,
+    stock: 800,
+    status: 'online',
+    isHot: true,
+    isRecommend: true,
+    sort: 6,
+  },
+  {
+    id: 'mp007',
+    productCode: 'SKU-HNT-002',
+    productName: '商品混凝土 C40',
+    spec: 'C40',
+    warehouseId: 'w003',
+    warehouseName: '宝安新安项目仓',
+    salePrice: 480,
+    stock: 600,
+    status: 'online',
+    isHot: false,
+    isRecommend: false,
+    sort: 7,
+  },
+  {
+    id: 'mp008',
+    productCode: 'SKU-FS-001',
+    productName: '防水涂料 聚氨酯',
+    spec: '20kg/桶',
+    warehouseId: 'w001',
+    warehouseName: '深圳湾科技园项目仓',
+    salePrice: 380,
+    stock: 200,
+    status: 'online',
+    isHot: false,
+    isRecommend: true,
+    sort: 8,
+  },
+  {
+    id: 'mp009',
+    productCode: 'SKU-QG-001',
+    productName: '轻钢龙骨 50型',
+    spec: '50mm',
+    warehouseId: 'w004',
+    warehouseName: '龙岗中心城项目仓',
+    salePrice: 28,
+    stock: 5000,
+    status: 'online',
+    isHot: false,
+    isRecommend: false,
+    sort: 9,
+  },
+  {
+    id: 'mp010',
+    productCode: 'SKU-SGB-001',
+    productName: '石膏板 12mm',
+    spec: '1200x2400mm',
+    warehouseId: 'w004',
+    warehouseName: '龙岗中心城项目仓',
+    salePrice: 45,
+    stock: 2000,
+    status: 'online',
+    isHot: true,
+    isRecommend: true,
+    sort: 10,
+  },
+  {
+    id: 'mp011',
+    productCode: 'SKU-DX-001',
+    productName: '电线 BV 2.5mm²',
+    spec: '2.5mm²',
+    warehouseId: 'w005',
+    warehouseName: '南山科技园项目仓',
+    salePrice: 180,
+    stock: 800,
+    status: 'online',
+    isHot: true,
+    isRecommend: false,
+    sort: 11,
+  },
+  {
+    id: 'mp012',
+    productCode: 'SKU-DX-002',
+    productName: '电线 BV 4mm²',
+    spec: '4mm²',
+    warehouseId: 'w005',
+    warehouseName: '南山科技园项目仓',
+    salePrice: 320,
+    stock: 500,
+    status: 'online',
+    isHot: false,
+    isRecommend: true,
+    sort: 12,
+  },
+  {
+    id: 'mp013',
+    productCode: 'SKU-SG-001',
+    productName: '水管 PPR 20mm',
+    spec: '20mm',
+    warehouseId: 'w002',
+    warehouseName: '福田CBD项目仓',
+    salePrice: 15,
+    stock: 3000,
+    status: 'online',
+    isHot: false,
+    isRecommend: false,
+    sort: 13,
+  },
+  {
+    id: 'mp014',
+    productCode: 'SKU-ZBJ-001',
+    productName: '瓷砖胶 C1',
+    spec: '25kg/袋',
+    warehouseId: 'w003',
+    warehouseName: '宝安新安项目仓',
+    salePrice: 65,
+    stock: 400,
+    status: 'online',
+    isHot: true,
+    isRecommend: true,
+    sort: 14,
+  },
+  {
+    id: 'mp015',
+    productCode: 'SKU-LG-003',
+    productName: '螺纹钢 HRB400 25mm',
+    spec: '25mm',
+    warehouseId: 'w001',
+    warehouseName: '深圳湾科技园项目仓',
+    salePrice: 4050,
+    stock: 100,
+    status: 'offline',
+    isHot: false,
+    isRecommend: false,
+    sort: 15,
+  },
 ])
 
 const rowSelection = computed(() => ({
@@ -246,9 +418,12 @@ const filteredProducts = computed(() => {
     result = result.filter(p => p.status === searchForm.status)
   }
   
-  pagination.total = result.length
   return result
 })
+
+watch(filteredProducts, (val) => {
+  pagination.total = val.length
+}, { immediate: true })
 
 function handleSearch() {
   pagination.current = 1

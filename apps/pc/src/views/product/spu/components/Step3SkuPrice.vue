@@ -46,16 +46,6 @@
             <a-input-number v-model="record.salePrice" size="small" placeholder="销售价" :min="0" :precision="2" />
           </template>
         </a-table-column>
-        <a-table-column title="销售成本价" :width="120">
-          <template #cell="{ record }">
-            <a-input-number v-model="record.costPrice" size="small" placeholder="销售成本价" :min="0" :precision="2" />
-          </template>
-        </a-table-column>
-        <a-table-column title="市场价" :width="120">
-          <template #cell="{ record }">
-            <a-input-number v-model="record.marketPrice" size="small" placeholder="市场价" :min="0" :precision="2" />
-          </template>
-        </a-table-column>
       </template>
     </a-table>
 
@@ -77,18 +67,6 @@
           <a-col :span="12">
             <a-form-item label="销售价">
               <a-input-number v-model="batchPrice.salePrice" placeholder="销售价" :min="0" :precision="2" />
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item label="销售成本价">
-              <a-input-number v-model="batchPrice.costPrice" placeholder="销售成本价" :min="0" :precision="2" />
-            </a-form-item>
-          </a-col>
-        </a-row>
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-form-item label="市场价">
-              <a-input-number v-model="batchPrice.marketPrice" placeholder="市场价" :min="0" :precision="2" />
             </a-form-item>
           </a-col>
         </a-row>
@@ -115,8 +93,6 @@ const batchPrice = reactive({
   suggestPrice: undefined as number | undefined,
   supplyPrice: undefined as number | undefined,
   salePrice: undefined as number | undefined,
-  costPrice: undefined as number | undefined,
-  marketPrice: undefined as number | undefined,
 })
 
 function applyBatchPrice() {
@@ -124,8 +100,6 @@ function applyBatchPrice() {
     if (batchPrice.suggestPrice !== undefined) sku.suggestPrice = batchPrice.suggestPrice
     if (batchPrice.supplyPrice !== undefined) sku.supplyPrice = batchPrice.supplyPrice
     if (batchPrice.salePrice !== undefined) sku.salePrice = batchPrice.salePrice
-    if (batchPrice.costPrice !== undefined) sku.costPrice = batchPrice.costPrice
-    if (batchPrice.marketPrice !== undefined) sku.marketPrice = batchPrice.marketPrice
   })
   showBatchSetPrice.value = false
 }
@@ -135,8 +109,6 @@ function resetPrices() {
     sku.suggestPrice = undefined
     sku.supplyPrice = undefined
     sku.salePrice = undefined
-    sku.costPrice = undefined
-    sku.marketPrice = undefined
   })
 }
 

@@ -74,7 +74,7 @@
                 <div class="product-bottom">
                   <div class="product-price">
                     <span class="price-symbol">¥</span>
-                    <span class="price-value">{{ item.marketPrice }}</span>
+                    <span class="price-value">{{ getMinPrice(item.suppliers) || item.supplyPrice }}</span>
                     <span class="price-unit">/{{ item.unit }}</span>
                   </div>
                   <a-button type="primary" size="small" @click.stop="handleQuickAdd(item)">
@@ -131,7 +131,6 @@ const products = ref([
     specs: { '强度等级': '42.5' },
     mainImage: 'https://picsum.photos/200/200?random=1',
     unit: '吨',
-    marketPrice: 450,
     isHot: true,
     isRecommend: true,
     suppliers: [
@@ -149,7 +148,6 @@ const products = ref([
     specs: { '规格': '16mm' },
     mainImage: 'https://picsum.photos/200/200?random=2',
     unit: '吨',
-    marketPrice: 4200,
     isHot: false,
     isRecommend: false,
     suppliers: [
@@ -166,7 +164,6 @@ const products = ref([
     specs: { '类型': '中砂' },
     mainImage: 'https://picsum.photos/200/200?random=3',
     unit: '方',
-    marketPrice: 95,
     isHot: false,
     isRecommend: true,
     suppliers: [
@@ -183,7 +180,6 @@ const products = ref([
     specs: { '强度等级': 'C30' },
     mainImage: 'https://picsum.photos/200/200?random=4',
     unit: '方',
-    marketPrice: 420,
     isHot: true,
     isRecommend: false,
     suppliers: [
@@ -200,7 +196,6 @@ const products = ref([
     specs: { '规格': '20mm' },
     mainImage: 'https://picsum.photos/200/200?random=5',
     unit: '吨',
-    marketPrice: 4250,
     isHot: false,
     isRecommend: false,
     suppliers: [
@@ -218,7 +213,6 @@ const products = ref([
     specs: { '规格': '600x240x200' },
     mainImage: 'https://picsum.photos/200/200?random=6',
     unit: '块',
-    marketPrice: 10.5,
     isHot: false,
     isRecommend: true,
     suppliers: [

@@ -14,13 +14,6 @@
         <a-form-item label="BOM名称">
           <a-input v-model="searchForm.name" placeholder="请输入BOM名称" allow-clear style="width: 200px" />
         </a-form-item>
-        <a-form-item label="供应商策略">
-          <a-select v-model="searchForm.strategy" placeholder="全部" allow-clear style="width: 150px">
-            <a-option value="smart">智能分配</a-option>
-            <a-option value="single">单一供应商</a-option>
-            <a-option value="sku">SKU级指定</a-option>
-          </a-select>
-        </a-form-item>
         <a-form-item label="状态">
           <a-select v-model="searchForm.status" placeholder="全部" allow-clear style="width: 120px">
             <a-option value="draft">草稿</a-option>
@@ -50,7 +43,6 @@
                 <img :src="record.image" class="bom-image" />
                 <div class="bom-detail">
                   <div class="bom-name">{{ record.name }}</div>
-                  <div class="bom-category">{{ record.categoryName }}</div>
                 </div>
               </div>
             </template>
@@ -60,14 +52,7 @@
               <span class="sku-count">{{ record.skuCount }} 种</span>
             </template>
           </a-table-column>
-          <a-table-column title="供应商策略" :width="120">
-            <template #cell="{ record }">
-              <a-tag :color="getStrategyColor(record.strategy)">
-                {{ getStrategyText(record.strategy) }}
-              </a-tag>
-            </template>
-          </a-table-column>
-          <a-table-column title="SKU总价" :width="120" align="right">
+          <a-table-column title="SKU单价总计" :width="120" align="right">
             <template #cell="{ record }">
               <span class="price">¥{{ record.skuTotalPrice }}</span>
             </template>
@@ -133,8 +118,7 @@
       <a-descriptions :column="2" bordered size="small">
         <a-descriptions-item label="BOM名称">{{ currentBom?.name }}</a-descriptions-item>
         <a-descriptions-item label="SKU数量">{{ currentBom?.skuCount }} 种</a-descriptions-item>
-        <a-descriptions-item label="供应商策略">{{ getStrategyText(currentBom?.strategy) }}</a-descriptions-item>
-        <a-descriptions-item label="SKU总价">¥{{ currentBom?.skuTotalPrice }}</a-descriptions-item>
+        <a-descriptions-item label="SKU单价总计">¥{{ currentBom?.skuTotalPrice }}</a-descriptions-item>
       </a-descriptions>
       <a-divider />
       <a-form :model="auditForm" layout="vertical">
@@ -208,7 +192,6 @@ const activeTab = ref('all')
 
 const searchForm = ref({
   name: '',
-  strategy: '',
   status: '',
 })
 
@@ -223,7 +206,6 @@ const bomList = ref([
     id: '1',
     name: '水电材料标准包',
     image: 'https://picsum.photos/100/100?random=1',
-    categoryName: '水电工程',
     skuCount: 12,
     strategy: 'smart',
     skuTotalPrice: '3,280.00',
@@ -240,7 +222,6 @@ const bomList = ref([
     id: '2',
     name: '防水涂料套餐',
     image: 'https://picsum.photos/100/100?random=2',
-    categoryName: '防水工程',
     skuCount: 5,
     strategy: 'single',
     skuTotalPrice: '1,850.00',
@@ -258,7 +239,6 @@ const bomList = ref([
     id: '3',
     name: '木工基础包',
     image: 'https://picsum.photos/100/100?random=3',
-    categoryName: '木工工程',
     skuCount: 8,
     strategy: 'sku',
     skuTotalPrice: '4,500.00',
@@ -272,7 +252,6 @@ const bomList = ref([
     id: '4',
     name: '油漆涂装套餐',
     image: 'https://picsum.photos/100/100?random=4',
-    categoryName: '油漆工程',
     skuCount: 6,
     strategy: 'smart',
     skuTotalPrice: '2,200.00',
@@ -286,7 +265,6 @@ const bomList = ref([
     id: '5',
     name: '瓷砖铺贴包',
     image: 'https://picsum.photos/100/100?random=5',
-    categoryName: '泥瓦工程',
     skuCount: 10,
     strategy: 'single',
     skuTotalPrice: '5,800.00',
@@ -496,11 +474,6 @@ function handleOnlineChange(record: any) {
   font-size: 14px;
   font-weight: 500;
   margin-bottom: 4px;
-}
-
-.bom-category {
-  font-size: 12px;
-  color: var(--color-text-3);
 }
 
 .sku-count {

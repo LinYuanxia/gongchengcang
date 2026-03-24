@@ -50,12 +50,12 @@
       </div>
 
       <div v-if="activeTab === 'merchant'">
-        <template #extra>
+        <div style="margin-bottom: 16px">
           <a-button type="primary" @click="handleAddMerchantConfig">
             <template #icon><icon-plus /></template>
             新增配置
           </a-button>
-        </template>
+        </div>
 
         <a-form :model="searchForm" layout="inline" class="search-form">
           <a-form-item label="商户名称">

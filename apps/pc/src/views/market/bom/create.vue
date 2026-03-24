@@ -8,7 +8,6 @@
       <a-steps :current="currentStep" style="margin-bottom: 24px">
         <a-step title="基本信息" />
         <a-step title="SKU明细" />
-        <a-step title="供应商策略" />
       </a-steps>
 
       <div class="step-content">
@@ -74,7 +73,7 @@
             </a-space>
             <div class="sku-summary">
               <span>已添加 <strong>{{ formData.skuList.length }}</strong> 种SKU</span>
-              <span>SKU总价：<strong class="price">¥{{ totalEstimatedPrice }}</strong></span>
+              <span>SKU单价总计：<strong class="price">¥{{ totalEstimatedPrice }}</strong></span>
             </div>
           </div>
 
@@ -90,27 +89,12 @@
                 </template>
               </a-table-column>
               <a-table-column title="规格" data-index="spec" :width="100" />
-              <a-table-column title="供应商" :width="120">
-                <template #cell="{ record }">
-                  <span>{{ record.supplierName }}</span>
-                </template>
-              </a-table-column>
               <a-table-column title="单价" :width="100" align="right">
                 <template #cell="{ record }">
                   <span class="price">¥{{ record.price }}</span>
                 </template>
               </a-table-column>
-              <a-table-column title="购买数量" :width="120">
-                <template #cell="{ record }">
-                  <a-input-number v-model="record.quantity" :min="1" size="small" style="width: 100%" />
-                </template>
-              </a-table-column>
               <a-table-column title="单位" data-index="unit" :width="60" align="center" />
-              <a-table-column title="小计" :width="100" align="right">
-                <template #cell="{ record }">
-                  <span class="subtotal">¥{{ (record.price * record.quantity).toFixed(2) }}</span>
-                </template>
-              </a-table-column>
               <a-table-column title="必选" :width="70" align="center">
                 <template #cell="{ record }">
                   <a-switch v-model="record.required" size="small" />
@@ -125,6 +109,7 @@
           </a-table>
         </div>
 
+        <!-- 供应商策略步骤暂时隐藏
         <div v-show="currentStep === 2">
           <a-form :model="formData" layout="vertical" style="max-width: 800px">
             <a-form-item label="供应商分配策略" required>
@@ -211,12 +196,13 @@
             <a-descriptions-item label="必选SKU">{{ formData.skuList.filter(s => s.required).length }} 种</a-descriptions-item>
           </a-descriptions>
         </div>
+        -->
       </div>
 
       <div class="step-actions">
         <a-button v-if="currentStep > 0" @click="prevStep">上一步</a-button>
-        <a-button v-if="currentStep < 2" type="primary" @click="nextStep">下一步</a-button>
-        <a-space v-if="currentStep === 2">
+        <a-button v-if="currentStep < 1" type="primary" @click="nextStep">下一步</a-button>
+        <a-space v-if="currentStep === 1">
           <a-button @click="handleSaveDraft">保存草稿</a-button>
           <a-button type="primary" @click="handleSubmit">提交审核</a-button>
         </a-space>
@@ -250,7 +236,6 @@
           <a-table-column title="SKU编码" data-index="skuCode" :width="120" />
           <a-table-column title="商品名称" data-index="name" :width="180" />
           <a-table-column title="规格" data-index="spec" :width="100" />
-          <a-table-column title="供应商" data-index="supplierName" :width="120" />
           <a-table-column title="单价" :width="100" align="right">
             <template #cell="{ record }">
               <span class="price">¥{{ record.price }}</span>
@@ -318,7 +303,7 @@ const supplierList = ref([
 ])
 
 const totalEstimatedPrice = computed(() => {
-  const total = formData.value.skuList.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const total = formData.value.skuList.reduce((sum, item) => sum + item.price, 0)
   return total.toLocaleString('zh-CN', { minimumFractionDigits: 2 })
 })
 
@@ -362,13 +347,7 @@ function nextStep() {
       return
     }
   }
-  if (currentStep.value === 1) {
-    if (formData.value.skuList.length === 0) {
-      Message.warning('请添加SKU明细')
-      return
-    }
-  }
-  if (currentStep.value < 2) {
+  if (currentStep.value < 1) {
     currentStep.value++
   }
 }
@@ -410,6 +389,10 @@ function handleSaveDraft() {
 }
 
 function handleSubmit() {
+  if (formData.value.skuList.length === 0) {
+    Message.warning('请添加SKU明细')
+    return
+  }
   Message.success('已提交审核')
   router.push('/market/bom')
 }

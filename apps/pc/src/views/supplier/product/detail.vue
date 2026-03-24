@@ -215,7 +215,7 @@
             </template>
 
             <div v-if="formData.skuList.length === 0" class="empty-sku">
-              <a-empty description="暂无SKU，请添加规格自动生成或点击上方"添加SKU"按钮手动添加" />
+              <a-empty description="暂无SKU，请添加规格自动生成或点击上方【添加SKU】按钮手动添加" />
             </div>
 
             <a-table v-else :data="formData.skuList" :pagination="false" :scroll="{ x: 1500 }" size="small">

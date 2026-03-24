@@ -27,38 +27,16 @@
             allow-clear
             :field-names="{ value: 'categoryId', label: 'categoryName', children: 'children' }"
           />
-          <a-select v-model="searchForm.status" placeholder="状态" style="width: 120px" allow-clear>
-            <a-option v-for="item in SKU_STATUS_OPTIONS" :key="item.value" :value="item.value">
-              {{ item.label }}
-            </a-option>
-          </a-select>
         </a-space>
-        <a-space>
-          <a-button
-            :disabled="selectedKeys.length === 0"
-            status="success"
-            @click="handleBatchOnShelf"
-          >
-            批量上架
-          </a-button>
-          <a-button
-            :disabled="selectedKeys.length === 0"
-            status="warning"
-            @click="handleBatchOffShelf"
-          >
-            批量下架
-          </a-button>
-          <a-button type="primary" @click="handleAdd">
-            <template #icon><icon-plus /></template>
-            新增SKU
-          </a-button>
-        </a-space>
+        <a-button type="primary" @click="handleAdd">
+          <template #icon><icon-plus /></template>
+          新增SKU
+        </a-button>
       </div>
       <a-table
         :data="tableData"
         :loading="loading"
         :pagination="pagination"
-        :row-selection="rowSelection"
         @page-change="handlePageChange"
       >
         <template #columns>
@@ -80,27 +58,12 @@
           </a-table-column>
           <a-table-column title="单位" data-index="unit" :width="60" />
           <a-table-column title="供应商数" data-index="supplierCount" :width="80" />
-          <a-table-column title="状态" :width="80">
-            <template #cell="{ record }">
-              <a-tag :color="record.status === SkuStatus.ON_SHELF ? 'green' : 'red'">
-                {{ record.status === SkuStatus.ON_SHELF ? '上架' : '下架' }}
-              </a-tag>
-            </template>
-          </a-table-column>
           <a-table-column title="创建时间" data-index="createdAt" :width="180" />
-          <a-table-column title="操作" :width="200" fixed="right">
+          <a-table-column title="操作" :width="150" fixed="right">
             <template #cell="{ record }">
               <a-space>
                 <a-button type="text" size="small" @click="handleView(record)">详情</a-button>
                 <a-button type="text" size="small" @click="handleEdit(record)">编辑</a-button>
-                <a-button
-                  type="text"
-                  size="small"
-                  :status="record.status === SkuStatus.ON_SHELF ? 'warning' : 'success'"
-                  @click="handleToggleStatus(record)"
-                >
-                  {{ record.status === SkuStatus.ON_SHELF ? '下架' : '上架' }}
-                </a-button>
               </a-space>
             </template>
           </a-table-column>
@@ -118,12 +81,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Message, Modal } from '@arco-design/web-vue'
-import { SkuStatus, SKU_STATUS_OPTIONS } from '@gongchengcang/types'
+import { Message } from '@arco-design/web-vue'
 import type { Sku, ProductCategory, Spu } from '@gongchengcang/types'
-import { getSkuList, batchUpdateSkuStatus, getCategoryTree, getSpuList } from '@gongchengcang/api'
+import { getSkuList, getCategoryTree, getSpuList } from '@gongchengcang/api'
 import SkuFormDrawer from './components/SkuFormDrawer.vue'
 
 const route = useRoute()
@@ -141,21 +103,10 @@ const pagination = reactive({
 const searchForm = reactive({
   keyword: '',
   categoryId: undefined as string[] | undefined,
-  status: undefined as number | undefined,
   spuId: undefined as string | undefined,
 })
 const formVisible = ref(false)
 const editingSku = ref<Sku | null>(null)
-const selectedKeys = ref<string[]>([])
-
-const rowSelection = computed(() => ({
-  type: 'checkbox' as const,
-  selectedRowKeys: selectedKeys.value,
-  onlyCurrent: true,
-  onChange: (keys: string[]) => {
-    selectedKeys.value = keys
-  },
-}))
 
 watch(
   () => route.query,
@@ -209,7 +160,6 @@ async function loadData() {
       pageSize: pagination.pageSize,
       keyword: searchForm.keyword,
       categoryId,
-      status: searchForm.status,
       spuId: searchForm.spuId,
     })
     tableData.value = result.list
@@ -241,59 +191,6 @@ function handleView(record: Sku) {
 function handleEdit(record: Sku) {
   editingSku.value = record
   formVisible.value = true
-}
-
-async function handleToggleStatus(record: Sku) {
-  const newStatus = record.status === SkuStatus.ON_SHELF ? SkuStatus.OFF_SHELF : SkuStatus.ON_SHELF
-  const action = newStatus === SkuStatus.ON_SHELF ? '上架' : '下架'
-  
-  Modal.confirm({
-    title: '确认操作',
-    content: `确定要${action}SKU「${record.skuName}」吗？`,
-    onOk: async () => {
-      try {
-        await batchUpdateSkuStatus([record.skuId], newStatus)
-        Message.success(`${action}成功`)
-        loadData()
-      } catch (error: any) {
-        Message.error(error.message || `${action}失败`)
-      }
-    },
-  })
-}
-
-function handleBatchOnShelf() {
-  Modal.confirm({
-    title: '确认操作',
-    content: `确定要批量上架 ${selectedKeys.value.length} 个SKU吗？`,
-    onOk: async () => {
-      try {
-        await batchUpdateSkuStatus(selectedKeys.value, SkuStatus.ON_SHELF)
-        Message.success('批量上架成功')
-        selectedKeys.value = []
-        loadData()
-      } catch (error: any) {
-        Message.error(error.message || '批量上架失败')
-      }
-    },
-  })
-}
-
-function handleBatchOffShelf() {
-  Modal.confirm({
-    title: '确认操作',
-    content: `确定要批量下架 ${selectedKeys.value.length} 个SKU吗？`,
-    onOk: async () => {
-      try {
-        await batchUpdateSkuStatus(selectedKeys.value, SkuStatus.OFF_SHELF)
-        Message.success('批量下架成功')
-        selectedKeys.value = []
-        loadData()
-      } catch (error: any) {
-        Message.error(error.message || '批量下架失败')
-      }
-    },
-  })
 }
 
 function handleFormSuccess() {

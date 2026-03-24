@@ -63,11 +63,6 @@
             {{ formatSpecs(record.specs) }}
           </template>
         </a-table-column>
-        <a-table-column title="市场价" :width="100" align="right">
-          <template #cell="{ record }">
-            ¥{{ record.marketPrice }}
-          </template>
-        </a-table-column>
         <a-table-column title="供应商" :width="100" align="center">
           <template #cell="{ record }">
             <a-tooltip :content="`${record.supplierCount}家供应商`">
@@ -99,7 +94,6 @@ interface Product {
   skuName: string
   categoryName: string
   specs: Record<string, string>
-  marketPrice: number
   supplierCount: number
   authorized: boolean
   authorizedAt: string
@@ -130,7 +124,6 @@ const products = ref<Product[]>([
     skuName: '水泥 P.O 42.5 普通硅酸盐水泥',
     categoryName: '水泥',
     specs: { '强度等级': '42.5' },
-    marketPrice: 450,
     supplierCount: 2,
     authorized: true,
     authorizedAt: '2024-01-15 10:30:00',
@@ -141,7 +134,6 @@ const products = ref<Product[]>([
     skuName: '螺纹钢 HRB400 16mm',
     categoryName: '钢材',
     specs: { '规格': '16mm' },
-    marketPrice: 4200,
     supplierCount: 1,
     authorized: true,
     authorizedAt: '2024-01-15 10:30:00',
@@ -152,7 +144,6 @@ const products = ref<Product[]>([
     skuName: '黄砂 中砂',
     categoryName: '砂石',
     specs: { '类型': '中砂' },
-    marketPrice: 95,
     supplierCount: 1,
     authorized: false,
     authorizedAt: '',
@@ -163,7 +154,6 @@ const products = ref<Product[]>([
     skuName: '商品混凝土 C30',
     categoryName: '混凝土',
     specs: { '强度等级': 'C30' },
-    marketPrice: 420,
     supplierCount: 1,
     authorized: false,
     authorizedAt: '',
@@ -174,7 +164,6 @@ const products = ref<Product[]>([
     skuName: '螺纹钢 HRB400 20mm',
     categoryName: '钢材',
     specs: { '规格': '20mm' },
-    marketPrice: 4250,
     supplierCount: 2,
     authorized: true,
     authorizedAt: '2024-01-20 14:20:00',
