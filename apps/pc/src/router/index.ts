@@ -461,6 +461,12 @@ const routes: RouteRecordRaw[] = [
             meta: { title: '用户管理' },
           },
           {
+            path: 'employee',
+            name: 'SystemEmployee',
+            component: () => import('@/views/system/employee/index.vue'),
+            meta: { title: '员工管理' },
+          },
+          {
             path: 'role',
             name: 'SystemRole',
             component: () => import('@/views/system/role/index.vue'),
