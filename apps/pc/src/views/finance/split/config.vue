@@ -164,10 +164,12 @@ const typeConfigList = ref([
   { id: '2', type: 'supplier', platformRate: 3, merchantRate: 97, status: 'enabled', updateTime: '2024-01-15 10:00:00' },
 ])
 
-const merchantConfigList = ref([
+const allMerchantConfigList = ref([
   { id: '1', merchantId: 'w1', merchantName: '深圳湾科技园项目仓', merchantType: 'warehouse', platformRate: 3, merchantRate: 97, status: 'enabled', updateTime: '2024-01-15 10:00:00' },
   { id: '2', merchantId: 'w2', merchantName: '广州天河工程仓', merchantType: 'warehouse', platformRate: 5, merchantRate: 95, status: 'enabled', updateTime: '2024-01-14 14:00:00' },
 ])
+
+const merchantConfigList = ref([...allMerchantConfigList.value])
 
 const configModalVisible = ref(false)
 const configForm = ref({
@@ -186,7 +188,21 @@ const configModalTitle = computed(() => {
 })
 
 function handleSearch() {
-  Message.info('查询功能开发中')
+  let filtered = [...allMerchantConfigList.value]
+  
+  if (searchForm.value.merchantName) {
+    filtered = filtered.filter(item => 
+      item.merchantName.includes(searchForm.value.merchantName)
+    )
+  }
+  
+  if (searchForm.value.merchantType) {
+    filtered = filtered.filter(item => item.merchantType === searchForm.value.merchantType)
+  }
+  
+  merchantConfigList.value = filtered
+  pagination.value.total = filtered.length
+  Message.success(`查询完成，共 ${filtered.length} 条记录`)
 }
 
 function handleEditTypeConfig(record: any) {

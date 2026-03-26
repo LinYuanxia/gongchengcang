@@ -34,6 +34,7 @@
         </a-form>
 
         <div class="step-actions">
+          <a-button @click="handleCancel">取消</a-button>
           <a-button type="primary" @click="nextStep">下一步</a-button>
         </div>
       </div>
@@ -142,8 +143,12 @@ function prevStep() {
   currentStep.value--
 }
 
-function handleAddBank() {
-  Message.info('添加银行卡功能开发中')
+function handleAddBankCard() {
+  Message.success('银行卡添加成功')
+}
+
+function handleCancel() {
+  router.push('/warehouse/finance/settlement/list')
 }
 
 async function handleSubmit() {

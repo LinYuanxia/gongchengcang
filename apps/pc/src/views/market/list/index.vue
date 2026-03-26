@@ -87,6 +87,22 @@
             </template>
           </a-table-column>
           <a-table-column title="分类" data-index="categoryName" :width="100" />
+          <a-table-column title="所属SPU" :width="150">
+            <template #cell="{ record }">
+              <div class="spu-info">
+                <div class="spu-name">{{ record.spuName || '-' }}</div>
+                <div v-if="record.spuCode" class="spu-code">{{ record.spuCode }}</div>
+              </div>
+            </template>
+          </a-table-column>
+          <a-table-column title="采购库存量" :width="100" align="right">
+            <template #cell="{ record }">
+              <div class="stock-info">
+                <span class="stock-value">{{ record.purchaseStock ?? 0 }}</span>
+                <span class="stock-unit">{{ record.unit || '件' }}</span>
+              </div>
+            </template>
+          </a-table-column>
           <a-table-column title="供应商" :width="180">
             <template #cell="{ record }">
               <template v-if="record.suppliers && record.suppliers.length > 1">
@@ -614,10 +630,12 @@ interface MarketProduct {
   skuName: string
   spuId: string
   spuName: string
+  spuCode?: string
   categoryName: string
   specs: Record<string, string>
   mainImage?: string
   unit: string
+  purchaseStock?: number
   supplierId: string
   supplierName: string
   supplyPrice: number
@@ -742,10 +760,12 @@ const mockProducts = ref<MarketProduct[]>([
     skuName: '水泥 P.O 42.5',
     spuId: 'spu001',
     spuName: '普通硅酸盐水泥',
+    spuCode: 'SPU-SN-001',
     categoryName: '水泥',
     specs: { '强度等级': '42.5' },
     mainImage: 'https://picsum.photos/200/200?random=1',
     unit: '吨',
+    purchaseStock: 500,
     supplierId: 's001',
     supplierName: '华新水泥供应商',
     supplyPrice: 420,
@@ -772,10 +792,12 @@ const mockProducts = ref<MarketProduct[]>([
     skuName: '螺纹钢 HRB400 16mm',
     spuId: 'spu002',
     spuName: '螺纹钢',
+    spuCode: 'SPU-GC-001',
     categoryName: '钢材',
     specs: { '规格': '16mm' },
     mainImage: 'https://picsum.photos/200/200?random=2',
     unit: '吨',
+    purchaseStock: 100,
     supplierId: 's003',
     supplierName: '宝钢供应商',
     supplyPrice: 4000,
@@ -797,10 +819,12 @@ const mockProducts = ref<MarketProduct[]>([
     skuName: '水泥 P.O 32.5',
     spuId: 'spu001',
     spuName: '普通硅酸盐水泥',
+    spuCode: 'SPU-SN-001',
     categoryName: '水泥',
     specs: { '强度等级': '32.5' },
     mainImage: 'https://picsum.photos/200/200?random=3',
     unit: '吨',
+    purchaseStock: 800,
     supplierId: 's001',
     supplierName: '华新水泥供应商',
     supplyPrice: 380,
@@ -831,10 +855,12 @@ const mockProducts = ref<MarketProduct[]>([
     skuName: '黄砂 中砂',
     spuId: 'spu003',
     spuName: '黄砂',
+    spuCode: 'SPU-SS-001',
     categoryName: '砂石',
     specs: { '类型': '中砂' },
     mainImage: 'https://picsum.photos/200/200?random=4',
     unit: '方',
+    purchaseStock: 1000,
     supplierId: 's004',
     supplierName: '南方建材供应商',
     supplyPrice: 80,
@@ -858,10 +884,12 @@ const mockProducts = ref<MarketProduct[]>([
     skuName: '螺纹钢 HRB400 20mm',
     spuId: 'spu002',
     spuName: '螺纹钢',
+    spuCode: 'SPU-GC-001',
     categoryName: '钢材',
     specs: { '规格': '20mm' },
     mainImage: 'https://picsum.photos/200/200?random=5',
     unit: '吨',
+    purchaseStock: 0,
     supplierId: 's003',
     supplierName: '宝钢供应商',
     supplyPrice: 3950,
@@ -1409,6 +1437,31 @@ onMounted(() => {
       gap: 4px;
       flex-wrap: wrap;
     }
+  }
+}
+
+.spu-info {
+  .spu-name {
+    font-weight: 500;
+    margin-bottom: 2px;
+  }
+  
+  .spu-code {
+    font-size: 12px;
+    color: var(--color-text-3);
+  }
+}
+
+.stock-info {
+  .stock-value {
+    font-weight: 600;
+    color: #165dff;
+  }
+  
+  .stock-unit {
+    font-size: 12px;
+    color: var(--color-text-3);
+    margin-left: 4px;
   }
 }
 

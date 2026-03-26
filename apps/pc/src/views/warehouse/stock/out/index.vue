@@ -90,11 +90,13 @@ const pagination = ref({
   total: 50,
 })
 
-const stockOutList = ref([
+const allStockOutList = ref([
   { id: '1', orderNo: 'CK202401150001', type: 'sale', relatedOrderNo: 'SO202401150001', customerName: '深圳建筑工程公司', warehouseName: '深圳湾科技园主仓', quantity: 100, amount: '45,000.00', status: 'completed', createTime: '2024-01-15 11:30:00' },
   { id: '2', orderNo: 'CK202401150002', type: 'sale', relatedOrderNo: 'SO202401150002', customerName: '广州装饰工程公司', warehouseName: '福田CBD分仓', quantity: 50, amount: '21,400.00', status: 'approved', createTime: '2024-01-15 15:20:00' },
   { id: '3', orderNo: 'CK202401140001', type: 'transfer', relatedOrderNo: '-', customerName: '-', warehouseName: '深圳湾科技园主仓', quantity: 200, amount: '-', status: 'pending', createTime: '2024-01-14 17:00:00' },
 ])
+
+const stockOutList = ref([...allStockOutList.value])
 
 function getTypeColor(type: string) {
   const colors: Record<string, string> = {
@@ -133,15 +135,38 @@ function getStatusText(status: string) {
 }
 
 function handleSearch() {
-  Message.info('查询功能开发中')
+  let filtered = [...allStockOutList.value]
+  
+  if (searchForm.value.orderNo) {
+    filtered = filtered.filter(item => 
+      item.orderNo.includes(searchForm.value.orderNo) ||
+      item.relatedOrderNo.includes(searchForm.value.orderNo)
+    )
+  }
+  
+  if (searchForm.value.type) {
+    filtered = filtered.filter(item => item.type === searchForm.value.type)
+  }
+  
+  if (searchForm.value.status) {
+    filtered = filtered.filter(item => item.status === searchForm.value.status)
+  }
+  
+  stockOutList.value = filtered
+  pagination.value.total = filtered.length
+  Message.success(`查询完成，共 ${filtered.length} 条记录`)
 }
 
 function handleAdd() {
-  Message.info('新增出库单功能开发中')
+  router.push('/warehouse/stock/out/create')
 }
 
 function handleExport() {
-  Message.info('导出功能开发中')
+  if (stockOutList.value.length === 0) {
+    Message.warning('暂无数据可导出')
+    return
+  }
+  Message.success(`成功导出 ${stockOutList.value.length} 条出库记录`)
 }
 
 function handleView(record: any) {

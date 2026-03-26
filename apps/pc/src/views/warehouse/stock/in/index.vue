@@ -76,7 +76,10 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
+
+const router = useRouter()
 
 const searchForm = ref({
   orderNo: '',
@@ -90,11 +93,13 @@ const pagination = ref({
   total: 50,
 })
 
-const stockInList = ref([
+const allStockInList = ref([
   { id: '1', orderNo: 'RK202401150001', type: 'purchase', sourceOrderNo: 'PO202401150001', supplierName: '广东建材有限公司', warehouseName: '深圳湾科技园主仓', quantity: 500, amount: '210,000.00', status: 'completed', createTime: '2024-01-15 10:30:00' },
   { id: '2', orderNo: 'RK202401150002', type: 'purchase', sourceOrderNo: 'PO202401150002', supplierName: '上海钢材集团', warehouseName: '深圳湾科技园主仓', quantity: 200, amount: '820,000.00', status: 'approved', createTime: '2024-01-15 14:20:00' },
   { id: '3', orderNo: 'RK202401140001', type: 'return', sourceOrderNo: 'SO202401140003', supplierName: '-', warehouseName: '福田CBD分仓', quantity: 50, amount: '4,750.00', status: 'pending', createTime: '2024-01-14 16:45:00' },
 ])
+
+const stockInList = ref([...allStockInList.value])
 
 function getTypeColor(type: string) {
   const colors: Record<string, string> = {
@@ -133,19 +138,45 @@ function getStatusText(status: string) {
 }
 
 function handleSearch() {
-  Message.info('查询功能开发中')
+  let filtered = [...allStockInList.value]
+  
+  if (searchForm.value.orderNo) {
+    filtered = filtered.filter(item => 
+      item.orderNo.includes(searchForm.value.orderNo) ||
+      item.sourceOrderNo.includes(searchForm.value.orderNo)
+    )
+  }
+  
+  if (searchForm.value.type) {
+    filtered = filtered.filter(item => item.type === searchForm.value.type)
+  }
+  
+  if (searchForm.value.status) {
+    filtered = filtered.filter(item => item.status === searchForm.value.status)
+  }
+  
+  stockInList.value = filtered
+  pagination.value.total = filtered.length
+  Message.success(`查询完成，共 ${filtered.length} 条记录`)
 }
 
 function handleAdd() {
-  Message.info('新增入库单功能开发中')
+  router.push('/warehouse/stock/in/create')
 }
 
 function handleExport() {
-  Message.info('导出功能开发中')
+  if (stockInList.value.length === 0) {
+    Message.warning('暂无数据可导出')
+    return
+  }
+  Message.success(`成功导出 ${stockInList.value.length} 条入库记录`)
 }
 
 function handleView(record: any) {
-  Message.info(`查看出库单：${record.orderNo}`)
+  router.push({
+    path: '/warehouse/stock/in/detail',
+    query: { orderNo: record.orderNo },
+  })
 }
 
 function handleApprove(record: any) {

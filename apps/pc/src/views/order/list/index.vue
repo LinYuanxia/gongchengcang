@@ -84,10 +84,12 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import { ORDER_TYPE_OPTIONS, ORDER_STATUS_OPTIONS, ORDER_STATUS_MAP, PAY_STATUS_MAP } from '@gongchengcang/constants'
 import type { Order } from '@gongchengcang/types'
 
+const router = useRouter()
 const loading = ref(false)
 const tableData = ref<Order[]>([])
 const pagination = reactive({
@@ -179,7 +181,7 @@ function handleAdd() {
 }
 
 function handleView(record: Order) {
-  Message.info(`查看订单: ${record.orderNo}`)
+  router.push(`/order/detail/${record.id}`)
 }
 
 function handleConfirm(record: Order) {

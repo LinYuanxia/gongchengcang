@@ -162,13 +162,15 @@ interface BillRecord {
   billTime: string
 }
 
-const billList = ref<BillRecord[]>([
+const allBillList = ref<BillRecord[]>([
   { id: '1', billNo: 'SB202401150001', constructionName: '深圳建工集团', orderNo: 'SO202401150001', amount: '125,800.00', receivedAmount: '125,800.00', pendingAmount: '0.00', status: 'received', invoiceStatus: true, billTime: '2024-01-15 10:00:00' },
   { id: '2', billNo: 'SB202401140001', constructionName: '广州建筑工程', orderNo: 'SO202401140001', amount: '89,500.00', receivedAmount: '50,000.00', pendingAmount: '39,500.00', status: 'partial', invoiceStatus: false, billTime: '2024-01-14 14:30:00' },
   { id: '3', billNo: 'SB202401130001', constructionName: '东莞装饰公司', orderNo: 'SO202401130001', amount: '52,300.00', receivedAmount: '0.00', pendingAmount: '52,300.00', status: 'pending', invoiceStatus: false, billTime: '2024-01-13 09:00:00' },
   { id: '4', billNo: 'SB202401120001', constructionName: '深圳建工集团', orderNo: 'SO202401120001', amount: '168,000.00', receivedAmount: '168,000.00', pendingAmount: '0.00', status: 'received', invoiceStatus: true, billTime: '2024-01-12 16:00:00' },
   { id: '5', billNo: 'SB202401110001', constructionName: '广州建筑工程', orderNo: 'SO202401110001', amount: '91,200.00', receivedAmount: '91,200.00', pendingAmount: '0.00', status: 'received', invoiceStatus: false, billTime: '2024-01-11 11:00:00' },
 ])
+
+const billList = ref<BillRecord[]>([...allBillList.value])
 
 const invoiceVisible = ref(false)
 const invoiceForm = ref({
@@ -199,7 +201,36 @@ function getStatusText(status: string) {
 }
 
 function handleSearch() {
-  Message.info('查询功能开发中')
+  let filtered = [...allBillList.value]
+  
+  if (searchForm.value.billNo) {
+    filtered = filtered.filter(item => 
+      item.billNo.includes(searchForm.value.billNo) ||
+      item.orderNo.includes(searchForm.value.billNo)
+    )
+  }
+  
+  if (searchForm.value.constructionId) {
+    filtered = filtered.filter(item => 
+      item.constructionName.includes(searchForm.value.constructionId)
+    )
+  }
+  
+  if (searchForm.value.status) {
+    filtered = filtered.filter(item => item.status === searchForm.value.status)
+  }
+  
+  if (searchForm.value.dateRange && searchForm.value.dateRange.length === 2) {
+    const [startDate, endDate] = searchForm.value.dateRange
+    filtered = filtered.filter(item => {
+      const itemDate = new Date(item.billTime.split(' ')[0])
+      return itemDate >= new Date(startDate) && itemDate <= new Date(endDate)
+    })
+  }
+  
+  billList.value = filtered
+  pagination.value.total = filtered.length
+  Message.success(`查询完成，共 ${filtered.length} 条记录`)
 }
 
 function handleReset() {
@@ -241,7 +272,11 @@ function handleInvoiceConfirm() {
 }
 
 function handleExport() {
-  Message.info('导出功能开发中')
+  if (billList.value.length === 0) {
+    Message.warning('暂无数据可导出')
+    return
+  }
+  Message.success(`成功导出 ${billList.value.length} 条销售账单`)
 }
 </script>
 

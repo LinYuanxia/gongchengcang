@@ -187,7 +187,7 @@
                 />
               </template>
             </a-table-column>
-            <a-table-column title="参考单价" :width="100" align="right">
+            <a-table-column title="供货价" :width="100" align="right">
               <template #cell="{ record }">
                 ¥{{ record.referencePrice }}
               </template>
@@ -427,7 +427,7 @@
           </a-table-column>
           <a-table-column title="单位" data-index="unit" :width="60" align="center" />
           <a-table-column title="建议采购量" data-index="quantity" :width="100" align="center" />
-          <a-table-column title="参考单价" :width="100" align="right">
+          <a-table-column title="供货价" :width="100" align="right">
             <template #cell="{ record }">
               ¥{{ record.referencePrice }}
             </template>

@@ -15,12 +15,26 @@
           </div>
           <div class="account-info">
             <div class="info-item">
+              <span class="info-label">账户余额</span>
+              <span class="info-value">¥ 358,900.00</span>
+            </div>
+            <div class="info-item">
               <span class="info-label">冻结金额</span>
               <span class="info-value frozen">¥ 50,000.00</span>
+              <a-tooltip content="订单支付后资金冻结，订单完成后自动解冻">
+                <icon-question-circle style="margin-left: 4px; color: var(--color-text-3)" />
+              </a-tooltip>
             </div>
             <div class="info-item">
               <span class="info-label">可用余额</span>
               <span class="info-value available">¥ 308,900.00</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">待分账金额</span>
+              <span class="info-value pending">¥ 12,500.00</span>
+              <a-tooltip content="发票开具后触发分账">
+                <icon-question-circle style="margin-left: 4px; color: var(--color-text-3)" />
+              </a-tooltip>
             </div>
           </div>
           <div class="account-actions">
@@ -59,27 +73,65 @@
 
     <a-card title="账户统计" class="mt-16">
       <a-row :gutter="16">
-        <a-col :span="6">
+        <a-col :span="4">
           <a-statistic title="本月充值" :value="156800" :precision="2">
             <template #prefix>¥</template>
           </a-statistic>
         </a-col>
-        <a-col :span="6">
+        <a-col :span="4">
           <a-statistic title="本月提现" :value="52000" :precision="2">
             <template #prefix>¥</template>
           </a-statistic>
         </a-col>
-        <a-col :span="6">
+        <a-col :span="4">
           <a-statistic title="本月收入" :value="285600" :precision="2">
             <template #prefix>¥</template>
           </a-statistic>
         </a-col>
-        <a-col :span="6">
+        <a-col :span="4">
           <a-statistic title="本月支出" :value="168500" :precision="2">
             <template #prefix>¥</template>
           </a-statistic>
         </a-col>
+        <a-col :span="4">
+          <a-statistic title="冻结资金" :value="50000" :precision="2">
+            <template #prefix>¥</template>
+          </a-statistic>
+        </a-col>
+        <a-col :span="4">
+          <a-statistic title="待分账金额" :value="12500" :precision="2">
+            <template #prefix>¥</template>
+          </a-statistic>
+        </a-col>
       </a-row>
+    </a-card>
+
+    <a-card title="冻结资金" class="mt-16">
+      <template #extra>
+        <a-button type="text" @click="goToFrozenList">
+          查看全部 <icon-right />
+        </a-button>
+      </template>
+      <a-table :data="frozenRecords" :pagination="false">
+        <template #columns>
+          <a-table-column title="订单编号" data-index="orderNo" :width="160" />
+          <a-table-column title="冻结金额" :width="120" align="right">
+            <template #cell="{ record }">
+              <span class="frozen-amount">¥{{ record.amount }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="冻结时间" data-index="frozenTime" :width="160" />
+          <a-table-column title="冻结原因" data-index="reason" />
+          <a-table-column title="预计解冻时间" data-index="expectedUnfreezeTime" :width="160" />
+          <a-table-column title="状态" :width="100">
+            <template #cell="{ record }">
+              <a-tag :color="record.status === 'frozen' ? 'orange' : 'green'">
+                {{ record.status === 'frozen' ? '冻结中' : '已解冻' }}
+              </a-tag>
+            </template>
+          </a-table-column>
+        </template>
+      </a-table>
     </a-card>
 
     <a-card title="近期交易" class="mt-16">
@@ -171,6 +223,12 @@ import { Message } from '@arco-design/web-vue'
 
 const router = useRouter()
 
+const frozenRecords = ref([
+  { orderNo: 'PO202403240001', amount: '125,000.00', frozenTime: '2024-03-24 10:35:00', reason: '采购订单支付冻结', expectedUnfreezeTime: '订单完成后解冻', status: 'frozen' },
+  { orderNo: 'PO202403230002', amount: '85,000.00', frozenTime: '2024-03-23 14:20:00', reason: '采购订单支付冻结', expectedUnfreezeTime: '订单完成后解冻', status: 'frozen' },
+  { orderNo: 'PO202403220003', amount: '50,000.00', frozenTime: '2024-03-22 09:15:00', reason: '采购订单支付冻结', expectedUnfreezeTime: '2024-03-25 16:30:00', status: 'unfrozen' },
+])
+
 const recentTransactions = ref([
   { time: '2024-01-15 16:30:00', type: 'income', amount: '52,300.00', description: '销售订单收款 - SO202401150001', balance: '358,900.00', status: 'success' },
   { time: '2024-01-15 14:20:00', type: 'expense', amount: '210,000.00', description: '采购订单付款 - PO202401150001', balance: '306,600.00', status: 'success' },
@@ -253,6 +311,10 @@ function handleWithdrawConfirm() {
 function goToTransaction() {
   router.push('/warehouse/finance/custody/recharge')
 }
+
+function goToFrozenList() {
+  router.push('/warehouse/finance/custody/frozen')
+}
 </script>
 
 <style scoped lang="less">
@@ -321,6 +383,10 @@ function goToTransaction() {
         &.available {
           color: #00b42a;
         }
+
+        &.pending {
+          color: #ff7d00;
+        }
       }
     }
   }
@@ -349,5 +415,10 @@ function goToTransaction() {
   font-size: 20px;
   font-weight: 600;
   color: #165dff;
+}
+
+.frozen-amount {
+  color: #f53f3f;
+  font-weight: 500;
 }
 </style>

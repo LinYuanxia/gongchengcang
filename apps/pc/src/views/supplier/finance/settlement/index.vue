@@ -101,13 +101,15 @@ const pagination = ref({
   total: 50,
 })
 
-const settlementList = ref([
+const allSettlementList = ref([
   { id: '1', settlementNo: 'JS202401150001', amount: '50,000.00', bankName: '中国工商银行', bankCard: '****8901', applyTime: '2024-01-15 10:00:00', status: 'success', arrivalTime: '2024-01-16 14:30:00' },
   { id: '2', settlementNo: 'JS202401140001', amount: '35,000.00', bankName: '中国工商银行', bankCard: '****8901', applyTime: '2024-01-14 16:20:00', status: 'processing', arrivalTime: '' },
   { id: '3', settlementNo: 'JS202401130001', amount: '28,500.00', bankName: '中国工商银行', bankCard: '****8901', applyTime: '2024-01-13 09:15:00', status: 'pending', arrivalTime: '' },
   { id: '4', settlementNo: 'JS202401120001', amount: '43,200.00', bankName: '中国工商银行', bankCard: '****8901', applyTime: '2024-01-12 14:00:00', status: 'failed', arrivalTime: '' },
   { id: '5', settlementNo: 'JS202401110001', amount: '65,000.00', bankName: '中国工商银行', bankCard: '****8901', applyTime: '2024-01-11 11:30:00', status: 'success', arrivalTime: '2024-01-12 10:00:00' },
 ])
+
+const settlementList = ref([...allSettlementList.value])
 
 function getStatusColor(status: string) {
   const colorMap: Record<string, string> = {
@@ -130,7 +132,29 @@ function getStatusText(status: string) {
 }
 
 function handleSearch() {
-  Message.info('查询功能开发中')
+  let filtered = [...allSettlementList.value]
+  
+  if (searchForm.value.settlementNo) {
+    filtered = filtered.filter(item => 
+      item.settlementNo.includes(searchForm.value.settlementNo)
+    )
+  }
+  
+  if (searchForm.value.status) {
+    filtered = filtered.filter(item => item.status === searchForm.value.status)
+  }
+  
+  if (searchForm.value.dateRange && searchForm.value.dateRange.length === 2) {
+    const [startDate, endDate] = searchForm.value.dateRange
+    filtered = filtered.filter(item => {
+      const itemDate = new Date(item.applyTime.split(' ')[0])
+      return itemDate >= new Date(startDate) && itemDate <= new Date(endDate)
+    })
+  }
+  
+  settlementList.value = filtered
+  pagination.value.total = filtered.length
+  Message.success(`查询完成，共 ${filtered.length} 条记录`)
 }
 
 function handleApplySettlement() {

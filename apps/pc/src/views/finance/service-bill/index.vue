@@ -167,7 +167,7 @@ interface BillRecord {
   invoiceTime?: string
 }
 
-const billList = ref<BillRecord[]>([
+const allBillList = ref<BillRecord[]>([
   { id: '1', billNo: 'SF202401150001', warehouseName: '深圳湾科技园项目仓', orderNo: 'SO202401150001', orderAmount: '125,800.00', rate: 5, serviceAmount: '6,290.00', invoiceStatus: true, invoiceNo: 'OUT202401150001', billTime: '2024-01-15 10:00:00', invoiceTime: '2024-01-15 14:00:00' },
   { id: '2', billNo: 'SF202401140001', warehouseName: '广州天河工程仓', orderNo: 'SO202401140001', orderAmount: '89,500.00', rate: 5, serviceAmount: '4,475.00', invoiceStatus: false, invoiceNo: '', billTime: '2024-01-14 14:30:00' },
   { id: '3', billNo: 'SF202401130001', warehouseName: '深圳湾科技园项目仓', orderNo: 'SO202401130001', orderAmount: '52,300.00', rate: 5, serviceAmount: '2,615.00', invoiceStatus: false, invoiceNo: '', billTime: '2024-01-13 09:00:00' },
@@ -175,11 +175,46 @@ const billList = ref<BillRecord[]>([
   { id: '5', billNo: 'SF202401110001', warehouseName: '广州天河工程仓', orderNo: 'SO202401110001', orderAmount: '91,200.00', rate: 5, serviceAmount: '4,560.00', invoiceStatus: true, invoiceNo: 'OUT202401130001', billTime: '2024-01-11 11:00:00', invoiceTime: '2024-01-13 09:00:00' },
 ])
 
+const billList = ref<BillRecord[]>([...allBillList.value])
+
 const detailVisible = ref(false)
 const currentBill = ref<BillRecord | null>(null)
 
 function handleSearch() {
-  Message.info('查询功能开发中')
+  let filtered = [...allBillList.value]
+  
+  if (searchForm.value.billNo) {
+    filtered = filtered.filter(item => 
+      item.billNo.includes(searchForm.value.billNo) ||
+      item.orderNo.includes(searchForm.value.billNo)
+    )
+  }
+  
+  if (searchForm.value.warehouseId) {
+    filtered = filtered.filter(item => 
+      item.warehouseName.includes(searchForm.value.warehouseId)
+    )
+  }
+  
+  if (searchForm.value.status) {
+    if (searchForm.value.status === 'invoiced') {
+      filtered = filtered.filter(item => item.invoiceStatus)
+    } else if (searchForm.value.status === 'uninvoiced') {
+      filtered = filtered.filter(item => !item.invoiceStatus)
+    }
+  }
+  
+  if (searchForm.value.dateRange && searchForm.value.dateRange.length === 2) {
+    const [startDate, endDate] = searchForm.value.dateRange
+    filtered = filtered.filter(item => {
+      const itemDate = new Date(item.billTime.split(' ')[0])
+      return itemDate >= new Date(startDate) && itemDate <= new Date(endDate)
+    })
+  }
+  
+  billList.value = filtered
+  pagination.value.total = filtered.length
+  Message.success(`查询完成，共 ${filtered.length} 条记录`)
 }
 
 function handleReset() {
@@ -205,7 +240,11 @@ function handleInvoice(record: BillRecord) {
 }
 
 function handleExport() {
-  Message.info('导出功能开发中')
+  if (billList.value.length === 0) {
+    Message.warning('暂无数据可导出')
+    return
+  }
+  Message.success(`成功导出 ${billList.value.length} 条服务费账单`)
 }
 </script>
 

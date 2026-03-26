@@ -19,6 +19,9 @@
       </template>
       
       <a-descriptions :column="6" bordered size="small">
+        <a-descriptions-item label="所属主体">
+          <span class="subject-name">{{ warehouseInfo.subjectName }}</span>
+        </a-descriptions-item>
         <a-descriptions-item label="仓库类型">
           <a-tag :color="warehouseInfo.type === 'main' ? 'blue' : 'green'">
             {{ warehouseInfo.type === 'main' ? '主仓' : '分仓' }}
@@ -171,9 +174,18 @@
             </template>
           </a-table-column>
           <a-table-column title="更新时间" data-index="updatedAt" :width="140" />
-          <a-table-column title="操作" :width="150" fixed="right">
+          <a-table-column title="批次" :width="80" align="center">
+            <template #cell="{ record }">
+              <a-button type="text" size="small" @click="handleViewBatches(record)">
+                {{ record.batches?.length || 0 }} 批
+              </a-button>
+            </template>
+          </a-table-column>
+          <a-table-column title="操作" :width="200" fixed="right">
             <template #cell="{ record }">
               <a-space>
+                <a-button type="text" size="small" @click="handleStockIn(record)">入库</a-button>
+                <a-button type="text" size="small" @click="handleStockOut(record)">出库</a-button>
                 <a-button type="text" size="small" @click="handleViewRecord(record)">记录</a-button>
                 <a-button type="text" size="small" @click="handleAdjustStock(record)">调整</a-button>
               </a-space>
@@ -223,6 +235,9 @@
             <a-radio value="out">出库</a-radio>
             <a-radio value="adjust">盘点调整</a-radio>
           </a-radio-group>
+          <div v-if="adjustStockForm.type === 'adjust'" class="form-tip" style="color: var(--color-warning); margin-top: 8px">
+            <icon-exclamation-circle /> 盘点调整需要创建盘点单进行审核
+          </div>
         </a-form-item>
         <a-form-item label="调整数量" required>
           <a-input-number v-model="adjustStockForm.quantity" :min="1" style="width: 100%">
@@ -233,6 +248,142 @@
           <a-textarea v-model="adjustStockForm.reason" placeholder="请输入调整原因" :max-length="200" />
         </a-form-item>
       </a-form>
+    </a-modal>
+
+    <a-modal
+      v-model:visible="stockInVisible"
+      title="商品入库"
+      :width="500"
+      @ok="handleStockInConfirm"
+    >
+      <a-form :model="stockInForm" layout="vertical">
+        <a-descriptions :column="2" bordered size="small" style="margin-bottom: 16px">
+          <a-descriptions-item label="商品名称">{{ currentProduct?.skuName }}</a-descriptions-item>
+          <a-descriptions-item label="当前库存">{{ currentProduct?.quantity }} {{ currentProduct?.unit }}</a-descriptions-item>
+        </a-descriptions>
+        <a-form-item label="入库数量" required>
+          <a-input-number v-model="stockInForm.quantity" :min="1" style="width: 100%">
+            <template #suffix>{{ currentProduct?.unit }}</template>
+          </a-input-number>
+        </a-form-item>
+        <a-form-item label="批次批注" required>
+          <a-input v-model="stockInForm.batchNote" placeholder="如：中等材质、优质品、特价款等" />
+          <div class="form-tip">批注用于区分不同批次的商品，方便后续出库时选择</div>
+        </a-form-item>
+        <a-form-item label="入库日期">
+          <a-date-picker v-model="stockInForm.inDate" style="width: 100%" />
+        </a-form-item>
+        <a-form-item label="备注">
+          <a-textarea v-model="stockInForm.remark" placeholder="请输入备注信息" :max-length="200" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <a-modal
+      v-model:visible="stockOutVisible"
+      title="商品出库"
+      :width="600"
+      @ok="handleStockOutConfirm"
+    >
+      <a-form :model="stockOutForm" layout="vertical">
+        <a-descriptions :column="2" bordered size="small" style="margin-bottom: 16px">
+          <a-descriptions-item label="商品名称">{{ currentProduct?.skuName }}</a-descriptions-item>
+          <a-descriptions-item label="可用库存">{{ currentProduct?.availableQty }} {{ currentProduct?.unit }}</a-descriptions-item>
+        </a-descriptions>
+        <a-form-item label="选择批次" required>
+          <div class="batch-select">
+            <div v-if="!currentProduct?.batches?.length" class="no-batch">
+              暂无批次记录，请直接输入出库数量
+            </div>
+            <a-table v-else :data="currentProduct?.batches" :pagination="false" size="small">
+              <template #columns>
+                <a-table-column title="入库日期" data-index="inDate" :width="100" />
+                <a-table-column title="批注" data-index="note" :width="120">
+                  <template #cell="{ record }">
+                    <a-tag color="arcoblue">{{ record.note }}</a-tag>
+                  </template>
+                </a-table-column>
+                <a-table-column title="可用数量" :width="100">
+                  <template #cell="{ record }">
+                    {{ record.availableQty }} {{ currentProduct?.unit }}
+                  </template>
+                </a-table-column>
+                <a-table-column title="出库数量" :width="120">
+                  <template #cell="{ record }">
+                    <a-input-number 
+                      v-model="stockOutForm.batchQuantities[record.id]"
+                      :min="0"
+                      :max="record.availableQty"
+                      size="small"
+                    />
+                  </template>
+                </a-table-column>
+              </template>
+            </a-table>
+          </div>
+        </a-form-item>
+        <a-form-item label="出库数量">
+          <a-input-number v-model="stockOutForm.quantity" :min="1" :max="currentProduct?.availableQty" style="width: 100%">
+            <template #suffix>{{ currentProduct?.unit }}</template>
+          </a-input-number>
+          <div class="form-tip">可手动输入总出库数量，或从上方批次中选择</div>
+        </a-form-item>
+        <a-form-item label="出库原因" required>
+          <a-textarea v-model="stockOutForm.reason" placeholder="请输入出库原因" :max-length="200" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <a-modal
+      v-model:visible="batchVisible"
+      :title="`${currentProduct?.skuName || ''} - 批次记录`"
+      :width="700"
+      :footer="false"
+    >
+      <a-table :data="currentProduct?.batches || []" :pagination="false">
+        <template #columns>
+          <a-table-column title="批次编号" :width="100">
+            <template #cell="{ record }">
+              {{ record.batchNo }}
+            </template>
+          </a-table-column>
+          <a-table-column title="入库日期" data-index="inDate" :width="100" />
+          <a-table-column title="批注" :width="120">
+            <template #cell="{ record }">
+              <a-tag color="arcoblue">{{ record.note }}</a-tag>
+            </template>
+          </a-table-column>
+          <a-table-column title="入库数量" :width="100">
+            <template #cell="{ record }">
+              {{ record.quantity }} {{ currentProduct?.unit }}
+            </template>
+          </a-table-column>
+          <a-table-column title="已出库" :width="80">
+            <template #cell="{ record }">
+              {{ record.outQty }} {{ currentProduct?.unit }}
+            </template>
+          </a-table-column>
+          <a-table-column title="可用数量" :width="100">
+            <template #cell="{ record }">
+              <span :class="record.availableQty === 0 ? 'text-danger' : ''">
+                {{ record.availableQty }} {{ currentProduct?.unit }}
+              </span>
+            </template>
+          </a-table-column>
+          <a-table-column title="状态" :width="80">
+            <template #cell="{ record }">
+              <a-tag :color="record.availableQty > 0 ? 'green' : 'gray'">
+                {{ record.availableQty > 0 ? '可用' : '已用完' }}
+              </a-tag>
+            </template>
+          </a-table-column>
+          <a-table-column title="备注" :width="120">
+            <template #cell="{ record }">
+              {{ record.remark || '-' }}
+            </template>
+          </a-table-column>
+        </template>
+      </a-table>
     </a-modal>
 
     <a-modal
@@ -340,7 +491,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Message } from '@arco-design/web-vue'
+import { Message, Modal } from '@arco-design/web-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -352,6 +503,7 @@ const warehouseInfo = ref({
   name: '深圳湾科技园项目仓',
   code: 'WH001',
   type: 'main',
+  subjectName: '深圳湾科技园工程仓',
   managerName: '张三',
   phone: '13800138001',
   address: '广东省深圳市南山区科技园南区',
@@ -414,6 +566,10 @@ const mockProducts = ref([
     purchasePrice: 380,
     location: 'A-01-01',
     updatedAt: '2024-03-24 10:00',
+    batches: [
+      { id: 'b1', batchNo: 'PC-0319-001', inDate: '2024-03-19', note: '优质品', quantity: 300, outQty: 50, availableQty: 250, remark: '供应商A' },
+      { id: 'b2', batchNo: 'PC-0320-001', inDate: '2024-03-20', note: '中等材质', quantity: 200, outQty: 0, availableQty: 200, remark: '供应商B' },
+    ],
   },
   {
     id: 'wp2',
@@ -431,6 +587,9 @@ const mockProducts = ref([
     purchasePrice: 3200,
     location: 'B-02-01',
     updatedAt: '2024-03-24 09:30',
+    batches: [
+      { id: 'b3', batchNo: 'LG-0315-001', inDate: '2024-03-15', note: '国标', quantity: 80, outQty: 5, availableQty: 75, remark: '' },
+    ],
   },
   {
     id: 'wp3',
@@ -448,6 +607,7 @@ const mockProducts = ref([
     purchasePrice: 95,
     location: 'C-01-01',
     updatedAt: '2024-03-23 16:00',
+    batches: [],
   },
   {
     id: 'wp4',
@@ -465,6 +625,7 @@ const mockProducts = ref([
     purchasePrice: 350,
     location: 'D-01-01',
     updatedAt: '2024-03-23 14:00',
+    batches: [],
   },
   {
     id: 'wp5',
@@ -482,6 +643,10 @@ const mockProducts = ref([
     purchasePrice: 380,
     location: 'E-01-01',
     updatedAt: '2024-03-22 10:00',
+    batches: [
+      { id: 'b4', batchNo: 'FS-0318-001', inDate: '2024-03-18', note: '品牌A', quantity: 100, outQty: 10, availableQty: 90, remark: '' },
+      { id: 'b5', batchNo: 'FS-0321-001', inDate: '2024-03-21', note: '品牌B', quantity: 50, outQty: 0, availableQty: 50, remark: '特价款' },
+    ],
   },
   {
     id: 'wp6',
@@ -499,6 +664,7 @@ const mockProducts = ref([
     purchasePrice: 85,
     location: 'F-01-01',
     updatedAt: '2024-03-24 11:00',
+    batches: [],
   },
 ])
 
@@ -556,6 +722,23 @@ const adjustStockForm = reactive({
   quantity: 1,
   reason: '',
 })
+
+const stockInVisible = ref(false)
+const stockInForm = reactive({
+  quantity: 1,
+  batchNote: '',
+  inDate: '',
+  remark: '',
+})
+
+const stockOutVisible = ref(false)
+const stockOutForm = reactive({
+  quantity: 0,
+  reason: '',
+  batchQuantities: {} as Record<string, number>,
+})
+
+const batchVisible = ref(false)
 
 const recordVisible = ref(false)
 const stockRecords = ref<any[]>([])
@@ -645,6 +828,18 @@ function handleAdjustStock(record: any) {
 }
 
 function handleAdjustStockConfirm() {
+  if (adjustStockForm.type === 'adjust') {
+    Modal.confirm({
+      title: '提示',
+      content: '盘点调整需要创建盘点单进行审核，是否前往创建盘点单？',
+      okText: '前往创建',
+      cancelText: '取消',
+      onOk: () => {
+        router.push('/stock/check')
+      },
+    })
+    return
+  }
   if (!adjustStockForm.reason.trim()) {
     Message.warning('请输入调整原因')
     return
@@ -658,9 +853,6 @@ function handleAdjustStockConfirm() {
       } else if (adjustStockForm.type === 'out') {
         mockProducts.value[index].quantity -= adjustStockForm.quantity
         mockProducts.value[index].availableQty -= adjustStockForm.quantity
-      } else {
-        mockProducts.value[index].quantity = adjustStockForm.quantity
-        mockProducts.value[index].availableQty = adjustStockForm.quantity
       }
     }
     Message.success('库存调整成功')
@@ -695,6 +887,98 @@ function handleViewRecord(record: any) {
     },
   ]
   recordVisible.value = true
+}
+
+function handleStockIn(record: any) {
+  currentProduct.value = record
+  stockInForm.quantity = 1
+  stockInForm.batchNote = ''
+  stockInForm.inDate = new Date().toISOString().split('T')[0]
+  stockInForm.remark = ''
+  stockInVisible.value = true
+}
+
+function handleStockInConfirm() {
+  if (!stockInForm.batchNote.trim()) {
+    Message.warning('请输入批次批注')
+    return
+  }
+  if (currentProduct.value) {
+    const index = mockProducts.value.findIndex(p => p.id === currentProduct.value.id)
+    if (index > -1) {
+      const batchNo = `${currentProduct.value.skuCode.split('-')[1]}-${stockInForm.inDate.replace(/-/g, '').slice(4)}-${String((currentProduct.value.batches?.length || 0) + 1).padStart(3, '0')}`
+      const newBatch = {
+        id: `b${Date.now()}`,
+        batchNo,
+        inDate: stockInForm.inDate,
+        note: stockInForm.batchNote,
+        quantity: stockInForm.quantity,
+        outQty: 0,
+        availableQty: stockInForm.quantity,
+        remark: stockInForm.remark,
+      }
+      if (!mockProducts.value[index].batches) {
+        mockProducts.value[index].batches = []
+      }
+      mockProducts.value[index].batches.push(newBatch)
+      mockProducts.value[index].quantity += stockInForm.quantity
+      mockProducts.value[index].availableQty += stockInForm.quantity
+    }
+    Message.success('入库成功，已创建批次记录')
+  }
+  stockInVisible.value = false
+}
+
+function handleStockOut(record: any) {
+  currentProduct.value = record
+  stockOutForm.quantity = 0
+  stockOutForm.reason = ''
+  stockOutForm.batchQuantities = {}
+  if (record.batches) {
+    record.batches.forEach((b: any) => {
+      stockOutForm.batchQuantities[b.id] = 0
+    })
+  }
+  stockOutVisible.value = true
+}
+
+function handleStockOutConfirm() {
+  if (!stockOutForm.reason.trim()) {
+    Message.warning('请输入出库原因')
+    return
+  }
+  
+  const batchTotal = Object.values(stockOutForm.batchQuantities).reduce((sum, qty) => sum + (qty as number), 0)
+  const totalQty = stockOutForm.quantity || batchTotal
+  
+  if (totalQty <= 0) {
+    Message.warning('请输入出库数量或从批次中选择')
+    return
+  }
+  
+  if (currentProduct.value) {
+    const index = mockProducts.value.findIndex(p => p.id === currentProduct.value.id)
+    if (index > -1) {
+      if (batchTotal > 0) {
+        currentProduct.value.batches.forEach((batch: any) => {
+          const outQty = stockOutForm.batchQuantities[batch.id] || 0
+          if (outQty > 0) {
+            batch.outQty += outQty
+            batch.availableQty -= outQty
+          }
+        })
+      }
+      mockProducts.value[index].quantity -= totalQty
+      mockProducts.value[index].availableQty -= totalQty
+    }
+    Message.success('出库成功')
+  }
+  stockOutVisible.value = false
+}
+
+function handleViewBatches(record: any) {
+  currentProduct.value = record
+  batchVisible.value = true
 }
 
 function getStockStatusKey(record: any) {
@@ -827,5 +1111,24 @@ function getStockStatusText(record: any) {
 
 .text-danger {
   color: var(--color-danger);
+}
+
+.subject-name {
+  font-weight: 500;
+  color: var(--color-primary);
+}
+
+.batch-select {
+  .no-batch {
+    color: var(--color-text-3);
+    font-size: 13px;
+    padding: 12px 0;
+  }
+}
+
+.form-tip {
+  font-size: 12px;
+  color: var(--color-text-3);
+  margin-top: 4px;
 }
 </style>

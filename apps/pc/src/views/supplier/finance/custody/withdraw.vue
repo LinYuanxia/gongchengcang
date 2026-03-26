@@ -164,12 +164,14 @@ const pagination = ref({
   total: 30,
 })
 
-const withdrawList = ref([
+const allWithdrawList = ref([
   { id: '1', withdrawNo: 'WD202401150001', amount: '12,000.00', fee: '12.00', arrivalAmount: '11,988.00', bankName: '中国工商银行', bankCard: '****8901', applyTime: '2024-01-15 10:00:00', arrivalTime: '2024-01-16 14:30:00', status: 'success', remark: '' },
   { id: '2', withdrawNo: 'WD202401140001', amount: '8,000.00', fee: '8.00', arrivalAmount: '7,992.00', bankName: '中国工商银行', bankCard: '****8901', applyTime: '2024-01-14 15:20:00', arrivalTime: '', status: 'processing', remark: '' },
   { id: '3', withdrawNo: 'WD202401130001', amount: '15,000.00', fee: '15.00', arrivalAmount: '14,985.00', bankName: '中国工商银行', bankCard: '****8901', applyTime: '2024-01-13 09:00:00', arrivalTime: '2024-01-14 10:00:00', status: 'success', remark: '' },
   { id: '4', withdrawNo: 'WD202401120001', amount: '10,000.00', fee: '10.00', arrivalAmount: '9,990.00', bankName: '中国工商银行', bankCard: '****8901', applyTime: '2024-01-12 16:00:00', arrivalTime: '2024-01-13 09:30:00', status: 'success', remark: '' },
 ])
+
+const withdrawList = ref([...allWithdrawList.value])
 
 const withdrawVisible = ref(false)
 const detailVisible = ref(false)
@@ -202,7 +204,36 @@ function getStatusText(status: string) {
 }
 
 function handleSearch() {
-  Message.info('查询功能开发中')
+  let filtered = [...allWithdrawList.value]
+  
+  if (searchForm.value.withdrawNo) {
+    filtered = filtered.filter(item => 
+      item.withdrawNo.includes(searchForm.value.withdrawNo)
+    )
+  }
+  
+  if (searchForm.value.bankId) {
+    filtered = filtered.filter(item => 
+      (searchForm.value.bankId === '1' && item.bankName === '中国工商银行') ||
+      (searchForm.value.bankId === '2' && item.bankName === '中国建设银行')
+    )
+  }
+  
+  if (searchForm.value.status) {
+    filtered = filtered.filter(item => item.status === searchForm.value.status)
+  }
+  
+  if (searchForm.value.dateRange && searchForm.value.dateRange.length === 2) {
+    const [startDate, endDate] = searchForm.value.dateRange
+    filtered = filtered.filter(item => {
+      const itemDate = new Date(item.applyTime.split(' ')[0])
+      return itemDate >= new Date(startDate) && itemDate <= new Date(endDate)
+    })
+  }
+  
+  withdrawList.value = filtered
+  pagination.value.total = filtered.length
+  Message.success(`查询完成，共 ${filtered.length} 条记录`)
 }
 
 function handlePageChange(page: number) {

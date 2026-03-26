@@ -41,7 +41,11 @@
       >
         <template #columns>
           <a-table-column title="租户ID" data-index="tenantId" :width="180" />
-          <a-table-column title="商户名称" data-index="merchantName" :width="200" />
+          <a-table-column title="商户名称" data-index="merchantName" :width="200">
+            <template #cell="{ record }">
+              <a-link @click="handleViewDetail(record)">{{ record.merchantName }}</a-link>
+            </template>
+          </a-table-column>
           <a-table-column title="商户类型" :width="120">
             <template #cell="{ record }">
               <a-tag :color="TENANT_TYPE_MAP[record.tenantType]?.color">
@@ -103,6 +107,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import {
   TENANT_TYPE_OPTIONS,
@@ -116,6 +121,7 @@ import type { Merchant } from '@gongchengcang/types'
 import MerchantFormDrawer from './components/MerchantFormDrawer.vue'
 import MerchantDetailDrawer from './components/MerchantDetailDrawer.vue'
 
+const router = useRouter()
 const loading = ref(false)
 const tableData = ref<Merchant[]>([])
 const pagination = reactive({
@@ -176,6 +182,10 @@ function handleAdd() {
 function handleView(record: Merchant) {
   currentTenantId.value = record.tenantId
   detailVisible.value = true
+}
+
+function handleViewDetail(record: Merchant) {
+  router.push({ path: '/merchant/detail', query: { id: record.tenantId } })
 }
 
 function handleEdit(record: Merchant) {

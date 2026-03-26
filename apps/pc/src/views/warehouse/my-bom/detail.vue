@@ -172,7 +172,7 @@ const bom = ref({
 })
 
 function handleEdit() {
-  router.push(`/warehouse/my-bom/edit/${bom.value.id}`)
+  router.push(`/warehouse/bom-manage/edit/${bom.value.id}`)
 }
 
 function handleOnline() {

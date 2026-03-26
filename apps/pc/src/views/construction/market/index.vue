@@ -61,6 +61,14 @@
         <template #columns>
           <a-table-column title="商品编码" data-index="productCode" :width="120" />
           <a-table-column title="商品名称" data-index="productName" :width="200" />
+          <a-table-column title="所属SPU" :width="150">
+            <template #cell="{ record }">
+              <div class="spu-info">
+                <div class="spu-name">{{ record.spuName || '-' }}</div>
+                <div v-if="record.spuCode" class="spu-code">{{ record.spuCode }}</div>
+              </div>
+            </template>
+          </a-table-column>
           <a-table-column title="规格" data-index="spec" :width="120" />
           <a-table-column title="所属工程仓" data-index="warehouseName" :width="150" />
           <a-table-column title="销售价" :width="100" align="right">
@@ -68,7 +76,12 @@
               <span class="price">¥{{ record.salePrice }}</span>
             </template>
           </a-table-column>
-          <a-table-column title="库存" data-index="stock" :width="80" align="center" />
+          <a-table-column title="销售库存" :width="100" align="right">
+            <template #cell="{ record }">
+              <span class="stock-value">{{ record.saleStock ?? 0 }}</span>
+              <span class="stock-unit">{{ record.unit || '件' }}</span>
+            </template>
+          </a-table-column>
           <a-table-column title="上架状态" :width="100" align="center">
             <template #cell="{ record }">
               <a-switch 
@@ -144,10 +157,14 @@ interface MarketProduct {
   id: string
   productCode: string
   productName: string
+  spuName?: string
+  spuCode?: string
   spec: string
   warehouseId: string
   warehouseName: string
   salePrice: number
+  saleStock?: number
+  unit?: string
   stock: number
   status: 'online' | 'offline'
   isHot: boolean
@@ -186,10 +203,14 @@ const products = ref<MarketProduct[]>([
     id: 'mp001',
     productCode: 'SKU-SN-001',
     productName: '水泥 P.O 42.5',
+    spuName: '普通硅酸盐水泥',
+    spuCode: 'SPU-SN-001',
     spec: '50kg/袋',
     warehouseId: 'w001',
     warehouseName: '深圳湾科技园项目仓',
     salePrice: 450,
+    saleStock: 500,
+    unit: '吨',
     stock: 500,
     status: 'online',
     isHot: true,
@@ -200,10 +221,14 @@ const products = ref<MarketProduct[]>([
     id: 'mp002',
     productCode: 'SKU-LG-001',
     productName: '螺纹钢 HRB400 16mm',
+    spuName: '螺纹钢',
+    spuCode: 'SPU-LG-001',
     spec: '16mm',
     warehouseId: 'w001',
     warehouseName: '深圳湾科技园项目仓',
     salePrice: 4280,
+    saleStock: 200,
+    unit: '吨',
     stock: 200,
     status: 'online',
     isHot: false,
@@ -214,10 +239,14 @@ const products = ref<MarketProduct[]>([
     id: 'mp003',
     productCode: 'SKU-HS-001',
     productName: '黄砂 中砂',
+    spuName: '黄砂',
+    spuCode: 'SPU-HS-001',
     spec: '中砂',
     warehouseId: 'w002',
     warehouseName: '福田CBD项目仓',
     salePrice: 95,
+    saleStock: 1000,
+    unit: '方',
     stock: 1000,
     status: 'offline',
     isHot: false,
@@ -228,10 +257,14 @@ const products = ref<MarketProduct[]>([
     id: 'mp004',
     productCode: 'SKU-SN-002',
     productName: '水泥 P.O 52.5',
+    spuName: '普通硅酸盐水泥',
+    spuCode: 'SPU-SN-001',
     spec: '50kg/袋',
     warehouseId: 'w001',
     warehouseName: '深圳湾科技园项目仓',
     salePrice: 520,
+    saleStock: 300,
+    unit: '吨',
     stock: 300,
     status: 'online',
     isHot: true,
@@ -242,10 +275,14 @@ const products = ref<MarketProduct[]>([
     id: 'mp005',
     productCode: 'SKU-LG-002',
     productName: '螺纹钢 HRB400 20mm',
+    spuName: '螺纹钢',
+    spuCode: 'SPU-LG-001',
     spec: '20mm',
     warehouseId: 'w002',
     warehouseName: '福田CBD项目仓',
     salePrice: 4150,
+    saleStock: 150,
+    unit: '吨',
     stock: 150,
     status: 'online',
     isHot: false,
@@ -256,10 +293,14 @@ const products = ref<MarketProduct[]>([
     id: 'mp006',
     productCode: 'SKU-HNT-001',
     productName: '商品混凝土 C30',
+    spuName: '商品混凝土',
+    spuCode: 'SPU-HNT-001',
     spec: 'C30',
     warehouseId: 'w003',
     warehouseName: '宝安新安项目仓',
     salePrice: 420,
+    saleStock: 800,
+    unit: '方',
     stock: 800,
     status: 'online',
     isHot: true,
@@ -270,10 +311,14 @@ const products = ref<MarketProduct[]>([
     id: 'mp007',
     productCode: 'SKU-HNT-002',
     productName: '商品混凝土 C40',
+    spuName: '商品混凝土',
+    spuCode: 'SPU-HNT-001',
     spec: 'C40',
     warehouseId: 'w003',
     warehouseName: '宝安新安项目仓',
     salePrice: 480,
+    saleStock: 600,
+    unit: '方',
     stock: 600,
     status: 'online',
     isHot: false,
@@ -284,10 +329,14 @@ const products = ref<MarketProduct[]>([
     id: 'mp008',
     productCode: 'SKU-FS-001',
     productName: '防水涂料 聚氨酯',
+    spuName: '防水涂料',
+    spuCode: 'SPU-FS-001',
     spec: '20kg/桶',
     warehouseId: 'w001',
     warehouseName: '深圳湾科技园项目仓',
     salePrice: 380,
+    saleStock: 200,
+    unit: '桶',
     stock: 200,
     status: 'online',
     isHot: false,
@@ -298,10 +347,14 @@ const products = ref<MarketProduct[]>([
     id: 'mp009',
     productCode: 'SKU-QG-001',
     productName: '轻钢龙骨 50型',
+    spuName: '轻钢龙骨',
+    spuCode: 'SPU-QG-001',
     spec: '50mm',
     warehouseId: 'w004',
     warehouseName: '龙岗中心城项目仓',
     salePrice: 28,
+    saleStock: 5000,
+    unit: '根',
     stock: 5000,
     status: 'online',
     isHot: false,
@@ -312,10 +365,14 @@ const products = ref<MarketProduct[]>([
     id: 'mp010',
     productCode: 'SKU-SGB-001',
     productName: '石膏板 12mm',
+    spuName: '石膏板',
+    spuCode: 'SPU-SGB-001',
     spec: '1200x2400mm',
     warehouseId: 'w004',
     warehouseName: '龙岗中心城项目仓',
     salePrice: 45,
+    saleStock: 2000,
+    unit: '张',
     stock: 2000,
     status: 'online',
     isHot: true,
@@ -326,10 +383,14 @@ const products = ref<MarketProduct[]>([
     id: 'mp011',
     productCode: 'SKU-DX-001',
     productName: '电线 BV 2.5mm²',
+    spuName: '电线',
+    spuCode: 'SPU-DX-001',
     spec: '2.5mm²',
     warehouseId: 'w005',
     warehouseName: '南山科技园项目仓',
     salePrice: 180,
+    saleStock: 800,
+    unit: '卷',
     stock: 800,
     status: 'online',
     isHot: true,
@@ -340,10 +401,14 @@ const products = ref<MarketProduct[]>([
     id: 'mp012',
     productCode: 'SKU-DX-002',
     productName: '电线 BV 4mm²',
+    spuName: '电线',
+    spuCode: 'SPU-DX-001',
     spec: '4mm²',
     warehouseId: 'w005',
     warehouseName: '南山科技园项目仓',
     salePrice: 320,
+    saleStock: 500,
+    unit: '卷',
     stock: 500,
     status: 'online',
     isHot: false,
@@ -354,10 +419,14 @@ const products = ref<MarketProduct[]>([
     id: 'mp013',
     productCode: 'SKU-SG-001',
     productName: '水管 PPR 20mm',
+    spuName: 'PPR水管',
+    spuCode: 'SPU-SG-001',
     spec: '20mm',
     warehouseId: 'w002',
     warehouseName: '福田CBD项目仓',
     salePrice: 15,
+    saleStock: 3000,
+    unit: '根',
     stock: 3000,
     status: 'online',
     isHot: false,
@@ -368,10 +437,14 @@ const products = ref<MarketProduct[]>([
     id: 'mp014',
     productCode: 'SKU-ZBJ-001',
     productName: '瓷砖胶 C1',
+    spuName: '瓷砖胶',
+    spuCode: 'SPU-ZBJ-001',
     spec: '25kg/袋',
     warehouseId: 'w003',
     warehouseName: '宝安新安项目仓',
     salePrice: 65,
+    saleStock: 400,
+    unit: '袋',
     stock: 400,
     status: 'online',
     isHot: true,
@@ -382,10 +455,14 @@ const products = ref<MarketProduct[]>([
     id: 'mp015',
     productCode: 'SKU-LG-003',
     productName: '螺纹钢 HRB400 25mm',
+    spuName: '螺纹钢',
+    spuCode: 'SPU-LG-001',
     spec: '25mm',
     warehouseId: 'w001',
     warehouseName: '深圳湾科技园项目仓',
     salePrice: 4050,
+    saleStock: 100,
+    unit: '吨',
     stock: 100,
     status: 'offline',
     isHot: false,
@@ -536,5 +613,28 @@ function handleStockSuccess() {
 .price {
   color: #f53f3f;
   font-weight: 500;
+}
+
+.spu-info {
+  .spu-name {
+    font-weight: 500;
+  }
+  
+  .spu-code {
+    font-size: 12px;
+    color: var(--color-text-3);
+    margin-top: 2px;
+  }
+}
+
+.stock-value {
+  font-weight: 600;
+  color: #165dff;
+}
+
+.stock-unit {
+  font-size: 12px;
+  color: var(--color-text-3);
+  margin-left: 4px;
 }
 </style>

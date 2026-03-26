@@ -14,12 +14,10 @@
         <a-form-item label="BOM名称">
           <a-input v-model="searchForm.name" placeholder="请输入BOM名称" allow-clear style="width: 200px" />
         </a-form-item>
-        <a-form-item label="状态">
-          <a-select v-model="searchForm.status" placeholder="全部" allow-clear style="width: 120px">
-            <a-option value="draft">草稿</a-option>
-            <a-option value="pending">待审核</a-option>
-            <a-option value="approved">已通过</a-option>
-            <a-option value="rejected">已驳回</a-option>
+        <a-form-item label="上架状态">
+          <a-select v-model="searchForm.isOnline" placeholder="全部" allow-clear style="width: 120px">
+            <a-option :value="true">已上架</a-option>
+            <a-option :value="false">已下架</a-option>
           </a-select>
         </a-form-item>
         <a-form-item>
@@ -29,14 +27,13 @@
 
       <a-tabs v-model:active-key="activeTab" style="margin-top: 16px">
         <a-tab-pane key="all" title="全部" />
-        <a-tab-pane key="draft" title="草稿" />
-        <a-tab-pane key="pending" title="待审核" />
-        <a-tab-pane key="approved" title="已通过" />
         <a-tab-pane key="online" title="已上架" />
+        <a-tab-pane key="offline" title="已下架" />
       </a-tabs>
 
       <a-table :data="filteredBomList" :pagination="pagination" class="mt-16">
         <template #columns>
+          <a-table-column title="BOM编码" data-index="bomCode" :width="120" />
           <a-table-column title="BOM包信息" :width="280">
             <template #cell="{ record }">
               <div class="bom-info">
@@ -80,30 +77,21 @@
               </div>
             </template>
           </a-table-column>
-          <a-table-column title="市场状态" :width="100">
+          <a-table-column title="上架状态" :width="100">
             <template #cell="{ record }">
               <a-switch 
                 v-model="record.isOnline" 
-                :disabled="record.status !== 'approved'"
                 @change="handleOnlineChange(record)"
               />
             </template>
           </a-table-column>
-          <a-table-column title="状态" :width="100">
-            <template #cell="{ record }">
-              <a-tag :color="getStatusColor(record.status)">{{ getStatusText(record.status) }}</a-tag>
-            </template>
-          </a-table-column>
           <a-table-column title="创建时间" data-index="createTime" :width="150" />
-          <a-table-column title="操作" :width="220" fixed="right">
+          <a-table-column title="操作" :width="180" fixed="right">
             <template #cell="{ record }">
               <a-space>
                 <a-link @click="handleView(record)">查看</a-link>
-                <a-link v-if="record.status === 'draft' || record.status === 'rejected'" @click="handleEdit(record)">编辑</a-link>
-                <a-link v-if="record.status === 'approved'" @click="handleConfigPermission(record)">权限配置</a-link>
-                <a-link v-if="record.status === 'draft'" @click="handleSubmit(record)">提交审核</a-link>
-                <a-link v-if="record.status === 'pending'" @click="handleAudit(record)">审核</a-link>
-                <a-link v-if="record.status === 'approved'" @click="handleCopy(record)">复制</a-link>
+                <a-link @click="handleEdit(record)">编辑</a-link>
+                <a-link @click="handleConfigPermission(record)">权限配置</a-link>
                 <a-popconfirm content="确定删除该BOM包吗？" @ok="handleDelete(record)">
                   <a-link status="danger">删除</a-link>
                 </a-popconfirm>
@@ -113,26 +101,6 @@
         </template>
       </a-table>
     </a-card>
-
-    <a-modal v-model:visible="auditModalVisible" title="BOM包审核" :width="600" @ok="handleAuditConfirm">
-      <a-descriptions :column="2" bordered size="small">
-        <a-descriptions-item label="BOM名称">{{ currentBom?.name }}</a-descriptions-item>
-        <a-descriptions-item label="SKU数量">{{ currentBom?.skuCount }} 种</a-descriptions-item>
-        <a-descriptions-item label="SKU单价总计">¥{{ currentBom?.skuTotalPrice }}</a-descriptions-item>
-      </a-descriptions>
-      <a-divider />
-      <a-form :model="auditForm" layout="vertical">
-        <a-form-item label="审核结果" required>
-          <a-radio-group v-model="auditForm.result">
-            <a-radio value="approved">通过</a-radio>
-            <a-radio value="rejected">驳回</a-radio>
-          </a-radio-group>
-        </a-form-item>
-        <a-form-item label="审核意见" required>
-          <a-textarea v-model="auditForm.remark" placeholder="请输入审核意见" :max-length="200" />
-        </a-form-item>
-      </a-form>
-    </a-modal>
 
     <a-modal v-model:visible="permissionModalVisible" title="BOM包权限配置" :width="700" @ok="handlePermissionConfirm">
       <div class="permission-header">
@@ -192,7 +160,7 @@ const activeTab = ref('all')
 
 const searchForm = ref({
   name: '',
-  status: '',
+  isOnline: undefined as boolean | undefined,
 })
 
 const pagination = ref({
@@ -201,16 +169,15 @@ const pagination = ref({
   total: 50,
 })
 
-const bomList = ref([
+const allBomList = ref([
   {
     id: '1',
+    bomCode: 'BOM-SD-001',
     name: '水电材料标准包',
     image: 'https://picsum.photos/100/100?random=1',
     skuCount: 12,
-    strategy: 'smart',
     skuTotalPrice: '3,280.00',
     tags: ['热门', '推荐'],
-    status: 'approved',
     isOnline: true,
     visibleWarehouses: [
       { id: 'w1', name: '华东工程仓' },
@@ -220,13 +187,12 @@ const bomList = ref([
   },
   {
     id: '2',
+    bomCode: 'BOM-FS-001',
     name: '防水涂料套餐',
     image: 'https://picsum.photos/100/100?random=2',
     skuCount: 5,
-    strategy: 'single',
     skuTotalPrice: '1,850.00',
     tags: ['新品'],
-    status: 'approved',
     isOnline: true,
     visibleWarehouses: [
       { id: 'w1', name: '华东工程仓' },
@@ -237,64 +203,58 @@ const bomList = ref([
   },
   {
     id: '3',
+    bomCode: 'BOM-MG-001',
     name: '木工基础包',
     image: 'https://picsum.photos/100/100?random=3',
     skuCount: 8,
-    strategy: 'sku',
     skuTotalPrice: '4,500.00',
     tags: [],
-    status: 'pending',
     isOnline: false,
     visibleWarehouses: [],
     createTime: '2024-01-16 09:00',
   },
   {
     id: '4',
+    bomCode: 'BOM-YQ-001',
     name: '油漆涂装套餐',
     image: 'https://picsum.photos/100/100?random=4',
     skuCount: 6,
-    strategy: 'smart',
     skuTotalPrice: '2,200.00',
     tags: ['促销'],
-    status: 'draft',
     isOnline: false,
     visibleWarehouses: [],
     createTime: '2024-01-16 11:30',
   },
   {
     id: '5',
+    bomCode: 'BOM-CZ-001',
     name: '瓷砖铺贴包',
     image: 'https://picsum.photos/100/100?random=5',
     skuCount: 10,
-    strategy: 'single',
     skuTotalPrice: '5,800.00',
     tags: [],
-    status: 'rejected',
     isOnline: false,
     visibleWarehouses: [],
     createTime: '2024-01-13 16:45',
   },
 ])
 
+const bomList = ref([...allBomList.value])
+
 const filteredBomList = computed(() => {
   let list = bomList.value
   if (activeTab.value !== 'all') {
     if (activeTab.value === 'online') {
       list = list.filter(item => item.isOnline)
-    } else {
-      list = list.filter(item => item.status === activeTab.value)
+    } else if (activeTab.value === 'offline') {
+      list = list.filter(item => !item.isOnline)
     }
   }
   return list
 })
 
-const auditModalVisible = ref(false)
 const permissionModalVisible = ref(false)
 const currentBom = ref<any>(null)
-const auditForm = ref({
-  result: 'approved',
-  remark: '',
-})
 
 const selectedWarehouseIds = ref<string[]>([])
 const marketConfig = ref({
@@ -310,46 +270,31 @@ const warehouseList = ref([
   { value: 'w6', label: '无锡工程仓' },
 ])
 
-function getStrategyColor(strategy: string) {
-  const colors: Record<string, string> = {
-    smart: 'blue',
-    single: 'green',
-    sku: 'purple',
-  }
-  return colors[strategy] || 'gray'
-}
-
-function getStrategyText(strategy: string) {
-  const texts: Record<string, string> = {
-    smart: '智能分配',
-    single: '单一供应商',
-    sku: 'SKU级指定',
-  }
-  return texts[strategy] || strategy
-}
-
-function getStatusColor(status: string) {
-  const colors: Record<string, string> = {
-    draft: 'gray',
-    pending: 'orange',
-    approved: 'green',
-    rejected: 'red',
-  }
-  return colors[status] || 'gray'
-}
-
-function getStatusText(status: string) {
-  const texts: Record<string, string> = {
-    draft: '草稿',
-    pending: '待审核',
-    approved: '已通过',
-    rejected: '已驳回',
-  }
-  return texts[status] || status
-}
-
 function handleSearch() {
-  Message.info('查询功能开发中')
+  let filtered = [...allBomList.value]
+  
+  if (activeTab.value !== 'all') {
+    if (activeTab.value === 'online') {
+      filtered = filtered.filter(item => item.isOnline)
+    } else if (activeTab.value === 'offline') {
+      filtered = filtered.filter(item => !item.isOnline)
+    }
+  }
+  
+  if (searchForm.value.name) {
+    filtered = filtered.filter(item => 
+      item.name.includes(searchForm.value.name) ||
+      item.bomCode.includes(searchForm.value.name)
+    )
+  }
+  
+  if (searchForm.value.isOnline !== undefined) {
+    filtered = filtered.filter(item => item.isOnline === searchForm.value.isOnline)
+  }
+  
+  bomList.value = filtered
+  pagination.value.total = filtered.length
+  Message.success(`查询完成，共 ${filtered.length} 条记录`)
 }
 
 function handleCreate() {
@@ -362,32 +307,6 @@ function handleView(record: any) {
 
 function handleEdit(record: any) {
   router.push(`/market/bom/edit/${record.id}`)
-}
-
-function handleSubmit(record: any) {
-  Message.success('已提交审核')
-  record.status = 'pending'
-}
-
-function handleAudit(record: any) {
-  currentBom.value = record
-  auditForm.value = { result: 'approved', remark: '' }
-  auditModalVisible.value = true
-}
-
-function handleAuditConfirm() {
-  if (!auditForm.value.remark) {
-    Message.warning('请输入审核意见')
-    return
-  }
-  if (auditForm.value.result === 'approved') {
-    currentBom.value.status = 'approved'
-    Message.success('审核通过')
-  } else {
-    currentBom.value.status = 'rejected'
-    Message.success('已驳回')
-  }
-  auditModalVisible.value = false
 }
 
 function handleConfigPermission(record: any) {
@@ -417,10 +336,6 @@ function handlePermissionConfirm() {
   
   Message.success('权限配置成功')
   permissionModalVisible.value = false
-}
-
-function handleCopy(record: any) {
-  Message.success('已复制到草稿')
 }
 
 function handleDelete(record: any) {

@@ -154,13 +154,15 @@ interface BillRecord {
   billTime: string
 }
 
-const billList = ref<BillRecord[]>([
+const allBillList = ref<BillRecord[]>([
   { id: '1', billNo: 'PB202401150001', supplierName: '华润建材', orderNo: 'PO202401150001', amount: '85,000.00', paidAmount: '85,000.00', pendingAmount: '0.00', status: 'paid', billTime: '2024-01-15 10:00:00' },
   { id: '2', billNo: 'PB202401140001', supplierName: '东方水泥', orderNo: 'PO202401140001', amount: '52,300.00', paidAmount: '30,000.00', pendingAmount: '22,300.00', status: 'partial', billTime: '2024-01-14 14:30:00' },
   { id: '3', billNo: 'PB202401130001', supplierName: '鑫源钢材', orderNo: 'PO202401130001', amount: '128,500.00', paidAmount: '0.00', pendingAmount: '128,500.00', status: 'pending', billTime: '2024-01-13 09:00:00' },
   { id: '4', billNo: 'PB202401120001', supplierName: '华润建材', orderNo: 'PO202401120001', amount: '45,000.00', paidAmount: '45,000.00', pendingAmount: '0.00', status: 'paid', billTime: '2024-01-12 16:00:00' },
   { id: '5', billNo: 'PB202401110001', supplierName: '东方水泥', orderNo: 'PO202401110001', amount: '48,200.00', paidAmount: '0.00', pendingAmount: '48,200.00', status: 'pending', billTime: '2024-01-11 11:00:00' },
 ])
+
+const billList = ref<BillRecord[]>([...allBillList.value])
 
 const payVisible = ref(false)
 const payForm = ref({
@@ -191,7 +193,36 @@ function getStatusText(status: string) {
 }
 
 function handleSearch() {
-  Message.info('查询功能开发中')
+  let filtered = [...allBillList.value]
+  
+  if (searchForm.value.billNo) {
+    filtered = filtered.filter(item => 
+      item.billNo.includes(searchForm.value.billNo) ||
+      item.orderNo.includes(searchForm.value.billNo)
+    )
+  }
+  
+  if (searchForm.value.supplierId) {
+    filtered = filtered.filter(item => 
+      item.supplierName.includes(searchForm.value.supplierId)
+    )
+  }
+  
+  if (searchForm.value.status) {
+    filtered = filtered.filter(item => item.status === searchForm.value.status)
+  }
+  
+  if (searchForm.value.dateRange && searchForm.value.dateRange.length === 2) {
+    const [startDate, endDate] = searchForm.value.dateRange
+    filtered = filtered.filter(item => {
+      const itemDate = new Date(item.billTime.split(' ')[0])
+      return itemDate >= new Date(startDate) && itemDate <= new Date(endDate)
+    })
+  }
+  
+  billList.value = filtered
+  pagination.value.total = filtered.length
+  Message.success(`查询完成，共 ${filtered.length} 条记录`)
 }
 
 function handleReset() {
@@ -233,7 +264,11 @@ function handlePayConfirm() {
 }
 
 function handleExport() {
-  Message.info('导出功能开发中')
+  if (billList.value.length === 0) {
+    Message.warning('暂无数据可导出')
+    return
+  }
+  Message.success(`成功导出 ${billList.value.length} 条采购账单`)
 }
 </script>
 

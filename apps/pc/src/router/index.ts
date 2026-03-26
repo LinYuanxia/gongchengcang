@@ -40,6 +40,12 @@ const routes: RouteRecordRaw[] = [
             meta: { title: '商户列表' },
           },
           {
+            path: 'detail',
+            name: 'MerchantDetail',
+            component: () => import('@/views/merchant/detail/index.vue'),
+            meta: { title: '商户详情', hideInMenu: true },
+          },
+          {
             path: 'contract',
             name: 'MerchantContract',
             component: () => import('@/views/merchant/contract/index.vue'),
@@ -193,12 +199,6 @@ const routes: RouteRecordRaw[] = [
             component: () => import('@/views/market/price/index.vue'),
             meta: { title: '价格管理', icon: 'icon-price-tag' },
           },
-          {
-            path: 'stock',
-            name: 'MarketStock',
-            component: () => import('@/views/market/stock/index.vue'),
-            meta: { title: '工程仓库存', icon: 'icon-storage' },
-          },
         ],
       },
       {
@@ -212,6 +212,12 @@ const routes: RouteRecordRaw[] = [
             name: 'OrderList',
             component: () => import('@/views/order/list/index.vue'),
             meta: { title: '订单列表' },
+          },
+          {
+            path: 'detail/:id',
+            name: 'OrderDetail',
+            component: () => import('@/views/order/detail/index.vue'),
+            meta: { title: '订单详情', hideInMenu: true },
           },
           {
             path: 'purchase',
@@ -276,6 +282,18 @@ const routes: RouteRecordRaw[] = [
             name: 'StockRecord',
             component: () => import('@/views/warehouse/record/index.vue'),
             meta: { title: '出入库记录', icon: 'icon-history' },
+          },
+          {
+            path: 'check',
+            name: 'StockCheck',
+            component: () => import('@/views/stock/check/index.vue'),
+            meta: { title: '盘点管理', icon: 'icon-check-circle' },
+          },
+          {
+            path: 'check-detail',
+            name: 'StockCheckDetail',
+            component: () => import('@/views/stock/check/detail.vue'),
+            meta: { title: '盘点详情', hideInMenu: true },
           },
         ],
       },
@@ -460,6 +478,12 @@ const routes: RouteRecordRaw[] = [
             component: () => import('@/views/system/splitConfig/index.vue'),
             meta: { title: '分账配置' },
           },
+          {
+            path: 'logistics',
+            name: 'SystemLogistics',
+            component: () => import('@/views/system/logistics/index.vue'),
+            meta: { title: '物流配置' },
+          },
         ],
       },
     ],
@@ -541,6 +565,12 @@ const routes: RouteRecordRaw[] = [
             component: () => import('@/views/supplier/order/index.vue'),
             meta: { title: '待确认订单' },
           },
+          {
+            path: 'detail/:id',
+            name: 'SupplierOrderDetail',
+            component: () => import('@/views/supplier/order/detail.vue'),
+            meta: { title: '订单详情', hideInMenu: true },
+          },
         ],
       },
       {
@@ -562,6 +592,12 @@ const routes: RouteRecordRaw[] = [
                 meta: { title: '账户概览' },
               },
               {
+                path: 'detail',
+                name: 'SupplierCustodyDetail',
+                component: () => import('@/views/supplier/finance/custody/detail.vue'),
+                meta: { title: '账户详情', hideInMenu: true },
+              },
+              {
                 path: 'recharge',
                 name: 'SupplierCustodyRecharge',
                 component: () => import('@/views/supplier/finance/custody/recharge.vue'),
@@ -574,6 +610,12 @@ const routes: RouteRecordRaw[] = [
                 meta: { title: '提现记录' },
               },
             ],
+          },
+          {
+            path: 'pending',
+            name: 'SupplierPending',
+            component: () => import('@/views/supplier/finance/pending/index.vue'),
+            meta: { title: '待入账资金' },
           },
           {
             path: 'settlement',
@@ -612,12 +654,6 @@ const routes: RouteRecordRaw[] = [
             name: 'SupplierInvoice',
             component: () => import('@/views/supplier/finance/invoice/index.vue'),
             meta: { title: '发票管理' },
-          },
-          {
-            path: 'api',
-            name: 'SupplierApi',
-            component: () => import('@/views/supplier/finance/api/index.vue'),
-            meta: { title: 'API对接' },
           },
         ],
       },
@@ -729,36 +765,30 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'bom-manage',
         name: 'WarehouseBomManage',
-        component: () => import('@/views/warehouse/bom-manage/index.vue'),
-        meta: { title: 'BOM包管理', icon: 'icon-folder' },
-      },
-      {
-        path: 'my-bom',
-        name: 'WarehouseMyBom',
-        redirect: '/warehouse/my-bom/list',
-        meta: { title: '我的BOM包', icon: 'icon-folder' },
+        redirect: '/warehouse/bom-manage/list',
+        meta: { title: 'BOM管理', icon: 'icon-folder' },
         children: [
           {
             path: 'list',
-            name: 'WarehouseMyBomList',
+            name: 'WarehouseBomManageList',
             component: () => import('@/views/warehouse/my-bom/index.vue'),
             meta: { title: 'BOM包列表' },
           },
           {
             path: 'create',
-            name: 'WarehouseMyBomCreate',
+            name: 'WarehouseBomManageCreate',
             component: () => import('@/views/warehouse/my-bom/create.vue'),
             meta: { title: '创建BOM包', hideInMenu: true },
           },
           {
             path: 'edit/:id',
-            name: 'WarehouseMyBomEdit',
+            name: 'WarehouseBomManageEdit',
             component: () => import('@/views/warehouse/my-bom/create.vue'),
             meta: { title: '编辑BOM包', hideInMenu: true },
           },
           {
             path: 'detail/:id',
-            name: 'WarehouseMyBomDetail',
+            name: 'WarehouseBomManageDetail',
             component: () => import('@/views/warehouse/my-bom/detail.vue'),
             meta: { title: 'BOM包详情', hideInMenu: true },
           },
@@ -811,10 +841,34 @@ const routes: RouteRecordRaw[] = [
             meta: { title: '入库单' },
           },
           {
+            path: 'in/detail',
+            name: 'WarehouseStockInDetail',
+            component: () => import('@/views/warehouse/stock/in/detail.vue'),
+            meta: { title: '入库单详情', hideInMenu: true },
+          },
+          {
             path: 'out',
             name: 'WarehouseStockOut',
             component: () => import('@/views/warehouse/stock/out/index.vue'),
             meta: { title: '出库单' },
+          },
+          {
+            path: 'check',
+            name: 'WarehouseStockCheck',
+            component: () => import('@/views/warehouse/stock/check/index.vue'),
+            meta: { title: '盘点管理' },
+          },
+          {
+            path: 'check-detail',
+            name: 'WarehouseStockCheckDetail',
+            component: () => import('@/views/warehouse/stock/check/detail.vue'),
+            meta: { title: '盘点详情', hideInMenu: true },
+          },
+          {
+            path: 'batch',
+            name: 'WarehouseStockBatch',
+            component: () => import('@/views/warehouse/stock/batch/index.vue'),
+            meta: { title: '批次库存' },
           },
         ],
       },
@@ -860,13 +914,19 @@ const routes: RouteRecordRaw[] = [
         path: 'plan',
         name: 'WarehousePlan',
         redirect: '/warehouse/plan/list',
-        meta: { title: '采购计划', icon: 'icon-calendar' },
+        meta: { title: '采购管理', icon: 'icon-shopping' },
         children: [
           {
             path: 'list',
             name: 'WarehousePlanList',
             component: () => import('@/views/warehouse/plan/index.vue'),
-            meta: { title: '计划列表' },
+            meta: { title: '采购计划' },
+          },
+          {
+            path: 'create',
+            name: 'WarehousePlanCreate',
+            component: () => import('@/views/warehouse/plan/create.vue'),
+            meta: { title: '新建采购计划', hideInMenu: true },
           },
         ],
       },
@@ -900,7 +960,25 @@ const routes: RouteRecordRaw[] = [
                 component: () => import('@/views/warehouse/finance/custody/withdraw.vue'),
                 meta: { title: '提现记录' },
               },
+              {
+                path: 'frozen',
+                name: 'WarehouseCustodyFrozen',
+                component: () => import('@/views/warehouse/finance/custody/frozen.vue'),
+                meta: { title: '冻结资金' },
+              },
+              {
+                path: 'transaction',
+                name: 'WarehouseCustodyTransaction',
+                component: () => import('@/views/warehouse/finance/custody/transaction.vue'),
+                meta: { title: '资金流水' },
+              },
             ],
+          },
+          {
+            path: 'payment',
+            name: 'WarehousePayment',
+            component: () => import('@/views/warehouse/finance/payment/index.vue'),
+            meta: { title: '支付流水' },
           },
           {
             path: 'settlement',
@@ -1006,7 +1084,7 @@ const routes: RouteRecordRaw[] = [
 ]
 
 const router = createRouter({
-  history: createWebHashHistory(),
+  history: createWebHashHistory('/gongchengcang/'),
   routes,
 })
 

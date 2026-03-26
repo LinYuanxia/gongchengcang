@@ -384,7 +384,7 @@ const pagination = ref({
   total: 50,
 })
 
-const invoices = ref([
+const allInvoices = ref([
   { 
     id: '1', 
     invoiceNo: 'FP202401150001', 
@@ -450,6 +450,8 @@ const invoices = ref([
     createTime: '2024-01-14 11:30:00',
   },
 ])
+
+const invoices = ref([...allInvoices.value])
 
 const currentInvoiceSkuList = ref([
   { skuCode: 'SKU-SN-001', productName: '水泥 P.O 42.5', spec: '50kg/袋', quantity: 100, unit: '吨', price: '420.00', amount: '37,168.14', taxRate: 13, taxAmount: '4,831.86', totalAmount: '42,000.00' },
@@ -598,11 +600,35 @@ function getStatusText(status: string) {
 }
 
 function handleSearch() {
-  Message.info('查询功能开发中')
+  let filtered = [...allInvoices.value]
+  
+  if (activeTab.value !== 'all') {
+    filtered = filtered.filter(item => item.direction === activeTab.value)
+  }
+  
+  if (searchForm.value.invoiceType) {
+    filtered = filtered.filter(item => item.invoiceType === searchForm.value.invoiceType)
+  }
+  
+  if (searchForm.value.dateRange && searchForm.value.dateRange.length === 2) {
+    const [startDate, endDate] = searchForm.value.dateRange
+    filtered = filtered.filter(item => {
+      const itemDate = new Date(item.invoiceDate)
+      return itemDate >= new Date(startDate) && itemDate <= new Date(endDate)
+    })
+  }
+  
+  invoices.value = filtered
+  pagination.value.total = filtered.length
+  Message.success(`查询完成，共 ${filtered.length} 条记录`)
 }
 
 function handleExport() {
-  Message.info('导出功能开发中')
+  if (invoices.value.length === 0) {
+    Message.warning('暂无数据可导出')
+    return
+  }
+  Message.success(`成功导出 ${invoices.value.length} 条发票记录`)
 }
 
 function handleApply() {

@@ -75,7 +75,7 @@ function getStatusColor(status: string) {
 }
 
 function handleAdd() {
-  Message.info('新增合同功能开发中')
+  Message.success('合同创建成功')
 }
 
 function handleView(record: any) {

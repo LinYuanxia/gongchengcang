@@ -183,13 +183,15 @@ const pagination = ref({
   total: 80,
 })
 
-const withdrawList = ref([
+const allWithdrawList = ref([
   { id: '1', withdrawNo: 'WD202401150001', merchantName: '深圳湾科技园项目仓', merchantType: 'warehouse', amount: '50,000.00', fee: '50.00', arrivalAmount: '49,950.00', bankName: '中国工商银行', bankCard: '****8901', applyTime: '2024-01-15 10:00:00', arrivalTime: '2024-01-16 14:30:00', status: 'success', remark: '' },
   { id: '2', withdrawNo: 'WD202401150002', merchantName: '华润建材供应商', merchantType: 'supplier', amount: '30,000.00', fee: '30.00', arrivalAmount: '29,970.00', bankName: '中国工商银行', bankCard: '****8901', applyTime: '2024-01-15 15:20:00', arrivalTime: '', status: 'processing', remark: '' },
   { id: '3', withdrawNo: 'WD202401150003', merchantName: '福田建材仓库', merchantType: 'warehouse', amount: '25,000.00', fee: '25.00', arrivalAmount: '24,975.00', bankName: '中国建设银行', bankCard: '****5678', applyTime: '2024-01-15 16:00:00', arrivalTime: '', status: 'pending', remark: '' },
   { id: '4', withdrawNo: 'WD202401140001', merchantName: '南山装饰材料仓', merchantType: 'warehouse', amount: '15,000.00', fee: '15.00', arrivalAmount: '14,985.00', bankName: '中国工商银行', bankCard: '****1234', applyTime: '2024-01-14 11:30:00', arrivalTime: '', status: 'pending', remark: '' },
   { id: '5', withdrawNo: 'WD202401140002', merchantName: '东方建材供应商', merchantType: 'supplier', amount: '20,000.00', fee: '20.00', arrivalAmount: '19,980.00', bankName: '中国建设银行', bankCard: '****9012', applyTime: '2024-01-14 09:00:00', arrivalTime: '2024-01-15 10:00:00', status: 'success', remark: '' },
 ])
+
+const withdrawList = ref([...allWithdrawList.value])
 
 const detailVisible = ref(false)
 const auditVisible = ref(false)
@@ -222,7 +224,39 @@ function getStatusText(status: string) {
 }
 
 function handleSearch() {
-  Message.info('查询功能开发中')
+  let filtered = [...allWithdrawList.value]
+  
+  if (searchForm.value.withdrawNo) {
+    filtered = filtered.filter(item => 
+      item.withdrawNo.includes(searchForm.value.withdrawNo)
+    )
+  }
+  
+  if (searchForm.value.merchantType) {
+    filtered = filtered.filter(item => item.merchantType === searchForm.value.merchantType)
+  }
+  
+  if (searchForm.value.merchantName) {
+    filtered = filtered.filter(item => 
+      item.merchantName.includes(searchForm.value.merchantName)
+    )
+  }
+  
+  if (searchForm.value.status) {
+    filtered = filtered.filter(item => item.status === searchForm.value.status)
+  }
+  
+  if (searchForm.value.dateRange && searchForm.value.dateRange.length === 2) {
+    const [startDate, endDate] = searchForm.value.dateRange
+    filtered = filtered.filter(item => {
+      const itemDate = new Date(item.applyTime.split(' ')[0])
+      return itemDate >= new Date(startDate) && itemDate <= new Date(endDate)
+    })
+  }
+  
+  withdrawList.value = filtered
+  pagination.value.total = filtered.length
+  Message.success(`查询完成，共 ${filtered.length} 条记录`)
 }
 
 function handleReset() {

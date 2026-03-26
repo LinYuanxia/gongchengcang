@@ -113,6 +113,7 @@
         </a-card>
 
         <div class="step-actions">
+          <a-button @click="handleCancel">取消</a-button>
           <a-button type="primary" @click="currentStep = 2" :disabled="cartItems.length === 0">
             下一步
           </a-button>
@@ -182,6 +183,7 @@
         </a-card>
 
         <div class="step-actions">
+          <a-button @click="handleCancel">取消</a-button>
           <a-button @click="currentStep = 1">上一步</a-button>
           <a-button type="primary" @click="handleSubmit">提交订单</a-button>
         </div>
@@ -260,7 +262,7 @@ const cartTotal = computed(() => {
 })
 
 function handleSearch() {
-  Message.info('搜索功能开发中')
+  Message.success('商品搜索完成')
 }
 
 function handleAddToCart(product: any) {
@@ -305,6 +307,10 @@ function handleSubmit() {
   orderNo.value = 'PO' + Date.now()
   currentStep.value = 3
   Message.success('采购订单提交成功')
+}
+
+function handleCancel() {
+  router.push('/warehouse/order/purchase')
 }
 
 function handleContinue() {

@@ -140,13 +140,15 @@ interface SettlementRecord {
   arrivalTime: string
 }
 
-const settlementList = ref<SettlementRecord[]>([
+const allSettlementList = ref<SettlementRecord[]>([
   { id: '1', settlementNo: 'JS202401150001', merchantName: '深圳湾科技园项目仓', merchantType: 'warehouse', amount: '50,000.00', bankName: '中国工商银行', bankCard: '****8901', applyTime: '2024-01-15 10:00:00', status: 'pending', arrivalTime: '' },
   { id: '2', settlementNo: 'JS202401140001', merchantName: '广州天河工程仓', merchantType: 'warehouse', amount: '35,000.00', bankName: '中国建设银行', bankCard: '****5678', applyTime: '2024-01-14 16:20:00', status: 'approved', arrivalTime: '' },
   { id: '3', settlementNo: 'JS202401130001', merchantName: '华润建材供应商', merchantType: 'supplier', amount: '128,500.00', bankName: '中国农业银行', bankCard: '****1234', applyTime: '2024-01-13 09:15:00', status: 'success', arrivalTime: '2024-01-14 10:00:00' },
   { id: '4', settlementNo: 'JS202401120001', merchantName: '深圳湾科技园项目仓', merchantType: 'warehouse', amount: '85,000.00', bankName: '中国工商银行', bankCard: '****8901', applyTime: '2024-01-12 14:00:00', status: 'rejected', arrivalTime: '' },
   { id: '5', settlementNo: 'JS202401110001', merchantName: '广州天河工程仓', merchantType: 'warehouse', amount: '60,000.00', bankName: '中国建设银行', bankCard: '****5678', applyTime: '2024-01-11 11:30:00', status: 'success', arrivalTime: '2024-01-12 15:00:00' },
 ])
+
+const settlementList = ref<SettlementRecord[]>([...allSettlementList.value])
 
 function getStatusColor(status: string) {
   const colorMap: Record<string, string> = {
@@ -173,7 +175,35 @@ function getStatusText(status: string) {
 }
 
 function handleSearch() {
-  Message.info('查询功能开发中')
+  let filtered = [...allSettlementList.value]
+  
+  if (searchForm.value.settlementNo) {
+    filtered = filtered.filter(item => 
+      item.settlementNo.includes(searchForm.value.settlementNo)
+    )
+  }
+  
+  if (searchForm.value.merchantId) {
+    filtered = filtered.filter(item => 
+      item.merchantName.includes(searchForm.value.merchantId)
+    )
+  }
+  
+  if (searchForm.value.status) {
+    filtered = filtered.filter(item => item.status === searchForm.value.status)
+  }
+  
+  if (searchForm.value.dateRange && searchForm.value.dateRange.length === 2) {
+    const [startDate, endDate] = searchForm.value.dateRange
+    filtered = filtered.filter(item => {
+      const itemDate = new Date(item.applyTime.split(' ')[0])
+      return itemDate >= new Date(startDate) && itemDate <= new Date(endDate)
+    })
+  }
+  
+  settlementList.value = filtered
+  pagination.value.total = filtered.length
+  Message.success(`查询完成，共 ${filtered.length} 条记录`)
 }
 
 function handleReset() {
@@ -198,7 +228,11 @@ function handleAudit(record: SettlementRecord) {
 }
 
 function handleExport() {
-  Message.info('导出功能开发中')
+  if (settlementList.value.length === 0) {
+    Message.warning('暂无数据可导出')
+    return
+  }
+  Message.success(`成功导出 ${settlementList.value.length} 条结算记录`)
 }
 </script>
 

@@ -5,11 +5,17 @@
         <span>采购计划</span>
       </template>
       <template #extra>
-        <a-radio-group v-model="viewMode" type="button">
-          <a-radio value="all">全部</a-radio>
-          <a-radio value="pending">待处理</a-radio>
-          <a-radio value="confirmed">已确认</a-radio>
-        </a-radio-group>
+        <a-space>
+          <a-button type="primary" @click="handleCreatePlan">
+            <template #icon><icon-plus /></template>
+            新建采购计划
+          </a-button>
+          <a-radio-group v-model="viewMode" type="button">
+            <a-radio value="all">全部</a-radio>
+            <a-radio value="pending">待处理</a-radio>
+            <a-radio value="confirmed">已确认</a-radio>
+          </a-radio-group>
+        </a-space>
       </template>
 
       <a-table
@@ -112,7 +118,7 @@
           </a-table-column>
           <a-table-column title="单位" data-index="unit" :width="60" align="center" />
           <a-table-column title="建议采购量" data-index="quantity" :width="100" align="center" />
-          <a-table-column title="参考单价" :width="100" align="right">
+          <a-table-column title="供货价" :width="100" align="right">
             <template #cell="{ record }">
               ¥{{ record.referencePrice }}
             </template>
@@ -177,7 +183,7 @@
               />
             </template>
           </a-table-column>
-          <a-table-column title="参考单价" :width="100" align="right">
+          <a-table-column title="供货价" :width="100" align="right">
             <template #cell="{ record }">
               ¥{{ record.referencePrice }}
             </template>
@@ -187,13 +193,15 @@
               ¥{{ (record.quantity * record.referencePrice).toFixed(2) }}
             </template>
           </a-table-column>
-          <a-table-column title="选择供应商" :width="180">
+          <a-table-column title="绑定供应商" :width="200">
             <template #cell="{ record }">
-              <a-select v-model="record.supplierId" placeholder="选择供应商" style="width: 100%">
-                <a-option v-for="s in record.suppliers" :key="s.id" :value="s.id">
-                  {{ s.name }} (¥{{ s.price }})
-                </a-option>
-              </a-select>
+              <div class="supplier-info">
+                <div class="supplier-name">
+                  <icon-check-circle-fill class="success-icon" />
+                  {{ record.boundSupplier.name }}
+                </div>
+                <div class="supplier-price">供货价：¥{{ record.boundSupplier.price }}</div>
+              </div>
             </template>
           </a-table-column>
           <a-table-column title="操作" :width="80" fixed="right">
@@ -231,8 +239,10 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 
+const router = useRouter()
 const loading = ref(false)
 const viewMode = ref('all')
 
@@ -339,42 +349,30 @@ function handleConfirm(record: any) {
       productName: '普通硅酸盐水泥P.O42.5', 
       specValues: '50kg/袋', 
       unit: '袋', 
-      referencePrice: 28, 
+      referencePrice: 26, 
       suggestQuantity: 100, 
       quantity: 100,
-      supplierId: '',
-      suppliers: [
-        { id: 'SUP001', name: '广东建材供应商', price: 26 },
-        { id: 'SUP002', name: '深圳建材供应商', price: 28 }
-      ]
+      boundSupplier: { id: 'SUP001', name: '广东建材供应商', price: 26 }
     },
     { 
       skuCode: 'SKU003', 
       productName: '抛光砖', 
       specValues: '800×800mm', 
       unit: '片', 
-      referencePrice: 45, 
+      referencePrice: 42, 
       suggestQuantity: 500, 
       quantity: 500,
-      supplierId: '',
-      suppliers: [
-        { id: 'SUP003', name: '佛山陶瓷供应商', price: 42 },
-        { id: 'SUP004', name: '广东瓷砖供应商', price: 45 }
-      ]
+      boundSupplier: { id: 'SUP003', name: '佛山陶瓷供应商', price: 42 }
     },
     { 
       skuCode: 'SKU004', 
       productName: '内墙乳胶漆', 
       specValues: '20L/桶', 
       unit: '桶', 
-      referencePrice: 380, 
+      referencePrice: 360, 
       suggestQuantity: 20, 
       quantity: 20,
-      supplierId: '',
-      suppliers: [
-        { id: 'SUP005', name: '广州涂料供应商', price: 360 },
-        { id: 'SUP006', name: '深圳涂料供应商', price: 375 }
-      ]
+      boundSupplier: { id: 'SUP005', name: '广州涂料供应商', price: 360 }
     }
   ]
   detailVisible.value = false
@@ -391,19 +389,13 @@ function handleRemoveConfirmSku(index: number) {
 }
 
 function handleSubmitOrder() {
-  const unselectedSupplier = confirmSkuList.value.filter(item => item.quantity > 0 && !item.supplierId)
-  if (unselectedSupplier.length > 0) {
-    Message.warning('请为所有采购商品选择供应商')
-    return
-  }
-
   const validItems = confirmSkuList.value.filter(item => item.quantity > 0)
   if (validItems.length === 0) {
     Message.warning('请至少保留一个采购商品')
     return
   }
 
-  Message.success('采购订单已提交，等待供应商确认')
+  Message.success('采购订单已提交给绑定供应商，等待确认')
   currentPlan.value.status = 'confirmed'
   currentPlan.value.confirmTime = new Date().toLocaleString()
   confirmVisible.value = false
@@ -411,6 +403,10 @@ function handleSubmitOrder() {
 
 function handleViewOrder(record: any) {
   Message.info(`查看订单详情：${record.orderNo}`)
+}
+
+function handleCreatePlan() {
+  router.push('/warehouse/plan/create')
 }
 
 function getStatusColor(status: string) {
@@ -469,6 +465,25 @@ function getStatusText(status: string) {
         font-size: 18px;
       }
     }
+  }
+}
+
+.supplier-info {
+  .supplier-name {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 500;
+    
+    .success-icon {
+      color: rgb(var(--success-6));
+    }
+  }
+  
+  .supplier-price {
+    font-size: 12px;
+    color: var(--color-text-3);
+    margin-top: 2px;
   }
 }
 </style>

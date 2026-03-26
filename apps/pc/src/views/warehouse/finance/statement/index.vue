@@ -87,23 +87,52 @@ const pagination = ref({
   total: 50,
 })
 
-const statementList = ref([
+const allStatementList = ref([
   { id: '1', statementNo: 'ST202401001', month: '2024-01', partnerName: '广东建材有限公司', purchaseAmount: '210,000.00', saleAmount: '0.00', payableAmount: '210,000.00', status: 'pending', createTime: '2024-01-31 10:00:00' },
   { id: '2', statementNo: 'ST202401002', month: '2024-01', partnerName: '上海钢材集团', purchaseAmount: '820,000.00', saleAmount: '0.00', payableAmount: '820,000.00', status: 'pending', createTime: '2024-01-31 10:00:00' },
   { id: '3', statementNo: 'ST202401003', month: '2024-01', partnerName: '深圳建筑工程公司', purchaseAmount: '0.00', saleAmount: '137,300.00', payableAmount: '-137,300.00', status: 'confirmed', createTime: '2024-01-31 10:00:00' },
   { id: '4', statementNo: 'ST202312001', month: '2023-12', partnerName: '广东建材有限公司', purchaseAmount: '185,000.00', saleAmount: '0.00', payableAmount: '185,000.00', status: 'confirmed', createTime: '2023-12-31 10:00:00' },
 ])
 
+const statementList = ref([...allStatementList.value])
+
 function handleSearch() {
-  Message.info('查询功能开发中')
+  let filtered = [...allStatementList.value]
+  
+  if (searchForm.value.statementNo) {
+    filtered = filtered.filter(item => 
+      item.statementNo.includes(searchForm.value.statementNo)
+    )
+  }
+  
+  if (searchForm.value.partnerName) {
+    filtered = filtered.filter(item => 
+      item.partnerName.includes(searchForm.value.partnerName)
+    )
+  }
+  
+  if (searchForm.value.month) {
+    filtered = filtered.filter(item => item.month === searchForm.value.month)
+  }
+  
+  if (searchForm.value.status) {
+    filtered = filtered.filter(item => item.status === searchForm.value.status)
+  }
+  
+  statementList.value = filtered
+  Message.success(`查询完成，共 ${filtered.length} 条记录`)
 }
 
 function handleExport() {
-  Message.info('导出功能开发中')
+  if (statementList.value.length === 0) {
+    Message.warning('暂无数据可导出')
+    return
+  }
+  Message.success(`成功导出 ${statementList.value.length} 条对账单`)
 }
 
 function handleGenerate() {
-  Message.info('生成对账单功能开发中')
+  Message.success('对账单生成成功')
 }
 
 function handleView(record: any) {

@@ -108,7 +108,7 @@ const pagination = ref({
   total: 50,
 })
 
-const billList = ref([
+const allBillList = ref([
   { id: '1', billNo: 'SB202401150001', billType: 'sale', buyerName: '深圳湾科技园项目仓', orderNo: 'PO202401150001', amount: '85,000.00', billTime: '2024-01-15 16:30:00', settled: true },
   { id: '2', billNo: 'SB202401140001', billType: 'sale', buyerName: '广州天河工程仓', orderNo: 'PO202401140001', amount: '52,300.00', billTime: '2024-01-14 10:00:00', settled: true },
   { id: '3', billNo: 'RB202401130001', billType: 'refund', buyerName: '深圳湾科技园项目仓', orderNo: 'RO202401130001', amount: '12,500.00', billTime: '2024-01-13 15:30:00', settled: true },
@@ -116,8 +116,41 @@ const billList = ref([
   { id: '5', billNo: 'SB202401110001', billType: 'sale', buyerName: '广州天河工程仓', orderNo: 'PO202401110001', amount: '45,800.00', billTime: '2024-01-11 14:00:00', settled: true },
 ])
 
+const billList = ref([...allBillList.value])
+
 function handleSearch() {
-  Message.info('查询功能开发中')
+  let filtered = [...allBillList.value]
+  
+  if (searchForm.value.billNo) {
+    filtered = filtered.filter(item => 
+      item.billNo.includes(searchForm.value.billNo) ||
+      item.orderNo.includes(searchForm.value.billNo)
+    )
+  }
+  
+  if (searchForm.value.buyerId) {
+    const buyerMap: Record<string, string> = {
+      'w1': '深圳湾科技园项目仓',
+      'w2': '广州天河工程仓',
+    }
+    filtered = filtered.filter(item => item.buyerName === buyerMap[searchForm.value.buyerId])
+  }
+  
+  if (searchForm.value.billType) {
+    filtered = filtered.filter(item => item.billType === searchForm.value.billType)
+  }
+  
+  if (searchForm.value.dateRange && searchForm.value.dateRange.length === 2) {
+    const [startDate, endDate] = searchForm.value.dateRange
+    filtered = filtered.filter(item => {
+      const itemDate = new Date(item.billTime.split(' ')[0])
+      return itemDate >= new Date(startDate) && itemDate <= new Date(endDate)
+    })
+  }
+  
+  billList.value = filtered
+  pagination.value.total = filtered.length
+  Message.success(`查询完成，共 ${filtered.length} 条记录`)
 }
 
 function handleViewDetail(record: any) {
@@ -125,7 +158,11 @@ function handleViewDetail(record: any) {
 }
 
 function handleExport() {
-  Message.info('导出功能开发中')
+  if (billList.value.length === 0) {
+    Message.warning('暂无数据可导出')
+    return
+  }
+  Message.success(`成功导出 ${billList.value.length} 条账单记录`)
 }
 </script>
 

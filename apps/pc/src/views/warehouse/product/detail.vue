@@ -124,6 +124,55 @@
                 </template>
               </a-table>
             </div>
+
+            <div class="batch-stock mt-16">
+              <div class="section-title">
+                <span>批次库存记录</span>
+                <a-tag color="blue" style="margin-left: 8px">共 {{ batchStock.length }} 个批次</a-tag>
+              </div>
+              <a-alert type="info" style="margin-bottom: 12px">
+                <template #message>
+                  <div>每个批次的库存独立管理，支持先进先出、批次追溯</div>
+                </template>
+              </a-alert>
+              <a-table :data="batchStock" :pagination="false" size="small">
+                <template #columns>
+                  <a-table-column title="批次号" :width="150">
+                    <template #cell="{ record }">
+                      <a-tag color="blue">{{ record.batchNo }}</a-tag>
+                    </template>
+                  </a-table-column>
+                  <a-table-column title="入库日期" data-index="inboundDate" :width="120" />
+                  <a-table-column title="生产日期" data-index="productionDate" :width="120" />
+                  <a-table-column title="入库数量" data-index="inboundQuantity" :width="100" align="right" />
+                  <a-table-column title="当前库存" :width="100" align="right">
+                    <template #cell="{ record }">
+                      <span :class="record.currentStock === 0 ? 'text-danger' : 'text-success'">
+                        {{ record.currentStock }}
+                      </span>
+                    </template>
+                  </a-table-column>
+                  <a-table-column title="已出库数量" :width="100" align="right">
+                    <template #cell="{ record }">
+                      {{ record.outboundQuantity }}
+                    </template>
+                  </a-table-column>
+                  <a-table-column title="批次批注" data-index="remark" :width="180" ellipsis />
+                  <a-table-column title="入库单号" :width="150">
+                    <template #cell="{ record }">
+                      <a-link>{{ record.inboundNo }}</a-link>
+                    </template>
+                  </a-table-column>
+                  <a-table-column title="库存状态" :width="100">
+                    <template #cell="{ record }">
+                      <a-tag :color="getBatchStockStatusColor(record.currentStock, record.inboundQuantity)">
+                        {{ getBatchStockStatusText(record.currentStock, record.inboundQuantity) }}
+                      </a-tag>
+                    </template>
+                  </a-table-column>
+                </template>
+              </a-table>
+            </div>
           </a-card>
         </a-col>
 
@@ -250,6 +299,49 @@ const warehouseStock = ref([
   { warehouseName: '福田CBD分仓', stock: 200, availableStock: 170, lockedStock: 30, status: 'normal' },
 ])
 
+const batchStock = ref([
+  {
+    batchNo: 'B20240309001',
+    inboundDate: '2024-03-09',
+    productionDate: '2024-03-01',
+    inboundQuantity: 200,
+    currentStock: 150,
+    outboundQuantity: 50,
+    remark: '白色，优等品',
+    inboundNo: 'RK202403090001',
+  },
+  {
+    batchNo: 'B20240309002',
+    inboundDate: '2024-03-09',
+    productionDate: '2024-03-05',
+    inboundQuantity: 150,
+    currentStock: 150,
+    outboundQuantity: 0,
+    remark: '灰色，优等品',
+    inboundNo: 'RK202403090001',
+  },
+  {
+    batchNo: 'B20240310001',
+    inboundDate: '2024-03-10',
+    productionDate: '2024-03-08',
+    inboundQuantity: 100,
+    currentStock: 80,
+    outboundQuantity: 20,
+    remark: '白色，一等品',
+    inboundNo: 'RK202403100001',
+  },
+  {
+    batchNo: 'B20240315001',
+    inboundDate: '2024-03-15',
+    productionDate: '2024-03-12',
+    inboundQuantity: 150,
+    currentStock: 120,
+    outboundQuantity: 30,
+    remark: '白色，优等品',
+    inboundNo: 'RK202403150001',
+  },
+])
+
 function getPriceStatusColor(status: string) {
   const colors: Record<string, string> = {
     pending: 'orange',
@@ -266,6 +358,18 @@ function getPriceStatusText(status: string) {
     rejected: '已拒绝',
   }
   return texts[status] || status
+}
+
+function getBatchStockStatusColor(current: number, total: number) {
+  if (current === 0) return 'red'
+  if (current < total * 0.3) return 'orange'
+  return 'green'
+}
+
+function getBatchStockStatusText(current: number, total: number) {
+  if (current === 0) return '已出完'
+  if (current < total * 0.3) return '库存紧张'
+  return '库存充足'
 }
 
 function handleAdjustPrice() {
@@ -331,22 +435,33 @@ function handlePriceSubmit() {
 }
 
 .stock {
-  color: #00b42a;
+  color: #165dff;
   font-weight: 600;
+  font-size: 16px;
 }
 
 .warning {
   color: #ff7d00;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .old-price {
-  color: var(--color-text-3);
+  color: #86909c;
   text-decoration: line-through;
 }
 
 .new-price {
   color: #165dff;
+  font-weight: 600;
+}
+
+.text-danger {
+  color: #f53f3f;
+  font-weight: 500;
+}
+
+.text-success {
+  color: #00b42a;
   font-weight: 500;
 }
 </style>

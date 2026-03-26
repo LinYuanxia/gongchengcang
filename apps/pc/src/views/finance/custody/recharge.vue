@@ -177,13 +177,15 @@ const pagination = ref({
   total: 100,
 })
 
-const rechargeList = ref([
+const allRechargeList = ref([
   { id: '1', rechargeNo: 'RC202401150001', merchantName: '深圳湾科技园项目仓', merchantType: 'warehouse', amount: '100,000.00', method: 'bank', bankName: '中国工商银行', bankCard: '****8901', applyTime: '2024-01-15 10:00:00', arrivalTime: '2024-01-15 14:30:00', status: 'success', remark: '' },
   { id: '2', rechargeNo: 'RC202401150002', merchantName: '华润建材供应商', merchantType: 'supplier', amount: '50,000.00', method: 'online', bankName: '中国工商银行', bankCard: '****8901', applyTime: '2024-01-15 11:20:00', arrivalTime: '2024-01-15 11:25:00', status: 'success', remark: '' },
   { id: '3', rechargeNo: 'RC202401150003', merchantName: '福田建材仓库', merchantType: 'warehouse', amount: '80,000.00', method: 'bank', bankName: '中国建设银行', bankCard: '****5678', applyTime: '2024-01-15 14:00:00', arrivalTime: '', status: 'pending', remark: '紧急充值' },
   { id: '4', rechargeNo: 'RC202401140001', merchantName: '南山装饰材料仓', merchantType: 'warehouse', amount: '30,000.00', method: 'online', bankName: '中国工商银行', bankCard: '****1234', applyTime: '2024-01-14 16:00:00', arrivalTime: '2024-01-14 16:05:00', status: 'success', remark: '' },
   { id: '5', rechargeNo: 'RC202401140002', merchantName: '东方建材供应商', merchantType: 'supplier', amount: '25,000.00', method: 'bank', bankName: '中国建设银行', bankCard: '****9012', applyTime: '2024-01-14 09:30:00', arrivalTime: '', status: 'processing', remark: '' },
 ])
+
+const rechargeList = ref([...allRechargeList.value])
 
 const detailVisible = ref(false)
 const auditVisible = ref(false)
@@ -216,7 +218,43 @@ function getStatusText(status: string) {
 }
 
 function handleSearch() {
-  Message.info('查询功能开发中')
+  let filtered = [...allRechargeList.value]
+  
+  if (searchForm.value.rechargeNo) {
+    filtered = filtered.filter(item => 
+      item.rechargeNo.includes(searchForm.value.rechargeNo)
+    )
+  }
+  
+  if (searchForm.value.merchantType) {
+    filtered = filtered.filter(item => item.merchantType === searchForm.value.merchantType)
+  }
+  
+  if (searchForm.value.merchantName) {
+    filtered = filtered.filter(item => 
+      item.merchantName.includes(searchForm.value.merchantName)
+    )
+  }
+  
+  if (searchForm.value.method) {
+    filtered = filtered.filter(item => item.method === searchForm.value.method)
+  }
+  
+  if (searchForm.value.status) {
+    filtered = filtered.filter(item => item.status === searchForm.value.status)
+  }
+  
+  if (searchForm.value.dateRange && searchForm.value.dateRange.length === 2) {
+    const [startDate, endDate] = searchForm.value.dateRange
+    filtered = filtered.filter(item => {
+      const itemDate = new Date(item.applyTime.split(' ')[0])
+      return itemDate >= new Date(startDate) && itemDate <= new Date(endDate)
+    })
+  }
+  
+  rechargeList.value = filtered
+  pagination.value.total = filtered.length
+  Message.success(`查询完成，共 ${filtered.length} 条记录`)
 }
 
 function handleReset() {

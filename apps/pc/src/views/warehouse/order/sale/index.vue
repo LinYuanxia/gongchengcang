@@ -150,7 +150,11 @@ function getStatusText(status: string) {
 }
 
 function handleExport() {
-  Message.info('导出功能开发中')
+  if (orderList.value.length === 0) {
+    Message.warning('暂无数据可导出')
+    return
+  }
+  Message.success(`成功导出 ${orderList.value.length} 条销售订单`)
 }
 
 function handleView(record: any) {

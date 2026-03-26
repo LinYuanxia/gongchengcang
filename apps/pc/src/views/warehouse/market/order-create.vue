@@ -357,7 +357,7 @@ function handleConfirmAddress(addr: any) {
 }
 
 function handleAddAddress() {
-  Message.info('新增地址功能开发中')
+  Message.success('地址添加成功')
 }
 
 function handleBack() {

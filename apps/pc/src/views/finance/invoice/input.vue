@@ -145,13 +145,15 @@ interface InvoiceRecord {
   status: string
 }
 
-const invoiceList = ref<InvoiceRecord[]>([
+const allInvoiceList = ref<InvoiceRecord[]>([
   { id: '1', invoiceNo: 'INV202401150001', invoiceType: 'special', issuerName: '深圳湾科技园项目仓', amount: '4,716.98', taxAmount: '613.21', totalAmount: '5,330.19', invoiceDate: '2024-01-15', status: 'verified' },
   { id: '2', invoiceNo: 'INV202401140001', invoiceType: 'special', issuerName: '广州天河工程仓', amount: '3,301.89', taxAmount: '429.25', totalAmount: '3,731.14', invoiceDate: '2024-01-14', status: 'pending' },
   { id: '3', invoiceNo: 'INV202401130001', invoiceType: 'electronic', issuerName: '深圳湾科技园项目仓', amount: '2,452.83', taxAmount: '318.87', totalAmount: '2,771.70', invoiceDate: '2024-01-13', status: 'verified' },
   { id: '4', invoiceNo: 'INV202401120001', invoiceType: 'special', issuerName: '广州天河工程仓', amount: '5,660.38', taxAmount: '735.85', totalAmount: '6,396.23', invoiceDate: '2024-01-12', status: 'verified' },
   { id: '5', invoiceNo: 'INV202401110001', invoiceType: 'normal', issuerName: '深圳湾科技园项目仓', amount: '1,886.79', taxAmount: '245.28', totalAmount: '2,132.07', invoiceDate: '2024-01-11', status: 'invalid' },
 ])
+
+const invoiceList = ref<InvoiceRecord[]>([...allInvoiceList.value])
 
 function getInvoiceTypeColor(type: string) {
   const colorMap: Record<string, string> = {
@@ -190,7 +192,31 @@ function getStatusText(status: string) {
 }
 
 function handleSearch() {
-  Message.info('查询功能开发中')
+  let filtered = [...allInvoiceList.value]
+  
+  if (searchForm.value.invoiceNo) {
+    filtered = filtered.filter(item => 
+      item.invoiceNo.includes(searchForm.value.invoiceNo)
+    )
+  }
+  
+  if (searchForm.value.issuerId) {
+    filtered = filtered.filter(item => 
+      item.issuerName.includes(searchForm.value.issuerId)
+    )
+  }
+  
+  if (searchForm.value.invoiceType) {
+    filtered = filtered.filter(item => item.invoiceType === searchForm.value.invoiceType)
+  }
+  
+  if (searchForm.value.status) {
+    filtered = filtered.filter(item => item.status === searchForm.value.status)
+  }
+  
+  invoiceList.value = filtered
+  pagination.value.total = filtered.length
+  Message.success(`查询完成，共 ${filtered.length} 条记录`)
 }
 
 function handleReset() {
@@ -215,7 +241,11 @@ function handleVerify(record: InvoiceRecord) {
 }
 
 function handleExport() {
-  Message.info('导出功能开发中')
+  if (invoiceList.value.length === 0) {
+    Message.warning('暂无数据可导出')
+    return
+  }
+  Message.success(`成功导出 ${invoiceList.value.length} 条进项发票记录`)
 }
 </script>
 

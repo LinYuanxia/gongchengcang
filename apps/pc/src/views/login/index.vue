@@ -3,12 +3,8 @@
     <div class="login-wrapper">
       <div class="login-left">
         <div class="brand-section">
-          <div class="brand-icon">
-            <icon-apps :size="32" />
-          </div>
-          <div class="brand-info">
-            <h1 class="brand-title">工程材料管理</h1>
-            <p class="brand-subtitle">采供一体化平台</p>
+          <div class="brand-logo">
+            工程-采供一体化平台
           </div>
         </div>
         <div class="feature-list">
@@ -42,7 +38,7 @@
           </div>
         </div>
         <div class="brand-footer">
-          <p>© 2024 鸣鸣很忙集团 版权所有</p>
+          <p>© 2024 集团开发中心</p>
         </div>
       </div>
 
@@ -222,35 +218,17 @@ async function handleSubmit() {
 }
 
 .brand-section {
-  display: flex;
-  align-items: center;
-  gap: 12px;
   margin-bottom: 40px;
 }
 
-.brand-icon {
-  width: 48px;
-  height: 48px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.brand-info {
-  .brand-title {
-    font-size: 20px;
-    font-weight: 600;
-    margin: 0 0 4px;
-    letter-spacing: 1px;
-  }
-  .brand-subtitle {
-    font-size: 13px;
-    margin: 0;
-    opacity: 0.85;
-  }
+.brand-logo {
+  background: #fff;
+  color: #1890ff;
+  font-size: 18px;
+  font-weight: 600;
+  padding: 12px 20px;
+  border-radius: 8px;
+  letter-spacing: 1px;
 }
 
 .feature-list {

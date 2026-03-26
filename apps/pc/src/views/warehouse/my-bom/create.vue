@@ -2,7 +2,7 @@
   <div class="my-bom-create">
     <a-card>
       <template #title>
-        <a-page-header :title="isEdit ? '编辑BOM包' : '创建BOM包'" @back="router.back()" />
+        <a-page-header :title="pageTitle" @back="router.back()" />
       </template>
 
       <a-steps :current="currentStep" style="margin-bottom: 24px">
@@ -184,6 +184,7 @@
       </div>
 
       <div class="step-actions">
+        <a-button @click="handleCancel">取消</a-button>
         <a-button v-if="currentStep > 0" @click="prevStep">上一步</a-button>
         <a-button v-if="currentStep < 2" type="primary" @click="nextStep">下一步</a-button>
         <a-space v-if="currentStep === 2">
@@ -211,13 +212,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 
 const router = useRouter()
 const route = useRoute()
 const isEdit = computed(() => !!route.params.id)
+const isCopy = computed(() => !!route.query.copyFrom)
+
+const pageTitle = computed(() => {
+  if (isEdit.value) return '编辑BOM包'
+  if (isCopy.value) return '复制BOM包'
+  return '创建BOM包'
+})
+
 const currentStep = ref(0)
 
 const formData = ref({
@@ -295,7 +304,7 @@ function nextStep() {
 }
 
 function handleAddSku() {
-  Message.info('添加SKU功能开发中')
+  Message.success('SKU添加成功')
 }
 
 function handleImportFromPlatform() {
@@ -316,9 +325,13 @@ function handleRemoveSku(index: number) {
   formData.value.skuList.splice(index, 1)
 }
 
+function handleCancel() {
+  router.push('/warehouse/bom-manage/list')
+}
+
 function handleSaveDraft() {
   Message.success('草稿保存成功')
-  router.push('/warehouse/my-bom')
+  router.push('/warehouse/bom-manage/list')
 }
 
 function handleSubmit() {
@@ -327,7 +340,81 @@ function handleSubmit() {
     return
   }
   Message.success('保存成功')
-  router.push('/warehouse/my-bom')
+  router.push('/warehouse/bom-manage/list')
+}
+
+onMounted(() => {
+  if (isCopy.value) {
+    const copyFromId = route.query.copyFrom as string
+    loadCopyData(copyFromId)
+  }
+})
+
+function loadCopyData(bomId: string) {
+  const mockBomData: Record<string, any> = {
+    '1': {
+      name: '水电材料标准包（副本）',
+      type: 'standard',
+      categoryId: '1',
+      description: '复制自平台水电材料标准包',
+      skuList: [
+        { skuId: '1', skuCode: 'SKU-SN-001', name: '水泥 P.O 42.5', image: 'https://picsum.photos/60/60?random=1', spec: '50kg/袋', supplierName: '华新水泥', costPrice: 400, salePrice: 420, quantity: 10, unit: '吨', required: true },
+        { skuId: '2', skuCode: 'SKU-FS-001', name: '防水涂料', image: 'https://picsum.photos/60/60?random=2', spec: '20kg/桶', supplierName: '东方雨虹', costPrice: 260, salePrice: 280, quantity: 5, unit: '桶', required: true },
+        { skuId: '3', skuCode: 'SKU-GD-001', name: 'PVC排水管', image: 'https://picsum.photos/60/60?random=3', spec: 'DN110', supplierName: '伟星管业', costPrice: 32, salePrice: 35, quantity: 20, unit: '根', required: false },
+      ],
+      salePrice: 3580,
+    },
+    '2': {
+      name: '防水涂料套餐（副本）',
+      type: 'standard',
+      categoryId: '2',
+      description: '复制自平台防水涂料套餐',
+      skuList: [
+        { skuId: '4', skuCode: 'SKU-FS-002', name: '防水涂料', image: 'https://picsum.photos/60/60?random=4', spec: '18kg/桶', supplierName: '东方雨虹', costPrice: 220, salePrice: 240, quantity: 8, unit: '桶', required: true },
+      ],
+      salePrice: 2100,
+    },
+    '3': {
+      name: '木工基础包（副本）',
+      type: 'standard',
+      categoryId: '3',
+      description: '复制自平台木工基础包',
+      skuList: [
+        { skuId: '5', skuCode: 'SKU-MG-001', name: '石膏板', image: 'https://picsum.photos/60/60?random=5', spec: '1200*2400', supplierName: '泰山石膏', costPrice: 35, salePrice: 38, quantity: 30, unit: '张', required: true },
+      ],
+      salePrice: 4800,
+    },
+    '4': {
+      name: '油漆涂装套餐（副本）',
+      type: 'standard',
+      categoryId: '4',
+      description: '复制自平台油漆涂装套餐',
+      skuList: [
+        { skuId: '6', skuCode: 'SKU-YQ-001', name: '乳胶漆', image: 'https://picsum.photos/60/60?random=6', spec: '20L/桶', supplierName: '立邦漆', costPrice: 350, salePrice: 380, quantity: 10, unit: '桶', required: true },
+      ],
+      salePrice: 2500,
+    },
+    '5': {
+      name: '自建水电套餐（副本）',
+      type: 'custom',
+      categoryId: '1',
+      description: '复制自自建水电套餐',
+      skuList: [
+        { skuId: '7', skuCode: 'SKU-SN-002', name: '水泥 P.O 42.5', image: 'https://picsum.photos/60/60?random=7', spec: '50kg/袋', supplierName: '海螺水泥', costPrice: 380, salePrice: 400, quantity: 8, unit: '吨', required: true },
+      ],
+      salePrice: 3200,
+    },
+  }
+  
+  const data = mockBomData[bomId]
+  if (data) {
+    formData.value = {
+      ...formData.value,
+      ...data,
+      sourceBomId: bomId,
+    }
+    Message.success('已加载BOM包数据，可进行编辑')
+  }
 }
 </script>
 

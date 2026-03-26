@@ -148,12 +148,14 @@ const pagination = ref({
   total: 30,
 })
 
-const rechargeList = ref([
+const allRechargeList = ref([
   { id: '1', rechargeNo: 'RC202401150001', amount: '50,000.00', method: 'bank', bankName: '中国工商银行', bankCard: '****8901', applyTime: '2024-01-15 10:00:00', arrivalTime: '2024-01-15 14:30:00', status: 'success', remark: '' },
   { id: '2', rechargeNo: 'RC202401140001', amount: '30,000.00', method: 'online', bankName: '中国工商银行', bankCard: '****8901', applyTime: '2024-01-14 15:20:00', arrivalTime: '2024-01-14 15:25:00', status: 'success', remark: '' },
   { id: '3', rechargeNo: 'RC202401130001', amount: '40,000.00', method: 'bank', bankName: '中国工商银行', bankCard: '****8901', applyTime: '2024-01-13 09:00:00', arrivalTime: '', status: 'pending', remark: '' },
   { id: '4', rechargeNo: 'RC202401120001', amount: '25,000.00', method: 'online', bankName: '中国工商银行', bankCard: '****8901', applyTime: '2024-01-12 16:00:00', arrivalTime: '2024-01-12 16:05:00', status: 'success', remark: '' },
 ])
+
+const rechargeList = ref([...allRechargeList.value])
 
 const rechargeVisible = ref(false)
 const detailVisible = ref(false)
@@ -186,7 +188,33 @@ function getStatusText(status: string) {
 }
 
 function handleSearch() {
-  Message.info('查询功能开发中')
+  let filtered = [...allRechargeList.value]
+  
+  if (searchForm.value.rechargeNo) {
+    filtered = filtered.filter(item => 
+      item.rechargeNo.includes(searchForm.value.rechargeNo)
+    )
+  }
+  
+  if (searchForm.value.method) {
+    filtered = filtered.filter(item => item.method === searchForm.value.method)
+  }
+  
+  if (searchForm.value.status) {
+    filtered = filtered.filter(item => item.status === searchForm.value.status)
+  }
+  
+  if (searchForm.value.dateRange && searchForm.value.dateRange.length === 2) {
+    const [startDate, endDate] = searchForm.value.dateRange
+    filtered = filtered.filter(item => {
+      const itemDate = new Date(item.applyTime.split(' ')[0])
+      return itemDate >= new Date(startDate) && itemDate <= new Date(endDate)
+    })
+  }
+  
+  rechargeList.value = filtered
+  pagination.value.total = filtered.length
+  Message.success(`查询完成，共 ${filtered.length} 条记录`)
 }
 
 function handlePageChange(page: number) {

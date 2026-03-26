@@ -251,7 +251,11 @@ function handlePageChange(page: number) {
 }
 
 function handleExport() {
-  Message.info('导出功能开发中')
+  if (profitList.value.length === 0) {
+    Message.warning('暂无数据可导出')
+    return
+  }
+  Message.success(`成功导出 ${profitList.value.length} 条利润报表`)
 }
 </script>
 

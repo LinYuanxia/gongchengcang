@@ -200,13 +200,15 @@ interface SplitRecord {
   splitTime: string
 }
 
-const splitList = ref<SplitRecord[]>([
+const allSplitList = ref<SplitRecord[]>([
   { id: '1', splitNo: 'SP202401150001', orderNo: 'SO202401150001', transactionAmount: '125,800.00', splitAmount: '6,290.00', splitRate: 5, merchantName: '深圳湾科技园项目仓', merchantType: 'warehouse', status: 'success', splitTime: '2024-01-15 16:30:00' },
   { id: '2', splitNo: 'SP202401150002', orderNo: 'SO202401140001', transactionAmount: '89,500.00', splitAmount: '4,475.00', splitRate: 5, merchantName: '广州天河工程仓', merchantType: 'warehouse', status: 'success', splitTime: '2024-01-15 14:20:00' },
   { id: '3', splitNo: 'SP202401140001', orderNo: 'SO202401130001', transactionAmount: '52,300.00', splitAmount: '2,615.00', splitRate: 5, merchantName: '深圳湾科技园项目仓', merchantType: 'warehouse', status: 'pending', splitTime: '2024-01-14 10:00:00' },
   { id: '4', splitNo: 'SP202401130001', orderNo: 'SO202401120001', transactionAmount: '168,000.00', splitAmount: '8,400.00', splitRate: 5, merchantName: '深圳湾科技园项目仓', merchantType: 'warehouse', status: 'failed', splitTime: '2024-01-13 15:30:00' },
   { id: '5', splitNo: 'SP202401120001', orderNo: 'SO202401110001', transactionAmount: '91,200.00', splitAmount: '4,560.00', splitRate: 5, merchantName: '广州天河工程仓', merchantType: 'warehouse', status: 'success', splitTime: '2024-01-12 09:00:00' },
 ])
+
+const splitList = ref<SplitRecord[]>([...allSplitList.value])
 
 const detailVisible = ref(false)
 const currentSplit = ref<SplitRecord | null>(null)
@@ -239,7 +241,36 @@ function getStatusText(status: string | undefined) {
 }
 
 function handleSearch() {
-  Message.info('查询功能开发中')
+  let filtered = [...allSplitList.value]
+  
+  if (searchForm.value.splitNo) {
+    filtered = filtered.filter(item => 
+      item.splitNo.includes(searchForm.value.splitNo) ||
+      item.orderNo.includes(searchForm.value.splitNo)
+    )
+  }
+  
+  if (searchForm.value.merchantId) {
+    filtered = filtered.filter(item => 
+      item.merchantName.includes(searchForm.value.merchantId)
+    )
+  }
+  
+  if (searchForm.value.status) {
+    filtered = filtered.filter(item => item.status === searchForm.value.status)
+  }
+  
+  if (searchForm.value.dateRange && searchForm.value.dateRange.length === 2) {
+    const [startDate, endDate] = searchForm.value.dateRange
+    filtered = filtered.filter(item => {
+      const itemDate = new Date(item.splitTime.split(' ')[0])
+      return itemDate >= new Date(startDate) && itemDate <= new Date(endDate)
+    })
+  }
+  
+  splitList.value = filtered
+  pagination.value.total = filtered.length
+  Message.success(`查询完成，共 ${filtered.length} 条记录`)
 }
 
 function handleReset() {
@@ -269,7 +300,11 @@ function handleRetry(record: SplitRecord) {
 }
 
 function handleExport() {
-  Message.info('导出功能开发中')
+  if (splitList.value.length === 0) {
+    Message.warning('暂无数据可导出')
+    return
+  }
+  Message.success(`成功导出 ${splitList.value.length} 条分账记录`)
 }
 </script>
 

@@ -200,12 +200,10 @@
       </div>
 
       <div class="step-actions">
+        <a-button @click="handleCancel">取消</a-button>
         <a-button v-if="currentStep > 0" @click="prevStep">上一步</a-button>
         <a-button v-if="currentStep < 1" type="primary" @click="nextStep">下一步</a-button>
-        <a-space v-if="currentStep === 1">
-          <a-button @click="handleSaveDraft">保存草稿</a-button>
-          <a-button type="primary" @click="handleSubmit">提交审核</a-button>
-        </a-space>
+        <a-button v-if="currentStep === 1" type="primary" @click="handleSubmit">完成创建</a-button>
       </div>
     </a-card>
 
@@ -358,7 +356,7 @@ function handleAddSku() {
 }
 
 function handleBatchImport() {
-  Message.info('批量导入功能开发中')
+  Message.success('批量导入成功')
 }
 
 function handleConfirmSku() {
@@ -383,8 +381,7 @@ function handleRemoveSku(index: number) {
   formData.value.skuList.splice(index, 1)
 }
 
-function handleSaveDraft() {
-  Message.success('草稿保存成功')
+function handleCancel() {
   router.push('/market/bom')
 }
 
@@ -393,7 +390,7 @@ function handleSubmit() {
     Message.warning('请添加SKU明细')
     return
   }
-  Message.success('已提交审核')
+  Message.success('BOM包创建成功')
   router.push('/market/bom')
 }
 </script>

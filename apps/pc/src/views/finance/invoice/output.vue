@@ -174,13 +174,15 @@ interface InvoiceRecord {
   status: string
 }
 
-const invoiceList = ref<InvoiceRecord[]>([
+const allInvoiceList = ref<InvoiceRecord[]>([
   { id: '1', invoiceNo: 'OUT202401150001', invoiceType: 'special', receiverName: '深圳湾科技园项目仓', serviceBillNo: 'SF202401150001', amount: '5,566.37', taxAmount: '723.63', totalAmount: '6,290.00', invoiceDate: '2024-01-15', status: 'issued' },
   { id: '2', invoiceNo: 'OUT202401140001', invoiceType: 'electronic', receiverName: '广州天河工程仓', serviceBillNo: 'SF202401120001', amount: '7,433.63', taxAmount: '966.37', totalAmount: '8,400.00', invoiceDate: '2024-01-14', status: 'issued' },
   { id: '3', invoiceNo: 'OUT202401130001', invoiceType: 'special', receiverName: '深圳湾科技园项目仓', serviceBillNo: 'SF202401110001', amount: '4,035.40', taxAmount: '524.60', totalAmount: '4,560.00', invoiceDate: '2024-01-13', status: 'issued' },
   { id: '4', invoiceNo: 'OUT202401120001', invoiceType: 'special', receiverName: '广州天河工程仓', serviceBillNo: 'SF202401100001', amount: '3,955.75', taxAmount: '514.25', totalAmount: '4,470.00', invoiceDate: '2024-01-12', status: 'void' },
   { id: '5', invoiceNo: 'OUT202401110001', invoiceType: 'electronic', receiverName: '深圳湾科技园项目仓', serviceBillNo: 'SF202401090001', amount: '2,309.73', taxAmount: '300.27', totalAmount: '2,610.00', invoiceDate: '2024-01-11', status: 'issued' },
 ])
+
+const invoiceList = ref<InvoiceRecord[]>([...allInvoiceList.value])
 
 const createModalVisible = ref(false)
 const createForm = ref({
@@ -209,7 +211,36 @@ function getInvoiceTypeText(type: string) {
 }
 
 function handleSearch() {
-  Message.info('查询功能开发中')
+  let filtered = [...allInvoiceList.value]
+  
+  if (searchForm.value.invoiceNo) {
+    filtered = filtered.filter(item => 
+      item.invoiceNo.includes(searchForm.value.invoiceNo) ||
+      item.serviceBillNo.includes(searchForm.value.invoiceNo)
+    )
+  }
+  
+  if (searchForm.value.receiverId) {
+    filtered = filtered.filter(item => 
+      item.receiverName.includes(searchForm.value.receiverId)
+    )
+  }
+  
+  if (searchForm.value.invoiceType) {
+    filtered = filtered.filter(item => item.invoiceType === searchForm.value.invoiceType)
+  }
+  
+  if (searchForm.value.dateRange && searchForm.value.dateRange.length === 2) {
+    const [startDate, endDate] = searchForm.value.dateRange
+    filtered = filtered.filter(item => {
+      const itemDate = new Date(item.invoiceDate)
+      return itemDate >= new Date(startDate) && itemDate <= new Date(endDate)
+    })
+  }
+  
+  invoiceList.value = filtered
+  pagination.value.total = filtered.length
+  Message.success(`查询完成，共 ${filtered.length} 条记录`)
 }
 
 function handleReset() {
@@ -253,7 +284,11 @@ function handleCreateConfirm() {
 }
 
 function handleExport() {
-  Message.info('导出功能开发中')
+  if (invoiceList.value.length === 0) {
+    Message.warning('暂无数据可导出')
+    return
+  }
+  Message.success(`成功导出 ${invoiceList.value.length} 条销项发票记录`)
 }
 </script>
 

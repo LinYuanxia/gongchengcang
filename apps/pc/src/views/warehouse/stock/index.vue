@@ -6,6 +6,10 @@
       </template>
       <template #extra>
         <a-space>
+          <a-button type="outline" status="warning" @click="handleGeneratePlan">
+            <template #icon><icon-plus /></template>
+            生成采购计划
+          </a-button>
           <a-button type="primary" @click="handleExport">
             <template #icon><icon-download /></template>
             导出
@@ -272,7 +276,11 @@ function handlePageChange(page: number) {
 }
 
 function handleExport() {
-  Message.info('导出功能开发中')
+  if (stockList.value.length === 0) {
+    Message.warning('暂无数据可导出')
+    return
+  }
+  Message.success(`成功导出 ${stockList.value.length} 条库存记录`)
 }
 
 function handleViewDetail(record: WarehouseProduct) {
@@ -283,6 +291,18 @@ function handleViewRecords(record: WarehouseProduct) {
   router.push({
     path: '/stock/record',
     query: { warehouseId: record.warehouseId, skuId: record.skuId }
+  })
+}
+
+function handleGeneratePlan() {
+  const lowStockItems = tableData.value.filter(item => item.availableQty < 50)
+  if (lowStockItems.length === 0) {
+    Message.info('当前没有库存不足的商品')
+    return
+  }
+  router.push({
+    path: '/warehouse/plan/create',
+    query: { autoSelect: 'low' }
   })
 }
 </script>

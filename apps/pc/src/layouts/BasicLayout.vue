@@ -9,11 +9,8 @@
       @collapse="appStore.setCollapsed"
     >
       <div class="logo" :class="{ 'logo-collapsed': appStore.collapsed }">
-        <img 
-          :src="appStore.collapsed ? logoMini : logo" 
-          :alt="appStore.collapsed ? 'Logo' : '工程材料管理'"
-          class="logo-image"
-        />
+        <span v-if="!appStore.collapsed" class="logo-text">工程-采供一体化平台</span>
+        <span v-else class="logo-text-mini">工程</span>
       </div>
       <a-menu
         :collapsed="appStore.collapsed"
@@ -120,7 +117,7 @@
         </router-view>
       </a-layout-content>
       <a-layout-footer class="footer">
-        <span>鸣鸣很忙集团 · 工程材料管理采供一体化平台</span>
+        <span>集团开发中心</span>
       </a-layout-footer>
     </a-layout>
   </a-layout>
@@ -132,8 +129,6 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAppStore, useUserStore } from '@/store'
 import { getLocal, setLocal } from '@gongchengcang/utils'
 import type { RouteRecordRaw } from 'vue-router'
-import logo from '@/assets/images/logo.png'
-import logoMini from '@/assets/images/logo-mini.png'
 import {
   IconDashboard,
   IconUserGroup,
@@ -261,24 +256,25 @@ function handleLogout() {
   background: #fff;
   overflow: hidden;
   
-  .logo-image {
-    max-width: 100%;
-    max-height: 48px;
-    height: auto;
-    object-fit: contain;
+  .logo-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1890ff;
+    white-space: nowrap;
+  }
+  
+  .logo-text-mini {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1890ff;
+    writing-mode: vertical-rl;
+    letter-spacing: 2px;
   }
   
   &.logo-collapsed {
     padding: 12px;
     justify-content: center;
     background: #fff;
-    
-    .logo-image {
-      width: 32px;
-      height: 32px;
-      max-width: 32px;
-      max-height: 32px;
-    }
   }
 }
 
