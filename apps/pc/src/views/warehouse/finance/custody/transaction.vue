@@ -15,7 +15,8 @@
         <a-col :span="4">
           <a-statistic title="本月支出" :value="168500" :precision="2">
             <template #prefix>¥</template>
-          </a-col>
+          </a-statistic>
+        </a-col>
         <a-col :span="4">
           <a-statistic title="冻结资金" :value="50000" :precision="2">
             <template #prefix>¥</template>
@@ -24,11 +25,13 @@
         <a-col :span="4">
           <a-statistic title="待分账" :value="12500" :precision="2">
             <template #prefix>¥</template>
-          </a-col>
+          </a-statistic>
+        </a-col>
         <a-col :span="4">
           <a-statistic title="可用余额" :value="308900" :precision="2">
             <template #prefix>¥</template>
-          </a-col>
+          </a-statistic>
+        </a-col>
       </a-row>
 
       <a-form :model="searchForm" layout="inline" style="margin-bottom: 16px">
