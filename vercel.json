@@ -1,6 +1,10 @@
 {
-  "buildCommand": "pnpm build:pc",
-  "installCommand": "pnpm install",
+  "version": 2,
+  "buildCommand": "cd apps/pc && npm run build",
   "outputDirectory": "apps/pc/dist",
-  "framework": null
+  "installCommand": "pnpm install",
+  "rewrites": [
+    { "source": "/gongchengcang/(.*)", "destination": "/$1" },
+    { "source": "/(.*)", "destination": "/" }
+  ]
 }
