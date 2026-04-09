@@ -161,7 +161,7 @@ function handleSearch() {
 }
 
 function handleAdd() {
-  router.push('/warehouse/stock/in/create')
+  router.push('/warehouse/warehouse/in/create')
 }
 
 function handleExport() {
@@ -174,7 +174,7 @@ function handleExport() {
 
 function handleView(record: any) {
   router.push({
-    path: '/warehouse/stock/in/detail',
+    path: '/warehouse/warehouse/in/detail',
     query: { orderNo: record.orderNo },
   })
 }

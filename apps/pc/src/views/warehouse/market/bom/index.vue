@@ -38,10 +38,6 @@
                   <span class="price">¥{{ bom.price }}</span>
                   <span class="unit">/套</span>
                 </div>
-                <div class="bom-actions">
-                  <a-button type="primary" size="small" @click.stop="handleBuy(bom)">立即购买</a-button>
-                  <a-button size="small" @click.stop="handleAddToCart(bom)">加入购物车</a-button>
-                </div>
               </div>
             </div>
           </div>
@@ -98,15 +94,7 @@ function handleCategorySelect(keys: string[]) {
 }
 
 function handleViewDetail(bom: any) {
-  router.push(`/warehouse/market/bom/detail/${bom.id}`)
-}
-
-function handleBuy(bom: any) {
-  router.push(`/warehouse/market/bom/order/${bom.id}`)
-}
-
-function handleAddToCart(bom: any) {
-  Message.success(`已将 ${bom.name} 加入购物车`)
+  router.push(`/warehouse/product/bom/detail/${bom.id}`)
 }
 </script>
 

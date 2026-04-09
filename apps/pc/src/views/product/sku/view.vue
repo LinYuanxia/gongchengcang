@@ -40,7 +40,7 @@
           </a-descriptions>
 
           <a-row :gutter="24" style="margin-top: 24px">
-            <a-col :span="6">
+            <a-col :span="8">
               <div class="spec-section">
                 <div class="spec-label">规格组合</div>
                 <div class="spec-content">
@@ -50,31 +50,18 @@
                 </div>
               </div>
             </a-col>
-            <a-col :span="6">
+            <a-col :span="16">
               <div class="image-section">
                 <div class="image-label">SKU主图</div>
                 <div v-if="skuData.mainImage" class="image-preview">
-                  <a-image :src="skuData.mainImage" :width="120" :height="120" fit="cover" />
+                  <a-image :src="skuData.mainImage" :width="150" :height="150" fit="cover" />
                 </div>
                 <div v-else class="image-empty">
                   <a-empty description="暂无主图" />
                 </div>
               </div>
             </a-col>
-            <a-col :span="12">
-              <div class="image-section">
-                <div class="image-label">商品相册</div>
-                <div v-if="skuData.images && skuData.images.length > 0" class="image-gallery">
-                  <a-image-preview-group>
-                    <a-image v-for="(img, index) in skuData.images" :key="index" :src="img" :width="80" :height="80" fit="cover" style="margin-right: 8px" />
-                  </a-image-preview-group>
-                </div>
-                <div v-else class="image-empty">
-                  <a-empty description="暂无相册图片" />
-                </div>
-              </div>
-            </a-col>
-          </a-row>
+            </a-row>
         </a-card>
 
         <a-card title="价格信息" class="section-card">
@@ -170,10 +157,6 @@
           </a-table>
         </a-card>
 
-        <a-card title="库存记录" class="section-card">
-          <a-empty description="暂无库存记录" />
-        </a-card>
-
         <a-card title="操作记录" class="section-card">
           <a-empty description="暂无操作记录" />
         </a-card>
@@ -196,7 +179,7 @@ const router = useRouter()
 const skuId = computed(() => route.params.id as string)
 
 const loading = ref(false)
-const skuData = ref<Partial<Sku>>({})
+const skuData = ref<Partial<Sku> | null>({})
 const splitRules = ref<SplitRule[]>([])
 const suppliers = ref<SupplierProduct[]>([])
 

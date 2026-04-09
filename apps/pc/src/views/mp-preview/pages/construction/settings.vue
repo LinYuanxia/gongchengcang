@@ -18,37 +18,6 @@
           </div>
           <icon-right class="item-arrow" />
         </div>
-        <div class="settings-item">
-          <div class="item-left">
-            <icon-safe class="item-icon" />
-            <span class="item-text">指纹登录</span>
-          </div>
-          <div class="item-switch" :class="{ active: fingerprintEnabled }" @click="fingerprintEnabled = !fingerprintEnabled">
-            <div class="switch-dot"></div>
-          </div>
-        </div>
-      </div>
-      
-      <div class="settings-section">
-        <div class="section-title">消息通知</div>
-        <div class="settings-item">
-          <div class="item-left">
-            <icon-notification class="item-icon" />
-            <span class="item-text">订单消息推送</span>
-          </div>
-          <div class="item-switch" :class="{ active: orderNotify }" @click="orderNotify = !orderNotify">
-            <div class="switch-dot"></div>
-          </div>
-        </div>
-        <div class="settings-item">
-          <div class="item-left">
-            <icon-message class="item-icon" />
-            <span class="item-text">系统通知推送</span>
-          </div>
-          <div class="item-switch" :class="{ active: systemNotify }" @click="systemNotify = !systemNotify">
-            <div class="switch-dot"></div>
-          </div>
-        </div>
       </div>
       
       <div class="settings-section">
@@ -87,9 +56,6 @@ import { ref } from 'vue'
 
 const emit = defineEmits(['navigate', 'logout'])
 
-const fingerprintEnabled = ref(false)
-const orderNotify = ref(true)
-const systemNotify = ref(true)
 const cacheSize = ref('23.5MB')
 
 function handleClearCache() {

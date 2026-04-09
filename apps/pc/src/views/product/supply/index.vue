@@ -504,13 +504,29 @@
       :footer="false"
     >
       <template #extra>
-        <a-button type="primary" size="small" @click="handleAddSupplyForSku(currentSku)">
-          <template #icon><icon-plus /></template>
-          添加供应商
-        </a-button>
+        <a-space>
+          <a-button 
+            type="outline" 
+            size="small" 
+            status="danger"
+            :disabled="selectedSupplierKeys.length === 0"
+            @click="handleBatchDeleteSuppliers"
+          >
+            批量删除 ({{ selectedSupplierKeys.length }})
+          </a-button>
+          <a-button type="primary" size="small" @click="handleAddSupplyForSku(currentSku)">
+            <template #icon><icon-plus /></template>
+            添加供应商
+          </a-button>
+        </a-space>
       </template>
       
-      <a-table :data="productSuppliers" :pagination="false">
+      <a-table 
+        :data="productSuppliers" 
+        :pagination="false"
+        :row-selection="supplierRowSelection"
+        row-key="supplierId"
+      >
         <template #columns>
           <a-table-column title="供应商" :width="180">
             <template #cell="{ record }">
@@ -921,6 +937,13 @@ const productSuppliers = ref([
   { supplierId: 'SUP002', supplierName: '深圳建材供应商', contactPerson: '李经理', contactPhone: '13800138002', supplyPrice: 27, estimatedStock: 300, minOrderQty: 30, leadTime: 2, unit: '袋', status: 'active', platformPrice: 28 },
   { supplierId: 'SUP003', supplierName: '佛山建材供应商', contactPerson: '王经理', contactPhone: '13800138003', supplyPrice: 28, estimatedStock: 200, minOrderQty: 20, leadTime: 5, unit: '袋', status: 'paused', platformPrice: 28 }
 ])
+const selectedSupplierKeys = ref<string[]>([])
+const supplierRowSelection = computed(() => ({
+  type: 'checkbox' as const,
+  selectedRowKeys: selectedSupplierKeys.value,
+  onlyCurrent: false,
+  onChange: (keys: string[]) => { selectedSupplierKeys.value = keys }
+}))
 
 const supplierProductsVisible = ref(false)
 const currentSupplier = ref<any>(null)
@@ -1238,6 +1261,56 @@ function handleDeleteSupply(record: any) {
           }
           Message.success('供应关系已删除')
         }
+      }
+    }
+  })
+}
+
+function handleBatchDeleteSuppliers() {
+  if (selectedSupplierKeys.value.length === 0) {
+    Message.warning('请先选择要删除的供应商')
+    return
+  }
+  
+  const selectedCount = selectedSupplierKeys.value.length
+  const willRemoveAll = selectedCount === productSuppliers.value.length
+  
+  Modal.confirm({
+    title: '批量删除确认',
+    content: `确定要删除选中的 <strong>${selectedCount}</strong> 条供货关联吗？${
+      willRemoveAll 
+        ? '<br/><span style="color: rgb(var(--warning-6));">注意：将删除该商品的所有供应商，删除后商品将自动从市场下架。</span>' 
+        : ''
+    }`,
+    onOk: () => {
+      let deletedCount = 0
+      
+      for (const supplierId of selectedSupplierKeys.value) {
+        const index = productSuppliers.value.findIndex(s => s.supplierId === supplierId)
+        if (index > -1) {
+          productSuppliers.value.splice(index, 1)
+          deletedCount++
+        }
+      }
+      
+      selectedSupplierKeys.value = []
+      
+      if (productSuppliers.value.length === 0) {
+        if (currentSku.value) {
+          const skuIndex = filteredProducts.value.findIndex(p => p.skuId === currentSku.value!.skuId)
+          if (skuIndex > -1) {
+            filteredProducts.value[skuIndex].supplierCount = 0
+          }
+        }
+        Message.success(`成功删除 ${deletedCount} 条供货关系，商品已从市场下架（暂无供应商供货）`)
+      } else {
+        if (currentSku.value) {
+          const skuIndex = filteredProducts.value.findIndex(p => p.skuId === currentSku.value!.skuId)
+          if (skuIndex > -1) {
+            filteredProducts.value[skuIndex].supplierCount = productSuppliers.value.length
+          }
+        }
+        Message.success(`成功删除 ${deletedCount} 条供货关系`)
       }
     }
   })

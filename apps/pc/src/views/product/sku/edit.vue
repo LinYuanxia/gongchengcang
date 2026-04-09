@@ -1,7 +1,7 @@
 <template>
   <div class="sku-edit-page">
     <a-page-header
-      :title="isEdit ? '编辑SKU' : '新增SKU'"
+      title="编辑SKU"
       subtitle="商品SKU信息管理"
       @back="handleBack"
     >
@@ -21,13 +21,12 @@
           <a-card title="基本信息" class="section-card">
             <a-row :gutter="24">
               <a-col :span="8">
-                <a-form-item field="spuId" label="所属SPU" :rules="[{ required: true, message: '请选择所属SPU' }]">
+                <a-form-item field="spuId" label="所属SPU">
                   <a-select
                     v-model="formData.spuId"
                     placeholder="请选择所属SPU"
                     allow-search
-                    :disabled="isEdit"
-                    @change="handleSpuChange"
+                    disabled
                   >
                     <a-option v-for="item in spuList" :key="item.spuId" :value="item.spuId">
                       {{ item.spuName }}
@@ -37,8 +36,8 @@
                 </a-form-item>
               </a-col>
               <a-col :span="8">
-                <a-form-item field="skuCode" label="SKU编码" :rules="[{ required: true, message: '请输入SKU编码' }]">
-                  <a-input v-model="formData.skuCode" placeholder="请输入SKU编码" :disabled="isEdit" />
+                <a-form-item field="skuCode" label="SKU编码">
+                  <a-input v-model="formData.skuCode" placeholder="请输入SKU编码" disabled />
                 </a-form-item>
               </a-col>
               <a-col :span="8">
@@ -48,22 +47,13 @@
               </a-col>
             </a-row>
 
-            <a-row v-if="selectedSpu" :gutter="24">
+            <a-row :gutter="24">
               <a-col :span="24">
                 <a-form-item label="规格属性">
                   <div class="spec-form">
-                    <div v-for="attrId in selectedSpu.attrIds" :key="attrId" class="spec-item">
-                      <span class="spec-label">{{ getAttrName(attrId) }}</span>
-                      <a-select
-                        v-model="formData.specs[getAttrName(attrId)]"
-                        :placeholder="`请选择${getAttrName(attrId)}`"
-                        allow-clear
-                        allow-create
-                      >
-                        <a-option v-for="value in getAttrValues(attrId)" :key="value" :value="value">
-                          {{ value }}
-                        </a-option>
-                      </a-select>
+                    <div v-for="(value, key) in formData.specs" :key="key" class="spec-item">
+                      <span class="spec-label">{{ key }}</span>
+                      <span class="spec-value">{{ value }}</span>
                     </div>
                   </div>
                 </a-form-item>
@@ -72,15 +62,15 @@
 
             <a-row :gutter="24">
               <a-col :span="8">
-                <a-form-item field="unit" label="计量单位" :rules="[{ required: true, message: '请输入计量单位' }]">
-                  <a-select v-model="formData.unit" placeholder="请选择或输入计量单位" allow-create allow-search>
+                <a-form-item field="unit" label="计量单位">
+                  <a-select v-model="formData.unit" placeholder="计量单位" disabled>
                     <a-option v-for="item in unitOptions" :key="item" :value="item">{{ item }}</a-option>
                   </a-select>
                 </a-form-item>
               </a-col>
               <a-col :span="8">
                 <a-form-item field="barcode" label="条形码">
-                  <a-input v-model="formData.barcode" placeholder="请输入条形码" />
+                  <a-input v-model="formData.barcode" placeholder="请输入条形码" disabled />
                 </a-form-item>
               </a-col>
             </a-row>
@@ -100,26 +90,6 @@
                       <div class="upload-btn">
                         <icon-plus />
                         <div class="upload-text">上传主图</div>
-                      </div>
-                    </template>
-                  </a-upload>
-                </a-form-item>
-              </a-col>
-              <a-col :span="12">
-                <a-form-item field="images" label="商品相册">
-                  <a-upload
-                    list-type="picture-card"
-                    :file-list="imagesFileList"
-                    :limit="9"
-                    accept="image/*"
-                    :auto-upload="false"
-                    multiple
-                    @change="handleImagesChange"
-                  >
-                    <template #upload-button>
-                      <div class="upload-btn">
-                        <icon-plus />
-                        <div class="upload-text">上传图片</div>
                       </div>
                     </template>
                   </a-upload>
@@ -153,52 +123,40 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
-import type { Spu, ProductAttr, UpdateSkuParams } from '@gongchengcang/types'
-import { getSkuDetail, updateSku, getSpuList, getAttrList } from '@gongchengcang/api'
+import type { Spu, UpdateSkuParams } from '@gongchengcang/types'
+import { getSkuDetail, updateSku, getSpuList } from '@gongchengcang/api'
 
 const route = useRoute()
 const router = useRouter()
 
-const isEdit = computed(() => !!route.params.id)
-const skuId = computed(() => route.params.id as string)
+const skuId = route.params.id as string
 
 const loading = ref(false)
 const submitting = ref(false)
 const formRef = ref()
 const spuList = ref<Spu[]>([])
-const attrList = ref<ProductAttr[]>([])
 const mainImageFileList = ref<any[]>([])
-const imagesFileList = ref<any[]>([])
 
 const unitOptions = ['吨', '米', '个', '件', '套', '千克', '立方米', '平方米', '桶', '箱', '包']
 
-const formData = ref<UpdateSkuParams & { skuId?: string }>({
+const formData = ref<UpdateSkuParams & { skuId?: string; spuId?: string }>({
   skuCode: '',
   skuName: '',
   specs: {},
   unit: '',
   barcode: '',
   mainImage: '',
-  images: [],
   supplyPrice: undefined,
   salePrice: undefined,
-  costPrice: undefined,
-  marketPrice: undefined,
-})
-
-const selectedSpu = computed(() => {
-  return spuList.value.find(s => s.spuId === formData.value.spuId)
+  spuId: '',
 })
 
 onMounted(async () => {
   await loadSpuList()
-  await loadAttrList()
-  if (isEdit.value) {
-    await loadSkuDetail()
-  }
+  await loadSkuDetail()
 })
 
 async function loadSpuList() {
@@ -210,66 +168,32 @@ async function loadSpuList() {
   }
 }
 
-async function loadAttrList() {
-  try {
-    attrList.value = await getAttrList()
-  } catch (error) {
-    console.error('加载属性列表失败:', error)
-  }
-}
-
 async function loadSkuDetail() {
   loading.value = true
   try {
-    const sku = await getSkuDetail(skuId.value)
-    formData.value = {
-      skuId: sku.skuId,
-      skuCode: sku.skuCode,
-      skuName: sku.skuName,
-      spuId: sku.spuId,
-      specs: { ...sku.specs },
-      unit: sku.unit,
-      barcode: sku.barcode || '',
-      mainImage: sku.mainImage || '',
-      images: sku.images || [],
-      supplyPrice: sku.supplyPrice,
-      salePrice: sku.salePrice,
-      costPrice: sku.costPrice,
-      marketPrice: sku.marketPrice,
-    }
+    const sku = await getSkuDetail(skuId)
+    if (sku) {
+      formData.value = {
+        skuId: sku.skuId,
+        skuCode: sku.skuCode,
+        skuName: sku.skuName,
+        spuId: sku.spuId,
+        specs: { ...sku.specs },
+        unit: sku.unit,
+        barcode: sku.barcode || '',
+        mainImage: sku.mainImage || '',
+        supplyPrice: sku.supplyPrice,
+        salePrice: sku.salePrice,
+      }
 
-    if (formData.value.mainImage) {
-      mainImageFileList.value = [{ uid: '1', url: formData.value.mainImage, name: 'main' }]
-    }
-    if (formData.value.images && formData.value.images.length > 0) {
-      imagesFileList.value = formData.value.images.map((url, index) => ({
-        uid: String(index),
-        url,
-        name: `image-${index}`,
-      }))
+      if (formData.value.mainImage) {
+        mainImageFileList.value = [{ uid: '1', url: formData.value.mainImage, name: 'main' }]
+      }
     }
   } catch (error: any) {
     Message.error(error.message || '获取SKU详情失败')
   } finally {
     loading.value = false
-  }
-}
-
-function getAttrName(attrId: string) {
-  const attr = attrList.value.find(a => a.attrId === attrId)
-  return attr?.attrName || attrId
-}
-
-function getAttrValues(attrId: string) {
-  const attr = attrList.value.find(a => a.attrId === attrId)
-  return attr?.optionValues || []
-}
-
-function handleSpuChange(spuId: string) {
-  const spu = spuList.value.find(s => s.spuId === spuId)
-  if (spu) {
-    formData.value.unit = spu.unit
-    formData.value.specs = {}
   }
 }
 
@@ -287,13 +211,6 @@ function handleMainImageChange(fileList: any[]) {
   }
 }
 
-function handleImagesChange(fileList: any[]) {
-  imagesFileList.value = fileList
-  formData.value.images = fileList
-    .filter(f => f.url || f.file)
-    .map(f => f.url || (f.file ? URL.createObjectURL(f.file) : ''))
-}
-
 function handleBack() {
   router.push('/product/sku')
 }
@@ -307,7 +224,7 @@ async function handleSave() {
 
   submitting.value = true
   try {
-    await updateSku(skuId.value, formData.value)
+    await updateSku(skuId, formData.value)
     Message.success('保存成功')
     handleBack()
   } catch (error: any) {
@@ -353,8 +270,11 @@ export default {
       color: var(--color-text-2);
     }
 
-    .arco-select {
-      width: 200px;
+    .spec-value {
+      padding: 4px 12px;
+      background: var(--color-bg-2);
+      border-radius: 4px;
+      color: var(--color-text-1);
     }
   }
 }
@@ -372,9 +292,5 @@ export default {
     margin-top: 8px;
     font-size: 12px;
   }
-}
-
-:deep(.arco-input-number) {
-  width: 100%;
 }
 </style>

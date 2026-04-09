@@ -2,7 +2,7 @@
   <div class="dashboard-container">
     <div class="welcome-section">
       <div class="welcome-content">
-        <h1 class="welcome-title">欢迎进入鸣鸣很忙材料供应商平台</h1>
+        <h1 class="welcome-title">欢迎进入材料供应商平台</h1>
         <p class="welcome-subtitle">工程材料管理采供一体化平台</p>
       </div>
       <div class="welcome-illustration">

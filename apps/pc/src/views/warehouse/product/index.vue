@@ -73,11 +73,10 @@
                   <a-switch v-model="record.isOnline" @change="handleStatusChange(record)" />
                 </template>
               </a-table-column>
-              <a-table-column title="操作" :width="150" fixed="right">
+              <a-table-column title="操作" :width="100" fixed="right">
                 <template #cell="{ record }">
                   <a-space>
                     <a-link @click="handleViewDetail(record)">详情</a-link>
-                    <a-link @click="handleEditPrice(record)">调价</a-link>
                   </a-space>
                 </template>
               </a-table-column>
@@ -86,31 +85,6 @@
         </a-card>
       </a-layout-content>
     </a-layout>
-
-    <a-modal v-model:visible="priceModalVisible" title="调整销售价" @ok="handlePriceSubmit">
-      <a-form :model="priceForm" layout="vertical">
-        <a-form-item label="商品名称">
-          <span>{{ currentProduct?.productName }}</span>
-        </a-form-item>
-        <a-form-item label="成本价（采购价）">
-          <span class="cost-price">¥{{ currentProduct?.costPrice }}</span>
-        </a-form-item>
-        <a-form-item label="当前销售价">
-          <span class="sale-price">¥{{ currentProduct?.salePrice }}</span>
-        </a-form-item>
-        <a-form-item label="新销售价" required>
-          <a-input-number v-model="priceForm.salePrice" :min="0" :precision="2" style="width: 100%">
-            <template #prefix>¥</template>
-          </a-input-number>
-        </a-form-item>
-        <a-form-item label="调价原因" required>
-          <a-textarea v-model="priceForm.reason" placeholder="请输入调价原因" :max-length="200" />
-        </a-form-item>
-        <a-alert type="info">
-          调价申请提交后，需等待平台审核通过后生效
-        </a-alert>
-      </a-form>
-    </a-modal>
   </div>
 </template>
 
@@ -123,13 +97,6 @@ const router = useRouter()
 const activeTab = ref('all')
 const viewMode = ref('sku')
 const selectedCategoryKeys = ref<string[]>([])
-const priceModalVisible = ref(false)
-const currentProduct = ref<any>(null)
-
-const priceForm = ref({
-  salePrice: 0,
-  reason: '',
-})
 
 const pagination = ref({
   current: 1,
@@ -277,26 +244,6 @@ function handleStatusChange(record: any) {
 
 function handleViewDetail(record: any) {
   router.push(`/warehouse/product/detail/${record.id}`)
-}
-
-function handleEditPrice(record: any) {
-  currentProduct.value = record
-  priceForm.value = {
-    salePrice: record.salePrice,
-    reason: '',
-  }
-  priceModalVisible.value = true
-}
-
-function handlePriceSubmit() {
-  if (!priceForm.value.salePrice || !priceForm.value.reason) {
-    Message.warning('请完善调价信息')
-    return
-  }
-  if (currentProduct.value) {
-    Message.success('调价申请已提交，等待平台审核')
-  }
-  priceModalVisible.value = false
 }
 </script>
 

@@ -548,18 +548,29 @@ async function handleWithdrawConfirm() {
 
 .account-card {
   &.main-account {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: #fff;
+    background: #fff;
+    border: 1px solid #e5e6eb;
+    border-radius: 8px;
 
     .account-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #f2f3f5;
 
       .account-name {
         font-size: 16px;
-        font-weight: 500;
+        font-weight: 600;
+        color: #1d2129;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .arco-icon {
+          color: #0e42d2;
+        }
       }
     }
 
@@ -570,35 +581,42 @@ async function handleWithdrawConfirm() {
       .balance-label {
         display: block;
         font-size: 14px;
-        opacity: 0.9;
+        color: #86909c;
         margin-bottom: 8px;
       }
 
       .balance-amount {
         font-size: 32px;
         font-weight: 600;
+        color: #1d2129;
       }
     }
 
     .account-info {
+      display: flex;
       margin-bottom: 20px;
+      background: #f7f8fa;
+      border-radius: 6px;
+      padding: 12px 0;
 
       .info-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 8px 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        flex: 1;
+        text-align: center;
 
-        &:last-child {
-          border-bottom: none;
+        &:first-child {
+          border-right: 1px solid #e5e6eb;
         }
 
         .info-label {
-          opacity: 0.9;
+          display: block;
+          font-size: 13px;
+          color: #86909c;
+          margin-bottom: 4px;
         }
 
         .info-value {
-          font-weight: 500;
+          font-weight: 600;
+          font-size: 16px;
 
           &.frozen {
             color: #ff7d00;

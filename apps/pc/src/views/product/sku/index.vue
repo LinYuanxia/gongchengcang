@@ -27,11 +27,15 @@
             allow-clear
             :field-names="{ value: 'categoryId', label: 'categoryName', children: 'children' }"
           />
+          <a-select
+            v-model="searchForm.spuId"
+            :options="spuSelectOptions"
+            placeholder="所属SPU"
+            style="width: 200px"
+            allow-search
+            allow-clear
+          />
         </a-space>
-        <a-button type="primary" @click="handleAdd">
-          <template #icon><icon-plus /></template>
-          新增SKU
-        </a-button>
       </div>
       <a-table
         :data="tableData"
@@ -57,13 +61,38 @@
             </template>
           </a-table-column>
           <a-table-column title="单位" data-index="unit" :width="60" />
-          <a-table-column title="供应商数" data-index="supplierCount" :width="80" />
+          <a-table-column title="供货价" :width="100">
+            <template #cell="{ record }">
+              <span v-if="record.supplyPrice">¥{{ record.supplyPrice.toFixed(2) }}</span>
+              <span v-else>-</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="销售价" :width="100">
+            <template #cell="{ record }">
+              <span v-if="record.salePrice">¥{{ record.salePrice.toFixed(2) }}</span>
+              <span v-else>-</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="状态" :width="80">
+            <template #cell="{ record }">
+              <a-switch
+                :model-value="record.status === 'on_shelf'"
+                :checked-value="true"
+                :unchecked-value="false"
+                size="small"
+                @change="(checked) => handleStatusChange(record, checked)"
+              />
+            </template>
+          </a-table-column>
           <a-table-column title="创建时间" data-index="createdAt" :width="180" />
-          <a-table-column title="操作" :width="150" fixed="right">
+          <a-table-column title="操作" :width="200" fixed="right">
             <template #cell="{ record }">
               <a-space>
                 <a-button type="text" size="small" @click="handleView(record)">详情</a-button>
                 <a-button type="text" size="small" @click="handleEdit(record)">编辑</a-button>
+                <a-button type="text" size="small" @click="handleDelete(record)">
+                  <icon-delete />
+                </a-button>
               </a-space>
             </template>
           </a-table-column>
@@ -71,22 +100,16 @@
       </a-table>
     </a-card>
 
-    <SkuFormDrawer
-      v-model:visible="formVisible"
-      :sku="editingSku"
-      :spu-list="spuList"
-      @success="handleFormSuccess"
-    />
+    
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import type { Sku, ProductCategory, Spu } from '@gongchengcang/types'
-import { getSkuList, getCategoryTree, getSpuList } from '@gongchengcang/api'
-import SkuFormDrawer from './components/SkuFormDrawer.vue'
+import { getSkuList, getCategoryTree, getSpuList, updateSku, deleteSku } from '@gongchengcang/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -95,6 +118,13 @@ const tableData = ref<Sku[]>([])
 const categoryTree = ref<ProductCategory[]>([])
 const spuList = ref<Spu[]>([])
 const spuFilter = ref<{ spuId: string; spuName: string } | null>(null)
+
+const spuSelectOptions = computed(() => {
+  return spuList.value.map(spu => ({
+    value: spu.spuId,
+    label: spu.spuName
+  }))
+})
 const pagination = reactive({
   current: 1,
   pageSize: 10,
@@ -105,9 +135,6 @@ const searchForm = reactive({
   categoryId: undefined as string[] | undefined,
   spuId: undefined as string | undefined,
 })
-const formVisible = ref(false)
-const editingSku = ref<Sku | null>(null)
-
 watch(
   () => route.query,
   (query) => {
@@ -124,6 +151,13 @@ watch(
     loadData()
   },
   { immediate: true }
+)
+
+watch(
+  () => searchForm.spuId,
+  () => {
+    handleSearch()
+  }
 )
 
 onMounted(() => {
@@ -179,22 +213,46 @@ function handlePageChange(page: number) {
   loadData()
 }
 
-function handleAdd() {
-  editingSku.value = null
-  formVisible.value = true
-}
-
 function handleView(record: Sku) {
   router.push(`/product/sku/view/${record.skuId}`)
 }
 
 function handleEdit(record: Sku) {
-  editingSku.value = record
-  formVisible.value = true
+  router.push(`/product/sku/edit/${record.skuId}`)
 }
 
-function handleFormSuccess() {
-  loadData()
+function handleStatusChange(record: Sku, checked: boolean) {
+  const newStatus = checked ? 'on_shelf' : 'off_shelf'
+  const action = checked ? '上架' : '下架'
+  Message.confirm({
+    title: `确认${action}`,
+    content: `确定要${action}该SKU吗？`,
+    onOk: async () => {
+      try {
+        await updateSku(record.skuId, { status: newStatus })
+        Message.success(`${action}成功`)
+        loadData()
+      } catch (error: any) {
+        Message.error(error.message || `${action}失败`)
+      }
+    },
+  })
+}
+
+function handleDelete(record: Sku) {
+  Message.confirm({
+    title: '确认删除',
+    content: '确定要删除该SKU吗？删除后将无法恢复。',
+    onOk: async () => {
+      try {
+        await deleteSku(record.skuId)
+        Message.success('删除成功')
+        loadData()
+      } catch (error: any) {
+        Message.error(error.message || '删除失败')
+      }
+    },
+  })
 }
 
 function clearSpuFilter() {

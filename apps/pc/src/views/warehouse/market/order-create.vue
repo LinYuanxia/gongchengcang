@@ -79,42 +79,58 @@
             </a-col>
             <a-col :span="12">
               <a-form-item label="支付方式">
-                <span class="payment-method-text">托管账户支付</span>
+                <span class="payment-method-text">线下转账</span>
               </a-form-item>
             </a-col>
           </a-row>
           
-          <div class="custody-account-section">
-            <div class="account-card">
-              <div class="account-header">
-                <icon-safe class="account-icon" />
-                <span class="account-title">托管账户</span>
+          <div class="supplier-account-section">
+            <a-card title="供应商收款账户">
+              <div class="account-info">
+                <div class="account-item">
+                  <span class="label">账户名称：</span>
+                  <span class="value">{{ supplierAccount.accountName }}</span>
+                </div>
+                <div class="account-item">
+                  <span class="label">银行名称：</span>
+                  <span class="value">{{ supplierAccount.bankName }}</span>
+                </div>
+                <div class="account-item">
+                  <span class="label">银行账号：</span>
+                  <span class="value">{{ supplierAccount.accountNumber }}</span>
+                </div>
+                <div class="account-item">
+                  <span class="label">开户支行：</span>
+                  <span class="value">{{ supplierAccount.branchName }}</span>
+                </div>
               </div>
-              <div class="account-balance">
-                <span class="balance-label">可用余额</span>
-                <span class="balance-amount" :class="{ 'insufficient': isBalanceInsufficient }">
-                  ¥{{ custodyBalance.toFixed(2) }}
-                </span>
-              </div>
-              <div class="account-actions">
-                <a-button type="text" size="small" @click="handleRecharge">
-                  <template #icon><icon-plus /></template>
-                  充值
-                </a-button>
-              </div>
-            </div>
-            
+              
+              <a-alert 
+                type="info" 
+                style="margin-top: 12px"
+              >
+                <template #message>
+                  <div class="payment-tip">
+                    <span>请在供应商确认订单后，将款项转至以上账户，并在订单中上传转账凭证</span>
+                  </div>
+                </template>
+              </a-alert>
+            </a-card>
+          </div>
+          
+          <div class="order-process-tip">
             <a-alert 
-              v-if="isBalanceInsufficient" 
-              type="error" 
+              type="warning" 
               style="margin-top: 12px"
             >
               <template #message>
-                <div class="insufficient-tip">
-                  <span>托管账户余额不足，当前需支付 <strong>¥{{ totalAmount }}</strong>，还需充值 <strong>¥{{ shortageAmount }}</strong></span>
-                  <a-button type="primary" size="small" @click="handleRecharge">
-                    立即充值
-                  </a-button>
+                <div class="process-tip">
+                  <span>订单流程：</span>
+                  <span class="process-step">1. 提交订单 → </span>
+                  <span class="process-step">2. 供应商确认 → </span>
+                  <span class="process-step">3. 线下转账 → </span>
+                  <span class="process-step">4. 上传凭证 → </span>
+                  <span class="process-step">5. 供应商发货</span>
                 </div>
               </template>
             </a-alert>
@@ -159,7 +175,7 @@
         <span class="price">¥{{ totalAmount }}</span>
       </div>
       <a-button size="large" @click="handleBack">返回</a-button>
-      <a-button type="primary" size="large" @click="handleSubmit" :disabled="isBalanceInsufficient">
+      <a-button type="primary" size="large" @click="handleSubmit">
         提交订单
       </a-button>
     </div>
@@ -177,7 +193,7 @@
             <icon-check v-if="selectedAddress?.id === addr.id" />
           </div>
           <div class="address-info">
-            <div class="address-top">
+            <div class="address-header">
               <span class="name">{{ addr.name }}</span>
               <span class="phone">{{ addr.phone }}</span>
               <a-tag v-if="addr.isDefault" color="blue" size="small">默认</a-tag>
@@ -190,37 +206,6 @@
         <a-button type="primary" @click="handleAddAddress">新增地址</a-button>
       </template>
     </a-modal>
-    
-    <a-modal v-model:visible="rechargeModalVisible" title="托管账户充值" :width="500" @ok="handleConfirmRecharge">
-      <a-form :model="rechargeForm" layout="vertical">
-        <a-form-item label="充值金额">
-          <a-input-number 
-            v-model="rechargeForm.amount" 
-            :min="100" 
-            :step="100"
-            style="width: 100%"
-            placeholder="请输入充值金额"
-          >
-            <template #prefix>¥</template>
-          </a-input-number>
-        </a-form-item>
-        <div class="quick-amount">
-          <span class="quick-label">快捷选择：</span>
-          <a-space>
-            <a-button v-for="amount in quickAmounts" :key="amount" size="small" @click="rechargeForm.amount = amount">
-              ¥{{ amount }}
-            </a-button>
-          </a-space>
-        </div>
-        <a-form-item label="支付方式" style="margin-top: 16px">
-          <a-radio-group v-model="rechargeForm.payMethod">
-            <a-radio value="bank">银行转账</a-radio>
-            <a-radio value="alipay">支付宝</a-radio>
-            <a-radio value="wechat">微信支付</a-radio>
-          </a-radio-group>
-        </a-form-item>
-      </a-form>
-    </a-modal>
   </div>
 </template>
 
@@ -232,7 +217,6 @@ import { Message, Modal } from '@arco-design/web-vue'
 const route = useRoute()
 const router = useRouter()
 const addressModalVisible = ref(false)
-const rechargeModalVisible = ref(false)
 
 const selectedAddress = ref<any>(null)
 const addressList = ref([
@@ -242,7 +226,7 @@ const addressList = ref([
 
 const orderForm = ref({
   deliveryDate: '',
-  payMethod: 'custody',
+  payMethod: 'offline',
   remark: '',
 })
 
@@ -250,14 +234,12 @@ const supplierId = ref('')
 const supplierName = ref('')
 const orderItems = ref<any[]>([])
 
-const custodyBalance = ref(5000.00)
-
-const rechargeForm = ref({
-  amount: 1000,
-  payMethod: 'bank',
+const supplierAccount = ref({
+  accountName: '广东建材有限公司',
+  bankName: '中国工商银行',
+  accountNumber: '6222 0244 0201 2345 678',
+  branchName: '深圳市南山区支行',
 })
-
-const quickAmounts = [500, 1000, 2000, 5000, 10000]
 
 const totalQuantity = computed(() => {
   return orderItems.value.reduce((sum, item) => sum + item.quantity, 0)
@@ -274,15 +256,6 @@ const totalAmount = computed(() => {
   return (parseFloat(productAmount.value) + freight.value - discount.value).toFixed(2)
 })
 
-const isBalanceInsufficient = computed(() => {
-  return custodyBalance.value < parseFloat(totalAmount.value)
-})
-
-const shortageAmount = computed(() => {
-  const shortage = parseFloat(totalAmount.value) - custodyBalance.value
-  return shortage > 0 ? shortage.toFixed(2) : '0.00'
-})
-
 onMounted(() => {
   if (addressList.value.length > 0) {
     const defaultAddr = addressList.value.find(a => a.isDefault)
@@ -290,7 +263,6 @@ onMounted(() => {
   }
   
   loadOrderData()
-  loadCustodyBalance()
 })
 
 function loadOrderData() {
@@ -339,10 +311,6 @@ function loadOrderData() {
   }
 }
 
-function loadCustodyBalance() {
-  
-}
-
 function formatSpecs(specs: Record<string, string>) {
   return Object.entries(specs || {}).map(([k, v]) => v).join(' / ')
 }
@@ -364,49 +332,17 @@ function handleBack() {
   router.back()
 }
 
-function handleRecharge() {
-  if (isBalanceInsufficient.value) {
-    rechargeForm.value.amount = Math.ceil(parseFloat(shortageAmount.value) / 100) * 100
-  }
-  rechargeModalVisible.value = true
-}
-
-function handleConfirmRecharge() {
-  if (!rechargeForm.value.amount || rechargeForm.value.amount < 100) {
-    Message.warning('充值金额最低100元')
-    return
-  }
-  
-  Message.success(`充值申请已提交，请完成${rechargeForm.value.payMethod === 'bank' ? '银行转账' : '在线支付'}`)
-  rechargeModalVisible.value = false
-  
-  router.push('/warehouse/finance/custody')
-}
-
 function handleSubmit() {
   if (!selectedAddress.value) {
     Message.warning('请选择收货地址')
     return
   }
   
-  if (isBalanceInsufficient.value) {
-    Modal.confirm({
-      title: '余额不足',
-      content: '托管账户余额不足，是否立即充值？',
-      okText: '立即充值',
-      cancelText: '取消',
-      onOk: () => {
-        handleRecharge()
-      }
-    })
-    return
-  }
-
   Modal.confirm({
     title: '确认提交',
     content: `订单金额：¥${totalAmount.value}，共 ${orderItems.value.length} 种规格，确认提交？`,
     onOk: () => {
-      Message.success('订单提交成功')
+      Message.success('订单提交成功，请等待供应商确认')
       setTimeout(() => {
         router.push('/warehouse/order/purchase')
       }, 1500)
@@ -556,76 +492,55 @@ function handleSubmit() {
 
 .info-section {
   margin-bottom: 24px;
-}
-
-.payment-method-text {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--color-text-1);
-}
-
-.custody-account-section {
-  background: linear-gradient(135deg, #e6f4ff 0%, #f0f5ff 100%);
-  border: 2px solid rgb(var(--primary-6));
-  border-radius: 12px;
-  padding: 20px;
-  margin-top: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-.account-card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.account-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   
-  .account-icon {
-    font-size: 28px;
-    color: rgb(var(--primary-6));
-  }
-  
-  .account-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--color-text-1);
-  }
-}
-
-.account-balance {
-  flex: 1;
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  
-  .balance-label {
+  .payment-method-text {
     font-size: 14px;
-    color: var(--color-text-2);
+    font-weight: 500;
+    color: #1D2129;
   }
   
-  .balance-amount {
-    font-size: 28px;
-    font-weight: 700;
-    color: rgb(var(--primary-6));
-    
-    &.insufficient {
-      color: rgb(var(--danger-6));
-      animation: pulse 1.5s infinite;
+  .process-step {
+    color: #165DFF;
+    font-weight: 500;
+  }
+  
+  .payment-tip {
+    line-height: 1.5;
+  }
+  
+  .process-tip {
+    line-height: 1.5;
+  }
+  
+  .account-info {
+    .account-item {
+      margin-bottom: 12px;
+      display: flex;
+      
+      .label {
+        width: 80px;
+        color: #86909C;
+      }
+      
+      .value {
+        flex: 1;
+        font-weight: 500;
+      }
     }
   }
 }
 
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
+.supplier-account-section {
+  margin: 16px 0;
+  
+  :deep(.arco-card) {
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
   }
-  50% {
-    opacity: 0.6;
-  }
+}
+
+.order-process-tip {
+  margin-top: 16px;
 }
 
 .account-actions {

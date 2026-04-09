@@ -10,10 +10,6 @@
             <a-radio value="spu">SPU列表</a-radio>
             <a-radio value="sku">SKU列表</a-radio>
           </a-radio-group>
-          <a-button type="primary" @click="handleCreateProduct">
-            <template #icon><icon-plus /></template>
-            创建商品
-          </a-button>
           <a-button @click="showPlatformSelector = true">
             <template #icon><icon-apps /></template>
             从平台库选择
@@ -21,7 +17,36 @@
         </a-space>
       </template>
 
-      <div v-if="currentTab === 'spu'">
+      <div class="product-layout">
+        <div class="category-sidebar">
+          <div class="tree-header">
+            <span class="title">商品分类</span>
+            <a-button type="text" size="small" @click="resetCategory">
+              重置
+            </a-button>
+          </div>
+          <a-input-search
+            v-model="categorySearchKeyword"
+            placeholder="搜索分类"
+            style="margin-bottom: 12px"
+            allow-clear
+          />
+          <a-tree
+            :data="categoryTreeWithCount"
+            :selected-keys="selectedCategoryKeys"
+            :expanded-keys="expandedCategoryKeys"
+            :field-names="{ key: 'categoryId', title: 'categoryName', children: 'children' }"
+            block-node
+            @select="handleCategorySelect"
+          >
+            <template #title="nodeData">
+              <span class="category-name">{{ nodeData.categoryName }}</span>
+              <span class="category-count">({{ currentTab === 'spu' ? nodeData.spuCount || 0 : nodeData.skuCount || 0 }})</span>
+            </template>
+          </a-tree>
+        </div>
+        <div class="product-content">
+          <div v-if="currentTab === 'spu'">
         <div class="table-actions">
           <a-space>
             <a-input-search
@@ -91,12 +116,10 @@
               </template>
             </a-table-column>
             <a-table-column title="创建时间" data-index="createdAt" :width="160" />
-            <a-table-column title="操作" :width="180" fixed="right">
+            <a-table-column title="操作" :width="100" fixed="right">
               <template #cell="{ record }">
                 <a-space>
                   <a-button type="text" size="small" @click="handleViewSpu(record)">详情</a-button>
-                  <a-button type="text" size="small" @click="handleEditSpu(record)">编辑</a-button>
-                  <a-button type="text" size="small" @click="handleManageSku(record)">管理SKU</a-button>
                 </a-space>
               </template>
             </a-table-column>
@@ -198,7 +221,7 @@
                   checked-value="on"
                   unchecked-value="off"
                   :disabled="record.supplyStatus === 'stopped' || record.auditStatus === 'pending' || record.auditStatus === 'rejected'"
-                  @change="(val: string) => handleShelfChange(record, val)"
+                  @change="(val: string | number | boolean) => handleShelfChange(record, val as 'on' | 'off')"
                 />
               </template>
             </a-table-column>
@@ -236,6 +259,8 @@
             </a-table-column>
           </template>
         </a-table>
+          </div>
+        </div>
       </div>
     </a-card>
 
@@ -267,7 +292,7 @@
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item label="供货价">
-              <a-input-number v-model="skuEditForm.supplyPrice" :min="0" :precision="2" style="width: 100%">
+              <a-input-number v-model="skuEditForm.supplyPrice" :min="0" :precision="2" style="width: 100%" disabled>
                 <template #prefix>¥</template>
               </a-input-number>
             </a-form-item>
@@ -379,44 +404,19 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Message } from '@arco-design/web-vue'
+import { Message, Modal } from '@arco-design/web-vue'
 import type { ProductCategory } from '@gongchengcang/types'
+import {
+  getSupplierSpuList,
+  getSupplierSkuList,
+  updateSupplierSku,
+  updateSupplierSkuSupplyStatus,
+  updateSupplierSkuShelfStatus,
+  batchUpdateSupplierSkuShelfStatus,
+  type SupplierSpu,
+  type SupplierSku,
+} from '@gongchengcang/api'
 import PlatformProductSelector from './components/PlatformProductSelector.vue'
-
-interface SupplierSpu {
-  spuId: string
-  spuCode: string
-  spuName: string
-  categoryName?: string
-  mainImage?: string
-  unit: string
-  source: 'self' | 'platform'
-  skuCount: number
-  auditStatus?: 'pending' | 'approved' | 'rejected'
-  createdAt: string
-}
-
-interface SupplierSku {
-  id: string
-  skuId?: string
-  skuCode: string
-  skuName: string
-  spuId: string
-  spuName: string
-  categoryName?: string
-  specs: Record<string, string>
-  unit: string
-  mainImage?: string
-  source: 'self' | 'platform'
-  supplyPrice?: number
-  estimatedStock: number
-  minOrderQty: number
-  leadTime: number
-  auditStatus?: 'pending' | 'approved' | 'rejected'
-  supplyStatus: 'supplying' | 'paused' | 'stopped'
-  shelfStatus: 'on' | 'off'
-  createdAt: string
-}
 
 const router = useRouter()
 const currentTab = ref('spu')
@@ -431,6 +431,10 @@ const skuDetailVisible = ref(false)
 const statusChangeVisible = ref(false)
 
 const selectedSkuKeys = ref<string[]>([])
+
+const categorySearchKeyword = ref('')
+const selectedCategoryKeys = ref<string[]>([])
+const expandedCategoryKeys = ref<string[]>([])
 
 const editSku = ref<SupplierSku | null>(null)
 const detailSku = ref<SupplierSku | null>(null)
@@ -452,13 +456,13 @@ const skuPagination = reactive({
 
 const spuSearchForm = reactive({
   keyword: '',
-  categoryId: undefined as string[] | undefined,
+  categoryId: undefined as string | undefined,
   auditStatus: undefined as string | undefined,
 })
 
 const skuSearchForm = reactive({
   keyword: '',
-  categoryId: undefined as string[] | undefined,
+  categoryId: undefined as string | undefined,
   supplyStatus: undefined as string | undefined,
   shelfStatus: undefined as string | undefined,
 })
@@ -470,147 +474,77 @@ const skuEditForm = reactive({
   leadTime: 7,
 })
 
-const mockSpuList = ref<SupplierSpu[]>([
-  {
-    spuId: 'spu001',
-    spuCode: 'SPU-TEST-001',
-    spuName: '普通硅酸盐水泥',
-    categoryName: '水泥',
-    mainImage: 'https://picsum.photos/200/200?random=1',
-    unit: '吨',
-    source: 'self',
-    skuCount: 2,
-    auditStatus: 'approved',
-    createdAt: '2024-01-15 10:30:00',
-  },
-  {
-    spuId: 'spu002',
-    spuCode: 'SPU-TEST-002',
-    spuName: '高强度螺纹钢',
-    categoryName: '钢材',
-    mainImage: 'https://picsum.photos/200/200?random=2',
-    unit: '吨',
-    source: 'platform',
-    skuCount: 3,
-    auditStatus: 'approved',
-    createdAt: '2024-01-14 14:20:00',
-  },
-  {
-    spuId: 'spu003',
-    spuCode: 'SPU-TEST-003',
-    spuName: '建筑用砂',
-    categoryName: '砂石',
-    mainImage: 'https://picsum.photos/200/200?random=3',
-    unit: '方',
-    source: 'self',
-    skuCount: 1,
-    auditStatus: 'pending',
-    createdAt: '2024-01-16 09:15:00',
-  },
-])
+const spuResult = getSupplierSpuList()
+const mockSpuList = ref<SupplierSpu[]>(spuResult.list)
+spuPagination.total = spuResult.total
 
-const mockSkuList = ref<SupplierSku[]>([
-  {
-    id: 'sku001',
-    skuCode: 'SKU-TEST-001-42.5',
-    skuName: '水泥 P.O 42.5',
-    spuId: 'spu001',
-    spuName: '普通硅酸盐水泥',
-    categoryName: '水泥',
-    specs: { '强度等级': '42.5' },
-    unit: '吨',
-    mainImage: 'https://picsum.photos/200/200?random=4',
-    source: 'self',
-    supplyPrice: 420,
-    estimatedStock: 1000,
-    minOrderQty: 10,
-    leadTime: 3,
-    auditStatus: 'approved',
-    supplyStatus: 'supplying',
-    shelfStatus: 'on',
-    createdAt: '2024-01-15 10:30:00',
-  },
-  {
-    id: 'sku002',
-    skuCode: 'SKU-TEST-001-52.5',
-    skuName: '水泥 P.O 52.5',
-    spuId: 'spu001',
-    spuName: '普通硅酸盐水泥',
-    categoryName: '水泥',
-    specs: { '强度等级': '52.5' },
-    unit: '吨',
-    mainImage: 'https://picsum.photos/200/200?random=5',
-    source: 'self',
-    supplyPrice: 480,
-    estimatedStock: 800,
-    minOrderQty: 10,
-    leadTime: 3,
-    auditStatus: 'approved',
-    supplyStatus: 'supplying',
-    shelfStatus: 'on',
-    createdAt: '2024-01-15 10:30:00',
-  },
-  {
-    id: 'sku003',
-    skuCode: 'SKU-TEST-002-20',
-    skuName: '螺纹钢 HRB400E 20mm',
-    spuId: 'spu002',
-    spuName: '高强度螺纹钢',
-    categoryName: '钢材',
-    specs: { '规格': '20mm', '材质': 'HRB400E' },
-    unit: '吨',
-    mainImage: 'https://picsum.photos/200/200?random=6',
-    source: 'platform',
-    supplyPrice: 3600,
-    estimatedStock: 500,
-    minOrderQty: 5,
-    leadTime: 7,
-    auditStatus: 'approved',
-    supplyStatus: 'supplying',
-    shelfStatus: 'on',
-    createdAt: '2024-01-14 14:20:00',
-  },
-  {
-    id: 'sku004',
-    skuCode: 'SKU-TEST-002-25',
-    skuName: '螺纹钢 HRB400E 25mm',
-    spuId: 'spu002',
-    spuName: '高强度螺纹钢',
-    categoryName: '钢材',
-    specs: { '规格': '25mm', '材质': 'HRB400E' },
-    unit: '吨',
-    mainImage: 'https://picsum.photos/200/200?random=7',
-    source: 'platform',
-    supplyPrice: 3550,
-    estimatedStock: 600,
-    minOrderQty: 5,
-    leadTime: 7,
-    auditStatus: 'approved',
-    supplyStatus: 'paused',
-    shelfStatus: 'off',
-    createdAt: '2024-01-14 14:20:00',
-  },
-  {
-    id: 'sku005',
-    skuCode: 'SKU-TEST-003',
-    skuName: '砂子 中砂',
-    spuId: 'spu003',
-    spuName: '建筑用砂',
-    categoryName: '砂石',
-    specs: { '类型': '中砂' },
-    unit: '方',
-    mainImage: 'https://picsum.photos/200/200?random=8',
-    source: 'self',
-    supplyPrice: 85,
-    estimatedStock: 2000,
-    minOrderQty: 20,
-    leadTime: 2,
-    auditStatus: 'pending',
-    supplyStatus: 'supplying',
-    shelfStatus: 'off',
-    createdAt: '2024-01-16 09:15:00',
-  },
-])
+const skuResult = getSupplierSkuList()
+const mockSkuList = ref<SupplierSku[]>(skuResult.list)
+skuPagination.total = skuResult.total
+
+function refreshSpuList() {
+  const result = getSupplierSpuList(spuSearchForm)
+  mockSpuList.value = result.list
+  spuPagination.total = result.total
+}
+
+function refreshSkuList() {
+  const result = getSupplierSkuList(skuSearchForm)
+  mockSkuList.value = result.list
+  skuPagination.total = result.total
+}
+
+const categoryTreeWithCount = computed(() => {
+  const spuCounts: Record<string, number> = {}
+  const skuCounts: Record<string, number> = {}
+  
+  mockSpuList.value.forEach(spu => {
+    if (spu.categoryId) {
+      spuCounts[spu.categoryId] = (spuCounts[spu.categoryId] || 0) + 1
+    }
+  })
+  
+  mockSkuList.value.forEach(sku => {
+    if (sku.categoryId) {
+      skuCounts[sku.categoryId] = (skuCounts[sku.categoryId] || 0) + 1
+    }
+  })
+  
+  function addCounts(categories: ProductCategory[]): ProductCategory[] {
+    return categories.map(cat => {
+      const children = cat.children ? addCounts(cat.children) : []
+      return {
+        ...cat,
+        spuCount: (spuCounts[cat.categoryId] || 0) + children.reduce((sum, c) => sum + (c.spuCount || 0), 0),
+        skuCount: (skuCounts[cat.categoryId] || 0) + children.reduce((sum, c) => sum + (c.skuCount || 0), 0),
+        children,
+      }
+    })
+  }
+  
+  const treeWithCounts = addCounts(categoryTree.value)
+  
+  if (!categorySearchKeyword.value) {
+    return treeWithCounts
+  }
+  
+  function filterTree(data: ProductCategory[], keyword: string): ProductCategory[] {
+    const result: ProductCategory[] = []
+    data.forEach(item => {
+      if (item.categoryName.toLowerCase().includes(keyword)) {
+        result.push(item)
+      } else if (item.children && item.children.length > 0) {
+        const filteredChildren = filterTree(item.children, keyword)
+        if (filteredChildren.length > 0) {
+          result.push({ ...item, children: filteredChildren })
+        }
+      }
+    })
+    return result
+  }
+  
+  return filterTree(treeWithCounts, categorySearchKeyword.value.toLowerCase())
+})
 
 const filteredSpuList = computed(() => {
   let result = mockSpuList.value
@@ -621,6 +555,10 @@ const filteredSpuList = computed(() => {
       p.spuName.toLowerCase().includes(keyword) || 
       p.spuCode.toLowerCase().includes(keyword)
     )
+  }
+  
+  if (spuSearchForm.categoryId) {
+    result = result.filter(p => p.categoryId === spuSearchForm.categoryId)
   }
   
   if (spuSearchForm.auditStatus) {
@@ -639,6 +577,10 @@ const filteredSkuList = computed(() => {
       p.skuName.toLowerCase().includes(keyword) || 
       p.skuCode.toLowerCase().includes(keyword)
     )
+  }
+  
+  if (skuSearchForm.categoryId) {
+    result = result.filter(p => p.categoryId === skuSearchForm.categoryId)
   }
   
   if (skuSearchForm.supplyStatus) {
@@ -701,7 +643,7 @@ function getSupplyStatusText(status: string) {
   const texts: Record<string, string> = {
     supplying: '供货中',
     paused: '暂停供货',
-    stopped: '永久停货',
+    stopped: '已停货',
   }
   return texts[status] || status
 }
@@ -710,24 +652,27 @@ function handleTabChange() {
   selectedSkuKeys.value = []
 }
 
-function handleSpuSearch() {
-  spuPagination.current = 1
+function handleCategorySelect(keys: string[]) {
+  selectedCategoryKeys.value = keys
+  if (keys.length > 0) {
+    spuSearchForm.categoryId = keys[0]
+    skuSearchForm.categoryId = keys[0]
+  } else {
+    spuSearchForm.categoryId = undefined
+    skuSearchForm.categoryId = undefined
+  }
 }
 
-function handleSkuSearch() {
-  skuPagination.current = 1
+function resetCategory() {
+  selectedCategoryKeys.value = []
+  spuSearchForm.categoryId = undefined
+  skuSearchForm.categoryId = undefined
 }
 
-function handleSpuPageChange(page: number) {
-  spuPagination.current = page
-}
 
-function handleSkuPageChange(page: number) {
-  skuPagination.current = page
-}
 
 function handleCreateProduct() {
-  router.push('/supplier/product/add')
+  showPlatformSelector.value = true
 }
 
 function handleViewSpu(record: SupplierSpu) {
@@ -739,12 +684,12 @@ function handleEditSpu(record: SupplierSpu) {
 }
 
 function handleManageSku(record: SupplierSpu) {
-  router.push(`/supplier/product/edit/${record.spuId}?tab=sku`)
+  Message.info('管理SKU功能开发中...')
 }
 
 function handleViewSkuList(record: SupplierSpu) {
   currentTab.value = 'sku'
-  Message.info(`已切换到SKU列表，显示SPU【${record.spuName}】的SKU`)
+  Message.info(`已跳转到SKU列表，筛选SPU: ${record.spuName}`)
 }
 
 function handleViewSku(record: SupplierSku) {
@@ -763,47 +708,104 @@ function handleEditSku(record: SupplierSku) {
 
 function handleSkuEditSubmit() {
   if (editSku.value) {
-    editSku.value.supplyPrice = skuEditForm.supplyPrice
-    editSku.value.estimatedStock = skuEditForm.estimatedStock
-    editSku.value.minOrderQty = skuEditForm.minOrderQty
-    editSku.value.leadTime = skuEditForm.leadTime
-    Message.success('保存成功')
+    updateSupplierSku(editSku.value.id, {
+      supplyPrice: skuEditForm.supplyPrice,
+      estimatedStock: skuEditForm.estimatedStock,
+      minOrderQty: skuEditForm.minOrderQty,
+      leadTime: skuEditForm.leadTime,
+    })
+    const index = mockSkuList.value.findIndex(s => s.id === editSku.value!.id)
+    if (index !== -1) {
+      mockSkuList.value[index] = {
+        ...mockSkuList.value[index],
+        supplyPrice: skuEditForm.supplyPrice,
+        estimatedStock: skuEditForm.estimatedStock,
+        minOrderQty: skuEditForm.minOrderQty,
+        leadTime: skuEditForm.leadTime,
+      }
+    }
     skuEditVisible.value = false
+    Message.success('SKU供货信息更新成功')
+    refreshSkuList()
   }
 }
 
-function handleShelfChange(record: SupplierSku, val: string) {
-  Message.success(`${record.skuName} 已${val === 'on' ? '上架' : '下架'}`)
+function handleShelfChange(record: SupplierSku, val: 'on' | 'off') {
+  const action = val === 'on' ? '上架' : '下架'
+  Modal.confirm({
+    title: `确认${action}`,
+    content: `确定要${action}该商品吗？`,
+    onOk: () => {
+      updateSupplierSkuShelfStatus(record.id, val)
+      record.shelfStatus = val
+      Message.success(`商品${action}成功`)
+      refreshSkuList()
+    },
+  })
 }
 
-function handleBatchShelf(action: 'on' | 'off') {
-  const count = selectedSkuKeys.value.length
-  Message.success(`已${action === 'on' ? '上架' : '下架'} ${count} 个SKU`)
-  selectedSkuKeys.value = []
+function handleBatchShelf(status: 'on' | 'off') {
+  const action = status === 'on' ? '上架' : '下架'
+  Modal.confirm({
+    title: `批量${action}`,
+    content: `确定要批量${action}选中的 ${selectedSkuKeys.value.length} 个商品吗？`,
+    onOk: () => {
+      batchUpdateSupplierSkuShelfStatus(selectedSkuKeys.value, status)
+      selectedSkuKeys.value.forEach(key => {
+        const sku = mockSkuList.value.find(s => s.id === key)
+        if (sku) {
+          sku.shelfStatus = status
+        }
+      })
+      selectedSkuKeys.value = []
+      Message.success(`批量${action}成功`)
+      refreshSkuList()
+    },
+  })
 }
 
-function handleSupplyStatusChange(record: SupplierSku, action: string) {
+function handleSupplyStatusChange(record: SupplierSku, key: string) {
   statusChangeSku.value = record
-  statusChangeAction.value = action
-  stopReason.value = ''
+  statusChangeAction.value = key
   statusChangeVisible.value = true
 }
 
 function handleConfirmStatusChange() {
   if (statusChangeAction.value === 'stopped' && !stopReason.value.trim()) {
-    Message.error('请填写停货原因')
+    Message.warning('请输入永久停货原因')
     return
   }
   
   if (statusChangeSku.value) {
-    statusChangeSku.value.supplyStatus = statusChangeAction.value as any
+    updateSupplierSkuSupplyStatus(statusChangeSku.value.id, statusChangeAction.value as 'supplying' | 'paused' | 'stopped')
+    statusChangeSku.value.supplyStatus = statusChangeAction.value as 'supplying' | 'paused' | 'stopped'
     if (statusChangeAction.value === 'stopped') {
       statusChangeSku.value.shelfStatus = 'off'
     }
-    Message.success('状态变更成功')
   }
   
   statusChangeVisible.value = false
+  stopReason.value = ''
+  Message.success(`供货状态已变更为 ${getSupplyStatusText(statusChangeAction.value)}`)
+  refreshSkuList()
+}
+
+function handleSpuSearch() {
+  refreshSpuList()
+  Message.success('搜索完成')
+}
+
+function handleSkuSearch() {
+  refreshSkuList()
+  Message.success('搜索完成')
+}
+
+function handleSpuPageChange(page: number) {
+  spuPagination.current = page
+}
+
+function handleSkuPageChange(page: number) {
+  skuPagination.current = page
 }
 
 function handlePlatformSelect(products: any[]) {
@@ -834,40 +836,83 @@ function handlePlatformSelect(products: any[]) {
     mockSkuList.value.unshift(newSku)
   })
   
-  skuPagination.total = mockSkuList.value.length
-  
+  refreshSkuList()
   Message.success(`已提交 ${products.length} 个SKU的供货申请，等待平台审核`)
 }
 
+function getCategoryIds(categories: ProductCategory[]): string[] {
+  const ids: string[] = []
+  categories.forEach(cat => {
+    ids.push(cat.categoryId)
+    if (cat.children) {
+      ids.push(...getCategoryIds(cat.children))
+    }
+  })
+  return ids
+}
+
 onMounted(() => {
-  categoryTree.value = [
-    {
-      categoryId: 'cat001',
-      categoryName: '钢材',
-      level: 1,
-      sortOrder: 1,
-      status: 1,
-      createdAt: '',
-      updatedAt: '',
-    },
-    {
-      categoryId: 'cat002',
-      categoryName: '水泥',
-      level: 1,
-      sortOrder: 2,
-      status: 1,
-      createdAt: '',
-      updatedAt: '',
-    },
-  ]
-  spuPagination.total = mockSpuList.value.length
-  skuPagination.total = mockSkuList.value.length
+  refreshSpuList()
+  refreshSkuList()
+  loadCategoryTree()
 })
+
+function loadCategoryTree() {
+  import('@gongchengcang/api').then(({ getCategoryTree }) => {
+    getCategoryTree().then((data) => {
+      categoryTree.value = data
+      expandedCategoryKeys.value = getCategoryIds(data)
+    })
+  })
+}
 </script>
 
 <style scoped lang="less">
 .page-container {
   padding: 16px;
+}
+
+.product-layout {
+  display: flex;
+  gap: 16px;
+}
+
+.category-sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+  padding: 12px;
+  background: var(--color-bg-2);
+
+  .tree-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border-2);
+
+    .title {
+      font-weight: 500;
+      font-size: 14px;
+    }
+  }
+
+  .category-name {
+    font-size: 13px;
+  }
+
+  .category-count {
+    color: var(--color-text-3);
+    font-size: 12px;
+    margin-left: 4px;
+  }
+}
+
+.product-content {
+  flex: 1;
+  min-width: 0;
 }
 
 .table-actions {

@@ -7,68 +7,49 @@
       </div>
     </div>
     
-    <div class="user-card">
+    <div class="user-card" @click="$emit('navigate', 'merchant-info')">
       <div class="user-info">
         <div class="user-avatar">
-          <icon-user />
+          <img src="https://picsum.photos/100/100?random=avatar" alt="" />
         </div>
         <div class="user-detail">
           <div class="user-name">{{ userInfo.name }}</div>
-          <div class="user-company">{{ userInfo.company }}</div>
+          <div class="user-phone">{{ userInfo.phone }}</div>
         </div>
       </div>
-      <div class="user-verify">
-        <icon-check-circle-fill class="verify-icon" />
-        <span>已认证</span>
-      </div>
+      <icon-right class="arrow-icon" />
     </div>
     
-    <div class="stats-card">
-      <div class="stat-item" @click="$emit('navigate', 'project-list')">
-        <div class="stat-value">{{ stats.ongoingProjects }}</div>
-        <div class="stat-label">进行中项目</div>
+    <div class="merchant-card" @click="$emit('navigate', 'merchant-info')">
+      <div class="merchant-header">
+        <icon-building class="merchant-icon" />
+        <span class="merchant-title">商户信息</span>
       </div>
-      <div class="stat-item" @click="$emit('navigate', 'order')">
-        <div class="stat-value">{{ stats.pendingOrders }}</div>
-        <div class="stat-label">待处理订单</div>
-      </div>
-      <div class="stat-item" @click="$emit('navigate', 'site-stock')">
-        <div class="stat-value">{{ stats.stockWarning }}</div>
-        <div class="stat-label">库存预警</div>
-      </div>
-    </div>
-    
-    <div class="menu-section">
-      <div class="section-title">项目管理</div>
-      <div class="menu-list">
-        <div class="menu-item" @click="$emit('navigate', 'project-list')">
-          <icon-folder class="menu-icon" />
-          <span class="menu-text">项目列表</span>
-          <icon-right class="menu-arrow" />
+      <div class="merchant-info">
+        <div class="info-row">
+          <span class="label">商户名称</span>
+          <span class="value">{{ merchantInfo.name }}</span>
         </div>
-        <div class="menu-item" @click="$emit('navigate', 'site-stock')">
-          <icon-storage class="menu-icon" />
-          <span class="menu-text">现场库存</span>
-          <icon-right class="menu-arrow" />
+        <div class="info-row">
+          <span class="label">门店名称</span>
+          <span class="value">{{ merchantInfo.storeName }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">门店编码</span>
+          <span class="value">{{ merchantInfo.storeCode }}</span>
         </div>
       </div>
     </div>
     
     <div class="menu-section">
-      <div class="section-title">资金管理</div>
+      <div class="section-title">订单服务</div>
       <div class="menu-list">
-        <div class="menu-item" @click="handleFund">
-          <icon-wallet class="menu-icon" />
-          <span class="menu-text">账户余额</span>
-          <span class="menu-extra">¥{{ balance }}</span>
-          <icon-right class="menu-arrow" />
-        </div>
-        <div class="menu-item" @click="handleTransaction">
+        <div class="menu-item" @click="$emit('navigate', 'transaction')">
           <icon-file-text class="menu-icon" />
-          <span class="menu-text">交易明细</span>
+          <span class="menu-text">支付记录</span>
           <icon-right class="menu-arrow" />
         </div>
-        <div class="menu-item" @click="handleInvoice">
+        <div class="menu-item" @click="$emit('navigate', 'invoice-manage')">
           <icon-file class="menu-icon" />
           <span class="menu-text">发票管理</span>
           <icon-right class="menu-arrow" />
@@ -89,12 +70,6 @@
           <span class="menu-text">发票抬头</span>
           <icon-right class="menu-arrow" />
         </div>
-        <div class="menu-item" @click="handleMessage">
-          <icon-message class="menu-icon" />
-          <span class="menu-text">消息中心</span>
-          <span class="menu-badge" v-if="unreadCount > 0">{{ unreadCount }}</span>
-          <icon-right class="menu-arrow" />
-        </div>
       </div>
     </div>
     
@@ -103,7 +78,12 @@
       <div class="menu-list">
         <div class="menu-item" @click="$emit('navigate', 'settings')">
           <icon-settings class="menu-icon" />
-          <span class="menu-text">设置</span>
+          <span class="menu-text">系统设置</span>
+          <icon-right class="menu-arrow" />
+        </div>
+        <div class="menu-item" @click="$emit('navigate', 'change-password')">
+          <icon-lock class="menu-icon" />
+          <span class="menu-text">修改密码</span>
           <icon-right class="menu-arrow" />
         </div>
         <div class="menu-item" @click="handleAbout">
@@ -112,6 +92,10 @@
           <icon-right class="menu-arrow" />
         </div>
       </div>
+    </div>
+    
+    <div class="logout-btn" @click="handleLogout">
+      退出登录
     </div>
     
     <div class="tabbar">
@@ -138,40 +122,25 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-const emit = defineEmits(['navigate'])
+const emit = defineEmits(['navigate', 'logout'])
 
 const userInfo = ref({
   name: '张三',
-  company: '深圳市建筑工程有限公司'
+  phone: '138****8000',
 })
 
-const stats = ref({
-  ongoingProjects: 3,
-  pendingOrders: 5,
-  stockWarning: 2
+const merchantInfo = ref({
+  name: '深圳市建筑工程有限公司',
+  storeName: '深圳万象城店',
+  storeCode: 'CD001',
 })
-
-const balance = ref('125,680.00')
-const unreadCount = ref(3)
-
-function handleFund() {
-  emit('navigate', 'fund-management')
-}
-
-function handleTransaction() {
-  emit('navigate', 'transaction')
-}
-
-function handleInvoice() {
-  emit('navigate', 'invoice-manage')
-}
-
-function handleMessage() {
-  emit('navigate', 'message-center')
-}
 
 function handleAbout() {
   emit('navigate', 'about')
+}
+
+function handleLogout() {
+  emit('logout')
 }
 </script>
 
@@ -179,7 +148,7 @@ function handleAbout() {
 .mine {
   background: #f5f5f5;
   min-height: 100%;
-  padding-bottom: 60px;
+  padding-bottom: 70px;
 }
 
 .page-header {
@@ -188,7 +157,7 @@ function handleAbout() {
   left: 0;
   right: 0;
   height: 44px;
-  background: #fff;
+  background: linear-gradient(135deg, #165dff, #4080ff);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -198,6 +167,7 @@ function handleAbout() {
   .header-title {
     font-size: 16px;
     font-weight: 500;
+    color: #fff;
   }
   
   .header-action {
@@ -206,19 +176,19 @@ function handleAbout() {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #4e5969;
+    color: #fff;
+    font-size: 20px;
   }
 }
 
 .user-card {
-  margin: 54px 12px 12px;
-  background: linear-gradient(135deg, #165dff, #4080ff);
-  border-radius: 8px;
+  margin: 54px 12px 10px;
+  background: #fff;
+  border-radius: 12px;
   padding: 16px;
-  color: #fff;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   
   .user-info {
     display: flex;
@@ -226,66 +196,79 @@ function handleAbout() {
     gap: 12px;
     
     .user-avatar {
-      width: 48px;
-      height: 48px;
-      background: rgba(255, 255, 255, 0.2);
+      width: 56px;
+      height: 56px;
       border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
+      overflow: hidden;
+      
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
     }
     
     .user-detail {
       .user-name {
         font-size: 16px;
         font-weight: 600;
+        color: #1d2129;
         margin-bottom: 4px;
       }
       
-      .user-company {
-        font-size: 12px;
-        opacity: 0.9;
+      .user-phone {
+        font-size: 13px;
+        color: #86909c;
       }
     }
   }
   
-  .user-verify {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 12px;
-    background: rgba(255, 255, 255, 0.2);
-    padding: 4px 8px;
-    border-radius: 4px;
-    
-    .verify-icon {
-      color: #00b42a;
-    }
+  .arrow-icon {
+    color: #c9cdd4;
+    font-size: 16px;
   }
 }
 
-.stats-card {
-  display: flex;
-  background: #fff;
-  border-radius: 8px;
-  padding: 16px;
+.merchant-card {
   margin: 0 12px 12px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px 16px;
   
-  .stat-item {
-    flex: 1;
-    text-align: center;
+  .merchant-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 12px;
     
-    .stat-value {
-      font-size: 20px;
-      font-weight: 600;
-      color: #1d2129;
+    .merchant-icon {
+      color: #165dff;
+      font-size: 18px;
     }
     
-    .stat-label {
-      font-size: 11px;
-      color: #86909c;
-      margin-top: 4px;
+    .merchant-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #1d2129;
+    }
+  }
+  
+  .merchant-info {
+    .info-row {
+      display: flex;
+      padding: 8px 0;
+      
+      .label {
+        width: 80px;
+        font-size: 13px;
+        color: #86909c;
+      }
+      
+      .value {
+        flex: 1;
+        font-size: 13px;
+        color: #1d2129;
+      }
     }
   }
 }
@@ -296,57 +279,57 @@ function handleAbout() {
   .section-title {
     font-size: 13px;
     color: #86909c;
-    margin-bottom: 8px;
-    padding-left: 4px;
+    margin-bottom: 10px;
+    padding: 0 4px;
+  }
+  
+  .menu-list {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    
+    .menu-item {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid #f2f3f5;
+      
+      &:last-child {
+        border-bottom: none;
+      }
+      
+      .menu-icon {
+        width: 20px;
+        color: #165dff;
+        font-size: 18px;
+        margin-right: 10px;
+      }
+      
+      .menu-text {
+        flex: 1;
+        font-size: 14px;
+        color: #1d2129;
+      }
+      
+      .menu-arrow {
+        color: #c9cdd4;
+        font-size: 16px;
+      }
+    }
   }
 }
 
-.menu-list {
-  background: #fff;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.menu-item {
+.logout-btn {
+  margin: 30px 24px;
+  height: 44px;
+  border: 1px solid #f53f3f;
+  color: #f53f3f;
+  border-radius: 22px;
   display: flex;
   align-items: center;
-  padding: 14px 16px;
-  border-bottom: 1px solid #f2f3f5;
-  
-  &:last-child {
-    border-bottom: none;
-  }
-  
-  .menu-icon {
-    font-size: 20px;
-    color: #165dff;
-    margin-right: 12px;
-  }
-  
-  .menu-text {
-    flex: 1;
-    font-size: 14px;
-    color: #1d2129;
-  }
-  
-  .menu-extra {
-    font-size: 13px;
-    color: #f53f3f;
-    margin-right: 8px;
-  }
-  
-  .menu-badge {
-    background: #f53f3f;
-    color: #fff;
-    font-size: 11px;
-    padding: 2px 6px;
-    border-radius: 10px;
-    margin-right: 8px;
-  }
-  
-  .menu-arrow {
-    color: #c9cdd4;
-  }
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 500;
 }
 
 .tabbar {
@@ -358,24 +341,28 @@ function handleAbout() {
   background: #fff;
   display: flex;
   border-top: 1px solid #e5e6eb;
-}
-
-.tabbar-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  color: #86909c;
+  z-index: 98;
   
-  &.active {
-    color: #165dff;
-  }
-  
-  :deep(.arco-icon) {
-    font-size: 20px;
-    margin-bottom: 2px;
+  .tabbar-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    color: #86909c;
+    
+    svg {
+      font-size: 20px;
+    }
+    
+    span {
+      font-size: 10px;
+    }
+    
+    &.active {
+      color: #165dff;
+    }
   }
 }
 </style>

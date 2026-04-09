@@ -2,70 +2,250 @@
   <a-drawer
     :visible="visible"
     :title="isEdit ? '编辑SKU' : '新增SKU'"
-    :width="560"
+    :width="800"
     @cancel="handleCancel"
     @ok="handleOk"
   >
-    <a-form ref="formRef" :model="formData" layout="vertical">
-      <a-form-item field="spuId" label="所属SPU" :rules="[{ required: true, message: '请选择所属SPU' }]">
-        <a-select
-          v-model="formData.spuId"
-          placeholder="请选择所属SPU"
-          allow-search
-          :disabled="isEdit"
-          @change="handleSpuChange"
-        >
-          <a-option v-for="item in spuList" :key="item.spuId" :value="item.spuId">
-            {{ item.spuName }}
-            <span style="color: var(--color-text-3); margin-left: 8px">{{ item.categoryName }}</span>
-          </a-option>
-        </a-select>
-      </a-form-item>
-      <a-form-item field="skuCode" label="SKU编码" :rules="[{ required: true, message: '请输入SKU编码' }]">
-        <a-input v-model="formData.skuCode" placeholder="请输入SKU编码" />
-      </a-form-item>
-      <a-form-item field="skuName" label="SKU名称" :rules="[{ required: true, message: '请输入SKU名称' }]">
-        <a-input v-model="formData.skuName" placeholder="请输入SKU名称" />
-      </a-form-item>
-      <a-form-item v-if="selectedSpu" label="规格属性">
-        <div class="spec-form">
-          <div v-for="attrId in selectedSpu.attrIds" :key="attrId" class="spec-item">
-            <span class="spec-label">{{ getAttrName(attrId) }}</span>
-            <a-select
-              v-model="formData.specs[getAttrName(attrId)]"
-              :placeholder="`请选择${getAttrName(attrId)}`"
-              allow-clear
-            >
-              <a-option v-for="value in getAttrValues(attrId)" :key="value" :value="value">
-                {{ value }}
-              </a-option>
-            </a-select>
+    <a-spin :loading="loading">
+      <a-form :model="formData" :rules="rules" layout="vertical" ref="formRef">
+        <a-form-item field="spuId" label="所属SPU">
+          <a-input
+            v-model="formData.spuName"
+            placeholder="请选择SPU"
+            readonly
+            style="width: 100%"
+          >
+            <template #suffix>
+              <icon-search @click="showSpuSelector = true" />
+            </template>
+          </a-input>
+        </a-form-item>
+
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item field="skuCode" label="SKU编码">
+              <a-input
+                v-model="formData.skuCode"
+                placeholder="请输入SKU编码"
+                :maxlength="50"
+                show-word-limit
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item field="skuName" label="SKU名称">
+              <a-input
+                v-model="formData.skuName"
+                placeholder="请输入SKU名称"
+                :maxlength="200"
+                show-word-limit
+              />
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item field="barcode" label="条形码">
+              <a-input
+                v-model="formData.barcode"
+                placeholder="请输入条形码"
+                :maxlength="50"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item field="unit" label="计量单位">
+              <a-input
+                v-model="formData.unit"
+                placeholder="请输入计量单位"
+                :maxlength="20"
+              />
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-divider orientation="left">价格信息</a-divider>
+
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item field="supplyPrice" label="供货价">
+              <a-input-number
+                v-model="formData.supplyPrice"
+                placeholder="请输入供货价"
+                :min="0"
+                :precision="2"
+                style="width: 100%"
+              >
+                <template #prefix>¥</template>
+              </a-input-number>
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item field="salePrice" label="销售价">
+              <a-input-number
+                v-model="formData.salePrice"
+                placeholder="请输入销售价"
+                :min="0"
+                :precision="2"
+                style="width: 100%"
+              >
+                <template #prefix>¥</template>
+              </a-input-number>
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item field="costPrice" label="成本价">
+              <a-input-number
+                v-model="formData.costPrice"
+                placeholder="请输入成本价"
+                :min="0"
+                :precision="2"
+                style="width: 100%"
+              >
+                <template #prefix>¥</template>
+              </a-input-number>
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item field="marketPrice" label="市场价">
+              <a-input-number
+                v-model="formData.marketPrice"
+                placeholder="请输入市场价"
+                :min="0"
+                :precision="2"
+                style="width: 100%"
+              >
+                <template #prefix>¥</template>
+              </a-input-number>
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-divider orientation="left">图片信息</a-divider>
+
+        <a-form-item field="mainImage" label="主图">
+          <a-upload
+            list-type="picture-card"
+            :file-list="mainImageFileList"
+            :limit="1"
+            accept="image/*"
+            :auto-upload="false"
+            @change="handleMainImageChange"
+          >
+            <template #upload-button>
+              <div class="upload-btn">
+                <icon-plus />
+                <div class="upload-text">上传主图</div>
+              </div>
+            </template>
+          </a-upload>
+        </a-form-item>
+
+        <a-form-item field="images" label="商品相册">
+          <a-upload
+            list-type="picture-card"
+            :file-list="imagesFileList"
+            :limit="9"
+            accept="image/*"
+            :auto-upload="false"
+            @change="handleImagesChange"
+          >
+            <template #upload-button>
+              <div class="upload-btn">
+                <icon-plus />
+                <div class="upload-text">上传图片</div>
+              </div>
+            </template>
+          </a-upload>
+        </a-form-item>
+
+        <a-divider orientation="left">规格属性</a-divider>
+
+        <div v-if="!formData.spuId" class="empty-tip">
+          <a-empty description="请先选择SPU" />
+        </div>
+        <div v-else-if="attrList.length === 0" class="empty-tip">
+          <a-empty description="该SPU暂无规格属性" />
+        </div>
+        <div v-else class="spec-form">
+          <div v-for="attr in attrList" :key="attr.attrId" class="spec-item">
+            <a-form-item :label="attr.attrName">
+              <a-select
+                v-model="formData.specs[attr.attrName]"
+                placeholder="请选择规格值"
+                style="width: 100%"
+              >
+                <a-option
+                  v-for="value in attr.optionValues"
+                  :key="value"
+                  :value="value"
+                >
+                  {{ value }}
+                </a-option>
+              </a-select>
+            </a-form-item>
           </div>
         </div>
-      </a-form-item>
-      <a-form-item field="unit" label="单位" :rules="[{ required: true, message: '请输入单位' }]">
-        <a-input v-model="formData.unit" placeholder="请输入单位" />
-      </a-form-item>
-      <a-form-item field="barcode" label="条形码">
-        <a-input v-model="formData.barcode" placeholder="请输入条形码" />
-      </a-form-item>
-      <a-form-item field="mainImage" label="主图">
-        <a-input v-model="formData.mainImage" placeholder="请输入主图URL" />
-      </a-form-item>
-    </a-form>
+      </a-form>
+    </a-spin>
   </a-drawer>
+
+  <a-modal
+    v-model:visible="showSpuSelector"
+    title="选择SPU"
+    :width="900"
+    @ok="confirmSelectSpu"
+    @cancel="showSpuSelector = false"
+  >
+    <div class="spu-selector">
+      <a-input-search
+        v-model="spuSearchKeyword"
+        placeholder="搜索SPU名称/编码"
+        style="margin-bottom: 16px"
+        @search="loadSpuList"
+      />
+      <a-table
+        :data="spuList"
+        :loading="spuLoading"
+        :pagination="spuPagination"
+        @page-change="handleSpuPageChange"
+        @page-size-change="handleSpuPageSizeChange"
+        @selection-change="handleSpuSelectionChange"
+        row-key="spuId"
+      >
+        <template #columns>
+          <a-table-column type="selection" :width="60" />
+          <a-table-column title="SPU编码" data-index="spuCode" :width="150" />
+          <a-table-column title="SPU名称" data-index="spuName" :width="200" />
+          <a-table-column title="分类" data-index="categoryName" :width="150" />
+          <a-table-column title="单位" data-index="unit" :width="100" />
+          <a-table-column title="状态" :width="100">
+            <template #cell="{ record }">
+              <a-tag :color="record.status === 1 ? 'green' : 'red'">
+                {{ record.status === 1 ? '启用' : '禁用' }}
+              </a-tag>
+            </template>
+          </a-table-column>
+        </template>
+      </a-table>
+    </div>
+  </a-modal>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, reactive, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
-import type { Sku, Spu, CreateSkuParams, UpdateSkuParams, ProductAttr } from '@gongchengcang/types'
-import { createSku, updateSku, getAttrList } from '@gongchengcang/api'
+import type { FormInstance } from '@arco-design/web-vue'
+import type { Spu, Sku, ProductAttr } from '@gongchengcang/types'
+import { getSpuList, getAttrList, createSku, updateSku } from '@gongchengcang/api'
 
 const props = defineProps<{
   visible: boolean
   sku: Sku | null
-  spuList: Spu[]
 }>()
 
 const emit = defineEmits<{
@@ -73,143 +253,292 @@ const emit = defineEmits<{
   success: []
 }>()
 
-const formRef = ref()
+const formRef = ref<FormInstance>()
+const loading = ref(false)
+const isEdit = ref(false)
+const showSpuSelector = ref(false)
+const spuLoading = ref(false)
+const spuSearchKeyword = ref('')
+const spuList = ref<Spu[]>([])
+const spuPagination = ref({ current: 1, pageSize: 10, total: 0 })
+const selectedSpu = ref<Spu | null>(null)
 const attrList = ref<ProductAttr[]>([])
-const isEdit = computed(() => !!props.sku)
 
-const formData = ref<CreateSkuParams & { skuId?: string }>({
+const formData = reactive({
+  spuId: '',
+  spuName: '',
   skuCode: '',
   skuName: '',
-  spuId: '',
-  specs: {},
-  unit: '',
   barcode: '',
+  unit: '',
+  supplyPrice: undefined,
+  salePrice: undefined,
+  costPrice: undefined,
+  marketPrice: undefined,
   mainImage: '',
+  images: [] as string[],
+  specs: {} as Record<string, string>,
 })
 
-const selectedSpu = computed(() => {
-  return props.spuList.find(s => s.spuId === formData.value.spuId)
-})
+const mainImageFileList = ref<any[]>([])
+const imagesFileList = ref<any[]>([])
+
+const rules = {
+  spuId: [{ required: true, message: '请选择所属SPU' }],
+  skuCode: [{ required: true, message: '请输入SKU编码' }],
+  skuName: [{ required: true, message: '请输入SKU名称' }],
+  unit: [{ required: true, message: '请输入计量单位' }],
+}
 
 watch(
   () => props.visible,
   async (val) => {
     if (val) {
-      await loadAttrList()
+      resetForm()
       if (props.sku) {
-        formData.value = {
-          skuId: props.sku.skuId,
-          skuCode: props.sku.skuCode,
-          skuName: props.sku.skuName,
-          spuId: props.sku.spuId,
-          specs: { ...props.sku.specs },
-          unit: props.sku.unit,
-          barcode: props.sku.barcode || '',
-          mainImage: props.sku.mainImage || '',
-        }
+        isEdit.value = true
+        await loadSkuDetail()
       } else {
-        formData.value = {
-          skuCode: '',
-          skuName: '',
-          spuId: '',
-          specs: {},
-          unit: '',
-          barcode: '',
-          mainImage: '',
-        }
+        isEdit.value = false
       }
     }
   }
 )
 
-async function loadAttrList() {
+function resetForm() {
+  Object.assign(formData, {
+    spuId: '',
+    spuName: '',
+    skuCode: '',
+    skuName: '',
+    barcode: '',
+    unit: '',
+    supplyPrice: undefined,
+    salePrice: undefined,
+    costPrice: undefined,
+    marketPrice: undefined,
+    mainImage: '',
+    images: [],
+    specs: {},
+  })
+  mainImageFileList.value = []
+  imagesFileList.value = []
+  selectedSpu.value = null
+  attrList.value = []
+}
+
+async function loadSkuDetail() {
+  if (!props.sku) return
+  
+  Object.assign(formData, {
+    spuId: props.sku.spuId,
+    spuName: props.sku.spuName || '',
+    skuCode: props.sku.skuCode,
+    skuName: props.sku.skuName,
+    barcode: props.sku.barcode || '',
+    unit: props.sku.unit,
+    supplyPrice: props.sku.supplyPrice,
+    salePrice: props.sku.salePrice,
+    costPrice: props.sku.costPrice,
+    marketPrice: props.sku.marketPrice,
+    mainImage: props.sku.mainImage || '',
+    images: props.sku.images || [],
+    specs: props.sku.specs,
+  })
+  
+  if (props.sku.mainImage) {
+    mainImageFileList.value = [{
+      uid: '-1',
+      name: 'mainImage',
+      url: props.sku.mainImage,
+    }]
+  }
+  
+  if (props.sku.images && props.sku.images.length > 0) {
+    imagesFileList.value = props.sku.images.map((url, index) => ({
+      uid: `-${index}`,
+      name: `image-${index}`,
+      url,
+    }))
+  }
+  
+  await loadAttrList(props.sku.spuId)
+}
+
+async function loadSpuList() {
+  spuLoading.value = true
+  try {
+    const result = await getSpuList({
+      page: spuPagination.value.current,
+      pageSize: spuPagination.value.pageSize,
+      keyword: spuSearchKeyword.value,
+      status: 1,
+    })
+    spuList.value = result.list
+    spuPagination.value.total = result.total
+  } catch (error) {
+    console.error('加载SPU列表失败:', error)
+  } finally {
+    spuLoading.value = false
+  }
+}
+
+function handleSpuPageChange(page: number) {
+  spuPagination.value.current = page
+  loadSpuList()
+}
+
+function handleSpuPageSizeChange(pageSize: number) {
+  spuPagination.value.pageSize = pageSize
+  spuPagination.value.current = 1
+  loadSpuList()
+}
+
+function handleSpuSelectionChange(selection: Spu[]) {
+  selectedSpu.value = selection[0] || null
+}
+
+async function confirmSelectSpu() {
+  if (!selectedSpu.value) {
+    Message.warning('请选择一个SPU')
+    return
+  }
+  
+  formData.spuId = selectedSpu.value.spuId
+  formData.spuName = selectedSpu.value.spuName
+  formData.unit = selectedSpu.value.unit
+  
+  await loadAttrList(selectedSpu.value.spuId)
+  
+  showSpuSelector.value = false
+}
+
+async function loadAttrList(spuId: string) {
   try {
     const result = await getAttrList({ page: 1, pageSize: 100 })
-    attrList.value = result.list
+    attrList.value = result.filter((attr: ProductAttr) => selectedSpu.value?.attrIds.includes(attr.attrId))
   } catch (error) {
     console.error('加载属性列表失败:', error)
   }
 }
 
-function handleSpuChange(spuId: string) {
-  formData.value.specs = {}
-  formData.value.unit = selectedSpu.value?.unit || ''
+function handleMainImageChange(fileList: any[]) {
+  mainImageFileList.value = fileList
+  if (fileList.length > 0) {
+    const file = fileList[0]
+    if (file.url) {
+      formData.mainImage = file.url
+    } else if (file.file) {
+      formData.mainImage = URL.createObjectURL(file.file)
+    }
+  } else {
+    formData.mainImage = ''
+  }
 }
 
-function getAttrName(attrId: string) {
-  const attr = attrList.value.find(a => a.attrId === attrId)
-  return attr?.attrName || attrId
-}
-
-function getAttrValues(attrId: string) {
-  const attr = attrList.value.find(a => a.attrId === attrId)
-  return attr?.optionValues || []
+function handleImagesChange(fileList: any[]) {
+  imagesFileList.value = fileList
+  formData.images = fileList
+    .map(file => file.url || (file.file ? URL.createObjectURL(file.file) : ''))
+    .filter(Boolean)
 }
 
 function handleCancel() {
   emit('update:visible', false)
-  formRef.value?.resetFields()
 }
 
 async function handleOk() {
+  if (!formRef.value) return
+  
   try {
-    await formRef.value?.validate()
-    
-    if (isEdit.value && formData.value.skuId) {
-      const params: UpdateSkuParams = {
-        skuCode: formData.value.skuCode,
-        skuName: formData.value.skuName,
-        specs: formData.value.specs,
-        unit: formData.value.unit,
-        barcode: formData.value.barcode,
-        mainImage: formData.value.mainImage,
-      }
-      await updateSku(formData.value.skuId, params)
+    await formRef.value.validate()
+  } catch (error) {
+    return
+  }
+  
+  loading.value = true
+  try {
+    if (isEdit.value && props.sku) {
+      await updateSku(props.sku.skuId, {
+        skuCode: formData.skuCode,
+        skuName: formData.skuName,
+        specs: formData.specs,
+        barcode: formData.barcode,
+        unit: formData.unit,
+        mainImage: formData.mainImage,
+        images: formData.images,
+        supplyPrice: formData.supplyPrice,
+        salePrice: formData.salePrice,
+        costPrice: formData.costPrice,
+        marketPrice: formData.marketPrice,
+      })
       Message.success('编辑成功')
     } else {
-      const params: CreateSkuParams = {
-        skuCode: formData.value.skuCode,
-        skuName: formData.value.skuName,
-        spuId: formData.value.spuId,
-        specs: formData.value.specs,
-        unit: formData.value.unit,
-        barcode: formData.value.barcode,
-        mainImage: formData.value.mainImage,
-      }
-      await createSku(params)
+      await createSku({
+        skuCode: formData.skuCode,
+        skuName: formData.skuName,
+        spuId: formData.spuId,
+        spuName: formData.spuName,
+        specs: formData.specs,
+        barcode: formData.barcode,
+        unit: formData.unit,
+        mainImage: formData.mainImage,
+        images: formData.images,
+        supplyPrice: formData.supplyPrice,
+        salePrice: formData.salePrice,
+        costPrice: formData.costPrice,
+        marketPrice: formData.marketPrice,
+      })
       Message.success('新增成功')
     }
-    
     emit('success')
     handleCancel()
   } catch (error: any) {
-    if (error.message) {
-      Message.error(error.message)
-    }
+    Message.error(error.message || '操作失败')
+  } finally {
+    loading.value = false
   }
 }
 </script>
 
-<style scoped>
+<style scoped lang="less">
+.spu-selector {
+  .arco-table-th {
+    white-space: nowrap;
+  }
+}
+
 .spec-form {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0 24px;
+}
+
+.empty-tip {
+  padding: 40px 0;
+}
+
+.upload-btn {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.spec-item {
-  display: flex;
   align-items: center;
-  gap: 12px;
-}
+  justify-content: center;
+  width: 100px;
+  height: 100px;
+  border: 1px dashed var(--color-border-2);
+  border-radius: 4px;
+  color: var(--color-text-3);
+  cursor: pointer;
+  transition: all 0.3s;
 
-.spec-label {
-  width: 80px;
-  flex-shrink: 0;
-  color: var(--color-text-2);
-}
+  &:hover {
+    border-color: var(--color-primary-6);
+    color: var(--color-primary-6);
+  }
 
-.spec-item .arco-select {
-  flex: 1;
+  .upload-text {
+    font-size: 12px;
+    margin-top: 8px;
+  }
 }
 </style>

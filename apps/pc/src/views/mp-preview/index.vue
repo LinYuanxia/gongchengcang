@@ -210,14 +210,7 @@
             <icon-plus />
             <span>新建项目</span>
           </div>
-          <div 
-            class="page-item" 
-            :class="{ active: currentPage === 'site-stock' }"
-            @click="currentPage = 'site-stock'"
-          >
-            <icon-storage />
-            <span>现场库存</span>
-          </div>
+
           <div class="section-title" style="margin-top: 12px;">采购市场</div>
           <div 
             class="page-item" 
@@ -409,6 +402,10 @@ import MpConstructionInvoiceManage from './pages/construction/invoice-manage.vue
 import MpConstructionMessageCenter from './pages/construction/message-center.vue'
 import MpConstructionSettings from './pages/construction/settings.vue'
 import MpConstructionAbout from './pages/construction/about.vue'
+import MpConstructionPayOffline from './pages/construction/pay-offline.vue'
+import MpConstructionChangePassword from './pages/construction/change-password.vue'
+import MpConstructionMerchantInfo from './pages/construction/merchant-info.vue'
+import MpConstructionWarehouseDetail from './pages/construction/warehouse-detail.vue'
 
 import MpSupplierMarket from './pages/supplier/market.vue'
 import MpSupplierSupplyManage from './pages/supplier/supply-manage.vue'
@@ -513,6 +510,10 @@ const pageInfo = computed(() => {
       'message-center': { title: '消息中心', path: '/pages/construction/message-center' },
       'settings': { title: '设置', path: '/pages/construction/settings' },
       'about': { title: '关于我们', path: '/pages/construction/about' },
+      'pay-offline': { title: '线下转账支付', path: '/pages/construction/pay-offline' },
+      'change-password': { title: '修改密码', path: '/pages/construction/change-password' },
+      'merchant-info': { title: '商户信息', path: '/pages/construction/merchant-info' },
+      'warehouse-detail': { title: '工程仓详情', path: '/pages/construction/warehouse-detail', params: 'warehouseId=xxx' },
     },
     'supplier': {
       'index': { title: '首页', path: '/pages/index/index' },
@@ -582,6 +583,10 @@ const currentComponent = computed(() => {
       'message-center': MpConstructionMessageCenter,
       'settings': MpConstructionSettings,
       'about': MpConstructionAbout,
+      'pay-offline': MpConstructionPayOffline,
+      'change-password': MpConstructionChangePassword,
+      'merchant-info': MpConstructionMerchantInfo,
+      'warehouse-detail': MpConstructionWarehouseDetail,
     }
     return components[currentPage.value] || MpConstructionIndex
   }

@@ -201,12 +201,12 @@ export const MOCK_CATEGORIES: ProductCategory[] = [
 export const MOCK_ATTRS: ProductAttr[] = [
   {
     attrId: 'ATTR001',
-    attrName: '规格型号',
+    attrName: '品牌',
     attrType: AttrType.SINGLE,
-    optionValues: ['Φ16', 'Φ20', 'Φ25', 'Φ32', 'Φ40'],
+    optionValues: ['品牌A', '品牌B', '品牌C', '品牌D'],
     sortOrder: 1,
     status: 1,
-    usedCount: 15,
+    usedCount: 28,
     createdAt: '2024-01-01 00:00:00',
     updatedAt: '2024-01-01 00:00:00',
   },
@@ -214,231 +214,223 @@ export const MOCK_ATTRS: ProductAttr[] = [
     attrId: 'ATTR002',
     attrName: '材质',
     attrType: AttrType.SINGLE,
-    optionValues: ['Q235B', 'Q345B', 'HRB400E', 'PVC', 'PE'],
+    optionValues: ['HRB400E', 'HRB500E', 'PVC', '镀锌'],
     sortOrder: 2,
     status: 1,
-    usedCount: 20,
+    usedCount: 35,
     createdAt: '2024-01-01 00:00:00',
     updatedAt: '2024-01-01 00:00:00',
   },
   {
     attrId: 'ATTR003',
-    attrName: '长度',
+    attrName: '规格',
     attrType: AttrType.SINGLE,
-    optionValues: ['6m', '9m', '12m', '定制'],
+    optionValues: ['Φ16', 'Φ20', 'Φ25', 'Φ32', '6m', '9m', '12m'],
     sortOrder: 3,
     status: 1,
-    usedCount: 18,
+    usedCount: 42,
     createdAt: '2024-01-01 00:00:00',
     updatedAt: '2024-01-01 00:00:00',
   },
   {
     attrId: 'ATTR004',
-    attrName: '厚度',
+    attrName: '强度等级',
     attrType: AttrType.SINGLE,
-    optionValues: ['2mm', '3mm', '4mm', '5mm', '6mm', '8mm', '10mm'],
+    optionValues: ['32.5', '42.5', '42.5R', '52.5', '52.5R'],
     sortOrder: 4,
     status: 1,
-    usedCount: 12,
-    createdAt: '2024-01-01 00:00:00',
-    updatedAt: '2024-01-01 00:00:00',
+    usedCount: 18,
+    createdAt: '2024-01-02 00:00:00',
+    updatedAt: '2024-01-02 00:00:00',
   },
   {
     attrId: 'ATTR005',
-    attrName: '强度等级',
+    attrName: '颜色',
     attrType: AttrType.SINGLE,
-    optionValues: ['32.5', '42.5', '52.5'],
+    optionValues: ['白色', '灰色', '黑色', '红色', '蓝色'],
     sortOrder: 5,
     status: 1,
-    usedCount: 8,
-    createdAt: '2024-01-01 00:00:00',
-    updatedAt: '2024-01-01 00:00:00',
+    usedCount: 12,
+    createdAt: '2024-01-03 00:00:00',
+    updatedAt: '2024-01-03 00:00:00',
   },
   {
     attrId: 'ATTR006',
-    attrName: '管径',
+    attrName: '厚度',
     attrType: AttrType.SINGLE,
-    optionValues: ['DN20', 'DN25', 'DN32', 'DN40', 'DN50', 'DN100'],
+    optionValues: ['5mm', '10mm', '15mm', '20mm', '25mm'],
     sortOrder: 6,
     status: 1,
-    usedCount: 10,
-    createdAt: '2024-01-01 00:00:00',
-    updatedAt: '2024-01-01 00:00:00',
+    usedCount: 15,
+    createdAt: '2024-01-04 00:00:00',
+    updatedAt: '2024-01-04 00:00:00',
   },
   {
     attrId: 'ATTR007',
-    attrName: '壁厚',
-    attrType: AttrType.SINGLE,
-    optionValues: ['2.0mm', '2.5mm', '3.0mm', '4.0mm'],
+    attrName: '特殊属性',
+    attrType: AttrType.MULTI,
+    optionValues: ['防腐', '防火', '防水', '防静电', '耐高温'],
     sortOrder: 7,
     status: 1,
-    usedCount: 10,
-    createdAt: '2024-01-01 00:00:00',
-    updatedAt: '2024-01-01 00:00:00',
+    usedCount: 8,
+    createdAt: '2024-01-05 00:00:00',
+    updatedAt: '2024-01-05 00:00:00',
   },
   {
     attrId: 'ATTR008',
-    attrName: '防火等级',
-    attrType: AttrType.SINGLE,
-    optionValues: ['A级', 'B1级', 'B2级'],
+    attrName: '备注说明',
+    attrType: AttrType.INPUT,
+    optionValues: [],
     sortOrder: 8,
     status: 1,
     usedCount: 5,
-    createdAt: '2024-01-01 00:00:00',
-    updatedAt: '2024-01-01 00:00:00',
+    createdAt: '2024-01-06 00:00:00',
+    updatedAt: '2024-01-06 00:00:00',
   },
   {
     attrId: 'ATTR009',
-    attrName: '颜色',
+    attrName: '尺寸',
     attrType: AttrType.SINGLE,
-    optionValues: ['白色', '灰色', '红色', '蓝色', '绿色'],
+    optionValues: ['100x100', '200x200', '300x300', '600x600'],
     sortOrder: 9,
-    status: 1,
-    usedCount: 6,
-    createdAt: '2024-01-01 00:00:00',
-    updatedAt: '2024-01-01 00:00:00',
+    status: 0,
+    usedCount: 0,
+    createdAt: '2024-01-07 00:00:00',
+    updatedAt: '2024-01-07 00:00:00',
   },
   {
     attrId: 'ATTR010',
-    attrName: '备注',
-    attrType: AttrType.INPUT,
-    optionValues: [],
+    attrName: '产地',
+    attrType: AttrType.SINGLE,
+    optionValues: ['山东', '河北', '江苏', '广东', '浙江'],
     sortOrder: 10,
     status: 1,
-    usedCount: 3,
-    createdAt: '2024-01-01 00:00:00',
-    updatedAt: '2024-01-01 00:00:00',
+    usedCount: 22,
+    createdAt: '2024-01-08 00:00:00',
+    updatedAt: '2024-01-08 00:00:00',
   },
 ]
 
 export const MOCK_SPUS: Spu[] = [
   {
     spuId: 'SPU001',
-    spuName: '螺纹钢 HRB400E',
     spuCode: 'GJ-LWG-001',
+    spuName: '螺纹钢 HRB400E',
     categoryId: 'CAT001-1',
     categoryName: '螺纹钢',
     unit: '吨',
-    attrIds: ['ATTR002', 'ATTR001', 'ATTR003'],
-    attrNames: ['材质', '规格型号', '长度'],
     mainImage: 'https://via.placeholder.com/200',
+    attrIds: ['ATTR001', 'ATTR002', 'ATTR003'],
+    attrNames: ['品牌', '材质', '规格'],
     status: SpuStatus.ENABLED,
-    skuCount: 12,
-    createdAt: '2024-01-01 00:00:00',
-    updatedAt: '2024-01-01 00:00:00',
-    createdBy: 'admin',
+    skuCount: 5,
+    createdAt: '2024-01-15 10:30:00',
+    updatedAt: '2024-01-16 14:20:00',
   },
   {
     spuId: 'SPU002',
-    spuName: '普通硅酸盐水泥',
-    spuCode: 'SN-PT-001',
-    categoryId: 'CAT002-1',
-    categoryName: '普通硅酸盐水泥',
+    spuCode: 'GJ-LWG-002',
+    spuName: '螺纹钢 HRB500E',
+    categoryId: 'CAT001-1',
+    categoryName: '螺纹钢',
     unit: '吨',
-    attrIds: ['ATTR005'],
-    attrNames: ['强度等级'],
     mainImage: 'https://via.placeholder.com/200',
+    attrIds: ['ATTR001', 'ATTR002', 'ATTR003'],
+    attrNames: ['品牌', '材质', '规格'],
     status: SpuStatus.ENABLED,
     skuCount: 3,
-    createdAt: '2024-01-02 00:00:00',
-    updatedAt: '2024-01-02 00:00:00',
-    createdBy: 'admin',
+    createdAt: '2024-01-15 11:00:00',
+    updatedAt: '2024-01-16 15:00:00',
   },
   {
     spuId: 'SPU003',
-    spuName: 'PVC排水管',
-    spuCode: 'GC-PVC-001',
-    categoryId: 'CAT003-1',
-    categoryName: 'PVC管',
-    unit: '米',
-    attrIds: ['ATTR006', 'ATTR007'],
-    attrNames: ['管径', '壁厚'],
+    spuCode: 'SN-PS-001',
+    spuName: '普通硅酸盐水泥 42.5',
+    categoryId: 'CAT002-1',
+    categoryName: '普通硅酸盐水泥',
+    unit: '吨',
     mainImage: 'https://via.placeholder.com/200',
+    attrIds: ['ATTR001', 'ATTR003'],
+    attrNames: ['品牌', '强度等级'],
     status: SpuStatus.ENABLED,
-    skuCount: 8,
-    createdAt: '2024-01-03 00:00:00',
-    updatedAt: '2024-01-03 00:00:00',
-    createdBy: 'admin',
+    skuCount: 2,
+    createdAt: '2024-01-14 09:00:00',
+    updatedAt: '2024-01-15 10:00:00',
   },
   {
     spuId: 'SPU004',
-    spuName: '防水卷材',
-    spuCode: 'FS-JC-001',
-    categoryId: 'CAT004-1',
-    categoryName: '防水卷材',
-    unit: '卷',
-    attrIds: ['ATTR004', 'ATTR008'],
-    attrNames: ['厚度', '防火等级'],
+    spuCode: 'GC-PVC-001',
+    spuName: 'PVC排水管 Φ110',
+    categoryId: 'CAT003-1',
+    categoryName: 'PVC管',
+    unit: '米',
     mainImage: 'https://via.placeholder.com/200',
+    attrIds: ['ATTR001', 'ATTR002', 'ATTR003'],
+    attrNames: ['品牌', '材质', '外径'],
     status: SpuStatus.ENABLED,
-    skuCount: 6,
-    createdAt: '2024-01-04 00:00:00',
-    updatedAt: '2024-01-04 00:00:00',
-    createdBy: 'admin',
+    skuCount: 4,
+    createdAt: '2024-01-13 14:00:00',
+    updatedAt: '2024-01-14 16:00:00',
   },
   {
     spuId: 'SPU005',
-    spuName: '工字钢',
-    spuCode: 'GJ-GZG-001',
-    categoryId: 'CAT001-2',
-    categoryName: '型材',
-    unit: '吨',
-    attrIds: ['ATTR002', 'ATTR001'],
-    attrNames: ['材质', '规格型号'],
-    mainImage: 'https://via.placeholder.com/200',
-    status: SpuStatus.ENABLED,
-    skuCount: 5,
-    createdAt: '2024-01-05 00:00:00',
-    updatedAt: '2024-01-05 00:00:00',
-    createdBy: 'admin',
-  },
-  {
-    spuId: 'SPU006',
-    spuName: '镀锌钢管',
     spuCode: 'GC-DX-001',
+    spuName: '镀锌钢管 DN50',
     categoryId: 'CAT003-2',
     categoryName: '镀锌钢管',
     unit: '米',
-    attrIds: ['ATTR006', 'ATTR007'],
-    attrNames: ['管径', '壁厚'],
     mainImage: 'https://via.placeholder.com/200',
+    attrIds: ['ATTR001', 'ATTR002', 'ATTR003'],
+    attrNames: ['品牌', '材质', '公称直径'],
     status: SpuStatus.ENABLED,
-    skuCount: 10,
-    createdAt: '2024-01-06 00:00:00',
-    updatedAt: '2024-01-06 00:00:00',
-    createdBy: 'admin',
+    skuCount: 3,
+    createdAt: '2024-01-12 10:00:00',
+    updatedAt: '2024-01-13 12:00:00',
+  },
+  {
+    spuId: 'SPU006',
+    spuCode: 'FS-FSJ-001',
+    spuName: 'SBS防水卷材 3mm',
+    categoryId: 'CAT004-1',
+    categoryName: '防水卷材',
+    unit: '平方米',
+    mainImage: 'https://via.placeholder.com/200',
+    attrIds: ['ATTR001', 'ATTR002', 'ATTR003'],
+    attrNames: ['品牌', '厚度', '胎基'],
+    status: SpuStatus.ENABLED,
+    skuCount: 2,
+    createdAt: '2024-01-11 09:00:00',
+    updatedAt: '2024-01-12 11:00:00',
   },
   {
     spuId: 'SPU007',
-    spuName: '防水涂料',
-    spuCode: 'FS-TL-001',
+    spuCode: 'FS-FST-001',
+    spuName: '聚氨酯防水涂料',
     categoryId: 'CAT004-2',
     categoryName: '防水涂料',
     unit: '桶',
-    attrIds: ['ATTR009'],
-    attrNames: ['颜色'],
     mainImage: 'https://via.placeholder.com/200',
+    attrIds: ['ATTR001', 'ATTR002', 'ATTR003'],
+    attrNames: ['品牌', '类型', '容量'],
     status: SpuStatus.ENABLED,
-    skuCount: 4,
-    createdAt: '2024-01-07 00:00:00',
-    updatedAt: '2024-01-07 00:00:00',
-    createdBy: 'admin',
+    skuCount: 2,
+    createdAt: '2024-01-10 14:00:00',
+    updatedAt: '2024-01-11 16:00:00',
   },
   {
     spuId: 'SPU008',
-    spuName: '钢板',
     spuCode: 'GJ-GB-001',
+    spuName: '钢板',
     categoryId: 'CAT001-3',
     categoryName: '板材',
     unit: '吨',
-    attrIds: ['ATTR002', 'ATTR004'],
-    attrNames: ['材质', '厚度'],
     mainImage: 'https://via.placeholder.com/200',
+    attrIds: ['ATTR001', 'ATTR002', 'ATTR003'],
+    attrNames: ['品牌', '材质', '厚度'],
     status: SpuStatus.ENABLED,
-    skuCount: 8,
-    createdAt: '2024-01-08 00:00:00',
-    updatedAt: '2024-01-08 00:00:00',
-    createdBy: 'admin',
+    skuCount: 2,
+    createdAt: '2024-01-09 10:00:00',
+    updatedAt: '2024-01-10 12:00:00',
   },
 ]
 
@@ -451,19 +443,19 @@ export const MOCK_SKUS: Sku[] = [
     spuName: '螺纹钢 HRB400E',
     categoryId: 'CAT001-1',
     categoryName: '螺纹钢',
-    specs: { '材质': 'HRB400E', '规格型号': 'Φ16', '长度': '6m' },
+    specs: { '直径': 'Φ16', '长度': '6m' },
     unit: '吨',
     mainImage: 'https://via.placeholder.com/200',
-    suggestPrice: 4200,
-    supplyPrice: 4000,
-    salePrice: 4100,
-    costPrice: 3900,
-    marketPrice: 4300,
+    suggestPrice: 5200,
+    supplyPrice: 5000,
+    salePrice: 5100,
+    costPrice: 4900,
+    marketPrice: 5300,
     status: SkuStatus.ON_SHELF,
-    supplierCount: 5,
-    stockTotal: 1200,
-    createdAt: '2024-01-01 00:00:00',
-    updatedAt: '2024-01-01 00:00:00',
+    supplierCount: 4,
+    stockTotal: 1000,
+    createdAt: '2024-01-15 10:30:00',
+    updatedAt: '2024-01-16 14:20:00',
     createdBy: 'admin',
   },
   {
@@ -474,19 +466,19 @@ export const MOCK_SKUS: Sku[] = [
     spuName: '螺纹钢 HRB400E',
     categoryId: 'CAT001-1',
     categoryName: '螺纹钢',
-    specs: { '材质': 'HRB400E', '规格型号': 'Φ20', '长度': '9m' },
+    specs: { '直径': 'Φ20', '长度': '9m' },
     unit: '吨',
     mainImage: 'https://via.placeholder.com/200',
-    suggestPrice: 4300,
-    supplyPrice: 4100,
-    salePrice: 4200,
-    costPrice: 4000,
-    marketPrice: 4400,
+    suggestPrice: 5100,
+    supplyPrice: 4900,
+    salePrice: 5000,
+    costPrice: 4800,
+    marketPrice: 5200,
     status: SkuStatus.ON_SHELF,
-    supplierCount: 4,
+    supplierCount: 3,
     stockTotal: 800,
-    createdAt: '2024-01-01 00:00:00',
-    updatedAt: '2024-01-01 00:00:00',
+    createdAt: '2024-01-15 11:00:00',
+    updatedAt: '2024-01-16 15:00:00',
     createdBy: 'admin',
   },
   {
@@ -497,660 +489,692 @@ export const MOCK_SKUS: Sku[] = [
     spuName: '螺纹钢 HRB400E',
     categoryId: 'CAT001-1',
     categoryName: '螺纹钢',
-    specs: { '材质': 'HRB400E', '规格型号': 'Φ25', '长度': '12m' },
+    specs: { '直径': 'Φ25', '长度': '12m' },
     unit: '吨',
     mainImage: 'https://via.placeholder.com/200',
-    suggestPrice: 4400,
-    supplyPrice: 4200,
-    salePrice: 4300,
-    costPrice: 4100,
-    marketPrice: 4500,
+    suggestPrice: 5000,
+    supplyPrice: 4800,
+    salePrice: 4900,
+    costPrice: 4700,
+    marketPrice: 5100,
     status: SkuStatus.ON_SHELF,
-    supplierCount: 3,
-    stockTotal: 500,
-    createdAt: '2024-01-01 00:00:00',
-    updatedAt: '2024-01-01 00:00:00',
+    supplierCount: 5,
+    stockTotal: 1200,
+    createdAt: '2024-01-15 11:30:00',
+    updatedAt: '2024-01-16 15:30:00',
     createdBy: 'admin',
   },
   {
     skuId: 'SKU004',
-    skuCode: 'SN-PT-001-42.5',
-    skuName: '普通硅酸盐水泥 P.O 42.5',
+    skuCode: 'GJ-LWG-002-16-6',
+    skuName: '螺纹钢 HRB500E Φ16 6m',
     spuId: 'SPU002',
-    spuName: '普通硅酸盐水泥',
+    spuName: '螺纹钢 HRB500E',
+    categoryId: 'CAT001-1',
+    categoryName: '螺纹钢',
+    specs: { '直径': 'Φ16', '长度': '6m' },
+    unit: '吨',
+    mainImage: 'https://via.placeholder.com/200',
+    suggestPrice: 5600,
+    supplyPrice: 5400,
+    salePrice: 5500,
+    costPrice: 5300,
+    marketPrice: 5700,
+    status: SkuStatus.ON_SHELF,
+    supplierCount: 3,
+    stockTotal: 600,
+    createdAt: '2024-01-15 12:00:00',
+    updatedAt: '2024-01-16 16:00:00',
+    createdBy: 'admin',
+  },
+  {
+    skuId: 'SKU005',
+    skuCode: 'GJ-LWG-002-20-9',
+    skuName: '螺纹钢 HRB500E Φ20 9m',
+    spuId: 'SPU002',
+    spuName: '螺纹钢 HRB500E',
+    categoryId: 'CAT001-1',
+    categoryName: '螺纹钢',
+    specs: { '直径': 'Φ20', '长度': '9m' },
+    unit: '吨',
+    mainImage: 'https://via.placeholder.com/200',
+    suggestPrice: 5500,
+    supplyPrice: 5300,
+    salePrice: 5400,
+    costPrice: 5200,
+    marketPrice: 5600,
+    status: SkuStatus.ON_SHELF,
+    supplierCount: 4,
+    stockTotal: 700,
+    createdAt: '2024-01-15 12:30:00',
+    updatedAt: '2024-01-16 16:30:00',
+    createdBy: 'admin',
+  },
+  {
+    skuId: 'SKU006',
+    skuCode: 'GJ-LWG-002-25-12',
+    skuName: '螺纹钢 HRB500E Φ25 12m',
+    spuId: 'SPU002',
+    spuName: '螺纹钢 HRB500E',
+    categoryId: 'CAT001-1',
+    categoryName: '螺纹钢',
+    specs: { '直径': 'Φ25', '长度': '12m' },
+    unit: '吨',
+    mainImage: 'https://via.placeholder.com/200',
+    suggestPrice: 5400,
+    supplyPrice: 5200,
+    salePrice: 5300,
+    costPrice: 5100,
+    marketPrice: 5500,
+    status: SkuStatus.ON_SHELF,
+    supplierCount: 3,
+    stockTotal: 500,
+    createdAt: '2024-01-15 13:00:00',
+    updatedAt: '2024-01-16 17:00:00',
+    createdBy: 'admin',
+  },
+  {
+    skuId: 'SKU007',
+    skuCode: 'SN-PS-001-32.5',
+    skuName: '普通硅酸盐水泥 32.5',
+    spuId: 'SPU003',
+    spuName: '普通硅酸盐水泥 42.5',
+    categoryId: 'CAT002-1',
+    categoryName: '普通硅酸盐水泥',
+    specs: { '强度等级': '32.5' },
+    unit: '吨',
+    mainImage: 'https://via.placeholder.com/200',
+    suggestPrice: 450,
+    supplyPrice: 430,
+    salePrice: 440,
+    costPrice: 420,
+    marketPrice: 460,
+    status: SkuStatus.ON_SHELF,
+    supplierCount: 3,
+    stockTotal: 2000,
+    createdAt: '2024-01-14 09:00:00',
+    updatedAt: '2024-01-15 10:00:00',
+    createdBy: 'admin',
+  },
+  {
+    skuId: 'SKU008',
+    skuCode: 'SN-PS-001-42.5',
+    skuName: '普通硅酸盐水泥 42.5',
+    spuId: 'SPU003',
+    spuName: '普通硅酸盐水泥 42.5',
     categoryId: 'CAT002-1',
     categoryName: '普通硅酸盐水泥',
     specs: { '强度等级': '42.5' },
     unit: '吨',
     mainImage: 'https://via.placeholder.com/200',
     suggestPrice: 480,
-    supplyPrice: 450,
-    salePrice: 465,
-    costPrice: 440,
-    marketPrice: 500,
+    supplyPrice: 460,
+    salePrice: 470,
+    costPrice: 450,
+    marketPrice: 490,
     status: SkuStatus.ON_SHELF,
-    supplierCount: 8,
-    stockTotal: 3000,
-    createdAt: '2024-01-02 00:00:00',
-    updatedAt: '2024-01-02 00:00:00',
+    supplierCount: 4,
+    stockTotal: 2500,
+    createdAt: '2024-01-14 09:30:00',
+    updatedAt: '2024-01-15 10:30:00',
     createdBy: 'admin',
   },
   {
-    skuId: 'SKU005',
-    skuCode: 'SN-PT-001-32.5',
-    skuName: '普通硅酸盐水泥 P.O 32.5',
-    spuId: 'SPU002',
-    spuName: '普通硅酸盐水泥',
-    categoryId: 'CAT002-1',
-    categoryName: '普通硅酸盐水泥',
-    specs: { '强度等级': '32.5' },
-    unit: '吨',
+    skuId: 'SKU009',
+    skuCode: 'GC-PVC-001-50',
+    skuName: 'PVC排水管 Φ50',
+    spuId: 'SPU004',
+    spuName: 'PVC排水管 Φ110',
+    categoryId: 'CAT003-1',
+    categoryName: 'PVC管',
+    specs: { '外径': 'Φ50' },
+    unit: '米',
+    mainImage: 'https://via.placeholder.com/200',
+    suggestPrice: 15,
+    supplyPrice: 13,
+    salePrice: 14,
+    costPrice: 12,
+    marketPrice: 16,
+    status: SkuStatus.ON_SHELF,
+    supplierCount: 3,
+    stockTotal: 5000,
+    createdAt: '2024-01-13 14:00:00',
+    updatedAt: '2024-01-14 16:00:00',
+    createdBy: 'admin',
+  },
+  {
+    skuId: 'SKU010',
+    skuCode: 'GC-PVC-001-75',
+    skuName: 'PVC排水管 Φ75',
+    spuId: 'SPU004',
+    spuName: 'PVC排水管 Φ110',
+    categoryId: 'CAT003-1',
+    categoryName: 'PVC管',
+    specs: { '外径': 'Φ75' },
+    unit: '米',
+    mainImage: 'https://via.placeholder.com/200',
+    suggestPrice: 20,
+    supplyPrice: 18,
+    salePrice: 19,
+    costPrice: 17,
+    marketPrice: 21,
+    status: SkuStatus.ON_SHELF,
+    supplierCount: 4,
+    stockTotal: 4000,
+    createdAt: '2024-01-13 14:30:00',
+    updatedAt: '2024-01-14 16:30:00',
+    createdBy: 'admin',
+  },
+  {
+    skuId: 'SKU011',
+    skuCode: 'GC-PVC-001-110',
+    skuName: 'PVC排水管 Φ110',
+    spuId: 'SPU004',
+    spuName: 'PVC排水管 Φ110',
+    categoryId: 'CAT003-1',
+    categoryName: 'PVC管',
+    specs: { '外径': 'Φ110' },
+    unit: '米',
+    mainImage: 'https://via.placeholder.com/200',
+    suggestPrice: 30,
+    supplyPrice: 28,
+    salePrice: 29,
+    costPrice: 27,
+    marketPrice: 31,
+    status: SkuStatus.ON_SHELF,
+    supplierCount: 5,
+    stockTotal: 3000,
+    createdAt: '2024-01-13 15:00:00',
+    updatedAt: '2024-01-14 17:00:00',
+    createdBy: 'admin',
+  },
+  {
+    skuId: 'SKU012',
+    skuCode: 'GC-PVC-001-160',
+    skuName: 'PVC排水管 Φ160',
+    spuId: 'SPU004',
+    spuName: 'PVC排水管 Φ110',
+    categoryId: 'CAT003-1',
+    categoryName: 'PVC管',
+    specs: { '外径': 'Φ160' },
+    unit: '米',
+    mainImage: 'https://via.placeholder.com/200',
+    suggestPrice: 45,
+    supplyPrice: 43,
+    salePrice: 44,
+    costPrice: 42,
+    marketPrice: 46,
+    status: SkuStatus.ON_SHELF,
+    supplierCount: 4,
+    stockTotal: 2000,
+    createdAt: '2024-01-13 15:30:00',
+    updatedAt: '2024-01-14 17:30:00',
+    createdBy: 'admin',
+  },
+  {
+    skuId: 'SKU013',
+    skuCode: 'GC-DX-001-25',
+    skuName: '镀锌钢管 DN25',
+    spuId: 'SPU005',
+    spuName: '镀锌钢管 DN50',
+    categoryId: 'CAT003-2',
+    categoryName: '镀锌钢管',
+    specs: { '公称直径': 'DN25' },
+    unit: '米',
+    mainImage: 'https://via.placeholder.com/200',
+    suggestPrice: 25,
+    supplyPrice: 23,
+    salePrice: 24,
+    costPrice: 22,
+    marketPrice: 26,
+    status: SkuStatus.ON_SHELF,
+    supplierCount: 3,
+    stockTotal: 3000,
+    createdAt: '2024-01-12 10:00:00',
+    updatedAt: '2024-01-13 12:00:00',
+    createdBy: 'admin',
+  },
+  {
+    skuId: 'SKU014',
+    skuCode: 'GC-DX-001-50',
+    skuName: '镀锌钢管 DN50',
+    spuId: 'SPU005',
+    spuName: '镀锌钢管 DN50',
+    categoryId: 'CAT003-2',
+    categoryName: '镀锌钢管',
+    specs: { '公称直径': 'DN50' },
+    unit: '米',
+    mainImage: 'https://via.placeholder.com/200',
+    suggestPrice: 40,
+    supplyPrice: 38,
+    salePrice: 39,
+    costPrice: 37,
+    marketPrice: 41,
+    status: SkuStatus.ON_SHELF,
+    supplierCount: 4,
+    stockTotal: 2500,
+    createdAt: '2024-01-12 10:30:00',
+    updatedAt: '2024-01-13 12:30:00',
+    createdBy: 'admin',
+  },
+  {
+    skuId: 'SKU015',
+    skuCode: 'GC-DX-001-80',
+    skuName: '镀锌钢管 DN80',
+    spuId: 'SPU005',
+    spuName: '镀锌钢管 DN50',
+    categoryId: 'CAT003-2',
+    categoryName: '镀锌钢管',
+    specs: { '公称直径': 'DN80' },
+    unit: '米',
+    mainImage: 'https://via.placeholder.com/200',
+    suggestPrice: 60,
+    supplyPrice: 58,
+    salePrice: 59,
+    costPrice: 57,
+    marketPrice: 61,
+    status: SkuStatus.ON_SHELF,
+    supplierCount: 5,
+    stockTotal: 2000,
+    createdAt: '2024-01-12 11:00:00',
+    updatedAt: '2024-01-13 13:00:00',
+    createdBy: 'admin',
+  },
+  {
+    skuId: 'SKU016',
+    skuCode: 'FS-FSJ-001-3',
+    skuName: 'SBS防水卷材 3mm',
+    spuId: 'SPU006',
+    spuName: 'SBS防水卷材 3mm',
+    categoryId: 'CAT004-1',
+    categoryName: '防水卷材',
+    specs: { '厚度': '3mm' },
+    unit: '平方米',
+    mainImage: 'https://via.placeholder.com/200',
+    suggestPrice: 35,
+    supplyPrice: 33,
+    salePrice: 34,
+    costPrice: 32,
+    marketPrice: 36,
+    status: SkuStatus.ON_SHELF,
+    supplierCount: 4,
+    stockTotal: 1500,
+    createdAt: '2024-01-11 09:00:00',
+    updatedAt: '2024-01-12 11:00:00',
+    createdBy: 'admin',
+  },
+  {
+    skuId: 'SKU017',
+    skuCode: 'FS-FSJ-001-4',
+    skuName: 'SBS防水卷材 4mm',
+    spuId: 'SPU006',
+    spuName: 'SBS防水卷材 3mm',
+    categoryId: 'CAT004-1',
+    categoryName: '防水卷材',
+    specs: { '厚度': '4mm' },
+    unit: '平方米',
+    mainImage: 'https://via.placeholder.com/200',
+    suggestPrice: 45,
+    supplyPrice: 43,
+    salePrice: 44,
+    costPrice: 42,
+    marketPrice: 46,
+    status: SkuStatus.ON_SHELF,
+    supplierCount: 3,
+    stockTotal: 1200,
+    createdAt: '2024-01-11 09:30:00',
+    updatedAt: '2024-01-12 11:30:00',
+    createdBy: 'admin',
+  },
+  {
+    skuId: 'SKU018',
+    skuCode: 'FS-FST-001-20',
+    skuName: '聚氨酯防水涂料 20kg',
+    spuId: 'SPU007',
+    spuName: '聚氨酯防水涂料',
+    categoryId: 'CAT004-2',
+    categoryName: '防水涂料',
+    specs: { '容量': '20kg' },
+    unit: '桶',
+    mainImage: 'https://via.placeholder.com/200',
+    suggestPrice: 180,
+    supplyPrice: 170,
+    salePrice: 175,
+    costPrice: 165,
+    marketPrice: 185,
+    status: SkuStatus.ON_SHELF,
+    supplierCount: 4,
+    stockTotal: 800,
+    createdAt: '2024-01-10 14:00:00',
+    updatedAt: '2024-01-11 16:00:00',
+    createdBy: 'admin',
+  },
+  {
+    skuId: 'SKU019',
+    skuCode: 'FS-FST-001-50',
+    skuName: '聚氨酯防水涂料 50kg',
+    spuId: 'SPU007',
+    spuName: '聚氨酯防水涂料',
+    categoryId: 'CAT004-2',
+    categoryName: '防水涂料',
+    specs: { '容量': '50kg' },
+    unit: '桶',
     mainImage: 'https://via.placeholder.com/200',
     suggestPrice: 420,
     supplyPrice: 400,
     salePrice: 410,
     costPrice: 390,
-    marketPrice: 450,
+    marketPrice: 430,
     status: SkuStatus.ON_SHELF,
-    supplierCount: 6,
-    stockTotal: 2500,
-    createdAt: '2024-01-02 00:00:00',
-    updatedAt: '2024-01-02 00:00:00',
+    supplierCount: 5,
+    stockTotal: 600,
+    createdAt: '2024-01-10 14:30:00',
+    updatedAt: '2024-01-11 16:30:00',
     createdBy: 'admin',
   },
   {
-    skuId: 'SKU006',
-    skuCode: 'GC-PVC-001-DN50-2.0',
-    skuName: 'PVC排水管 DN50 2.0mm',
-    spuId: 'SPU003',
-    spuName: 'PVC排水管',
-    categoryId: 'CAT003-1',
-    categoryName: 'PVC管',
-    specs: { '管径': 'DN50', '壁厚': '2.0mm' },
-    unit: '米',
-    mainImage: 'https://via.placeholder.com/200',
-    suggestPrice: 18,
-    supplyPrice: 15,
-    salePrice: 16.5,
-    costPrice: 14,
-    marketPrice: 20,
-    status: SkuStatus.ON_SHELF,
-    supplierCount: 4,
-    stockTotal: 5000,
-    createdAt: '2024-01-03 00:00:00',
-    updatedAt: '2024-01-03 00:00:00',
-    createdBy: 'admin',
-  },
-  {
-    skuId: 'SKU007',
-    skuCode: 'GC-PVC-001-DN100-3.0',
-    skuName: 'PVC排水管 DN100 3.0mm',
-    spuId: 'SPU003',
-    spuName: 'PVC排水管',
-    categoryId: 'CAT003-1',
-    categoryName: 'PVC管',
-    specs: { '管径': 'DN100', '壁厚': '3.0mm' },
-    unit: '米',
-    mainImage: 'https://via.placeholder.com/200',
-    suggestPrice: 35,
-    supplyPrice: 30,
-    salePrice: 32,
-    costPrice: 28,
-    marketPrice: 38,
-    status: SkuStatus.ON_SHELF,
-    supplierCount: 3,
-    stockTotal: 3000,
-    createdAt: '2024-01-03 00:00:00',
-    updatedAt: '2024-01-03 00:00:00',
-    createdBy: 'admin',
-  },
-  {
-    skuId: 'SKU008',
-    skuCode: 'FS-JC-001-3-B1',
-    skuName: '防水卷材 3mm B1级',
-    spuId: 'SPU004',
-    spuName: '防水卷材',
-    categoryId: 'CAT004-1',
-    categoryName: '防水卷材',
-    specs: { '厚度': '3mm', '防火等级': 'B1级' },
-    unit: '卷',
-    mainImage: 'https://via.placeholder.com/200',
-    suggestPrice: 280,
-    supplyPrice: 250,
-    salePrice: 265,
-    costPrice: 240,
-    marketPrice: 300,
-    status: SkuStatus.ON_SHELF,
-    supplierCount: 2,
-    stockTotal: 500,
-    createdAt: '2024-01-04 00:00:00',
-    updatedAt: '2024-01-04 00:00:00',
-    createdBy: 'admin',
-  },
-  {
-    skuId: 'SKU009',
-    skuCode: 'FS-JC-001-4-A',
-    skuName: '防水卷材 4mm A级',
-    spuId: 'SPU004',
-    spuName: '防水卷材',
-    categoryId: 'CAT004-1',
-    categoryName: '防水卷材',
-    specs: { '厚度': '4mm', '防火等级': 'A级' },
-    unit: '卷',
-    mainImage: 'https://via.placeholder.com/200',
-    suggestPrice: 380,
-    supplyPrice: 350,
-    salePrice: 365,
-    costPrice: 340,
-    marketPrice: 400,
-    status: SkuStatus.ON_SHELF,
-    supplierCount: 2,
-    stockTotal: 300,
-    createdAt: '2024-01-04 00:00:00',
-    updatedAt: '2024-01-04 00:00:00',
-    createdBy: 'admin',
-  },
-  {
-    skuId: 'SKU010',
-    skuCode: 'GJ-GZG-001-I20',
-    skuName: '工字钢 I20a Q235B',
-    spuId: 'SPU005',
-    spuName: '工字钢',
-    categoryId: 'CAT001-2',
-    categoryName: '型材',
-    specs: { '材质': 'Q235B', '规格型号': 'I20a' },
+    skuId: 'SKU020',
+    skuCode: 'GJ-GB-001-3-Q235B',
+    skuName: '钢板 Q235B 3mm',
+    spuId: 'SPU008',
+    spuName: '钢板',
+    categoryId: 'CAT001-3',
+    categoryName: '板材',
+    specs: { '材质': 'Q235B', '厚度': '3mm' },
     unit: '吨',
     mainImage: 'https://via.placeholder.com/200',
-    suggestPrice: 4500,
-    supplyPrice: 4300,
-    salePrice: 4400,
-    costPrice: 4200,
-    marketPrice: 4600,
+    suggestPrice: 4800,
+    supplyPrice: 4600,
+    salePrice: 4700,
+    costPrice: 4500,
+    marketPrice: 4900,
     status: SkuStatus.ON_SHELF,
-    supplierCount: 3,
-    stockTotal: 200,
-    createdAt: '2024-01-05 00:00:00',
-    updatedAt: '2024-01-05 00:00:00',
-    createdBy: 'admin',
-  },
-  {
-    skuId: 'SKU011',
-    skuCode: 'GC-DX-001-DN100-4.0',
-    skuName: '镀锌钢管 DN100 4.0mm',
-    spuId: 'SPU006',
-    spuName: '镀锌钢管',
-    categoryId: 'CAT003-2',
-    categoryName: '镀锌钢管',
-    specs: { '管径': 'DN100', '壁厚': '4.0mm' },
-    unit: '米',
-    mainImage: 'https://via.placeholder.com/200',
-    suggestPrice: 85,
-    supplyPrice: 80,
-    salePrice: 82,
-    costPrice: 78,
-    marketPrice: 90,
-    status: SkuStatus.OFF_SHELF,
-    supplierCount: 0,
-    stockTotal: 0,
-    createdAt: '2024-01-06 00:00:00',
-    updatedAt: '2024-01-06 00:00:00',
-    createdBy: 'admin',
-  },
-  {
-    skuId: 'SKU012',
-    skuCode: 'FS-TL-001-GRAY',
-    skuName: '防水涂料 灰色',
-    spuId: 'SPU007',
-    spuName: '防水涂料',
-    categoryId: 'CAT004-2',
-    categoryName: '防水涂料',
-    specs: { '颜色': '灰色' },
-    unit: '桶',
-    mainImage: 'https://via.placeholder.com/200',
-    suggestPrice: 320,
-    supplyPrice: 280,
-    salePrice: 300,
-    costPrice: 270,
-    marketPrice: 350,
-    status: SkuStatus.ON_SHELF,
-    supplierCount: 2,
+    supplierCount: 5,
     stockTotal: 800,
-    createdAt: '2024-01-07 00:00:00',
-    updatedAt: '2024-01-07 00:00:00',
+    createdAt: '2024-01-09 10:00:00',
+    updatedAt: '2024-01-10 12:00:00',
+    createdBy: 'admin',
+  },
+  {
+    skuId: 'SKU021',
+    skuCode: 'GJ-GB-001-5-Q345B',
+    skuName: '钢板 Q345B 5mm',
+    spuId: 'SPU008',
+    spuName: '钢板',
+    categoryId: 'CAT001-3',
+    categoryName: '板材',
+    specs: { '材质': 'Q345B', '厚度': '5mm' },
+    unit: '吨',
+    mainImage: 'https://via.placeholder.com/200',
+    suggestPrice: 5200,
+    supplyPrice: 5000,
+    salePrice: 5100,
+    costPrice: 4900,
+    marketPrice: 5300,
+    status: SkuStatus.ON_SHELF,
+    supplierCount: 4,
+    stockTotal: 600,
+    createdAt: '2024-01-09 10:30:00',
+    updatedAt: '2024-01-10 12:30:00',
     createdBy: 'admin',
   },
 ]
 
-export const MOCK_OPERATION_LOGS: ProductOperationLog[] = [
-  {
-    logId: 'LOG001',
-    targetType: 'spu',
-    targetId: 'SPU001',
-    targetName: '螺纹钢 HRB400E',
-    operationType: 'create',
-    operationContent: '创建SPU',
-    operatorId: 'admin',
-    operatorName: '管理员',
-    createdAt: '2024-01-01 00:00:00',
-  },
-  {
-    logId: 'LOG002',
-    targetType: 'sku',
-    targetId: 'SKU001',
-    targetName: '螺纹钢 HRB400E Φ16 6m',
-    operationType: 'create',
-    operationContent: '创建SKU',
-    operatorId: 'admin',
-    operatorName: '管理员',
-    createdAt: '2024-01-01 00:00:00',
-  },
-  {
-    logId: 'LOG003',
-    targetType: 'sku',
-    targetId: 'SKU001',
-    targetName: '螺纹钢 HRB400E Φ16 6m',
-    operationType: 'on_shelf',
-    operationContent: '上架商品',
-    operatorId: 'admin',
-    operatorName: '管理员',
-    createdAt: '2024-01-02 00:00:00',
-  },
-  {
-    logId: 'LOG004',
-    targetType: 'spu',
-    targetId: 'SPU002',
-    targetName: '普通硅酸盐水泥',
-    operationType: 'update',
-    operationContent: '修改SPU名称',
-    operatorId: 'admin',
-    operatorName: '管理员',
-    createdAt: '2024-01-03 00:00:00',
-  },
-  {
-    logId: 'LOG005',
-    targetType: 'sku',
-    targetId: 'SKU011',
-    targetName: '镀锌钢管 DN100 4.0mm',
-    operationType: 'off_shelf',
-    operationContent: '下架商品',
-    operatorId: 'admin',
-    operatorName: '管理员',
-    createdAt: '2024-01-06 00:00:00',
-  },
-]
-
-export const MOCK_STATISTICS: ProductStatistics = {
-  totalSpu: 51,
-  totalSku: 179,
-  onShelfSku: 165,
-  offShelfSku: 14,
-  categoryStats: [
-    { categoryId: 'CAT001', categoryName: '钢材', spuCount: 15, skuCount: 45 },
-    { categoryId: 'CAT002', categoryName: '水泥', spuCount: 10, skuCount: 30 },
-    { categoryId: 'CAT003', categoryName: '管材', spuCount: 12, skuCount: 48 },
-    { categoryId: 'CAT004', categoryName: '防水材料', spuCount: 8, skuCount: 32 },
-    { categoryId: 'CAT005', categoryName: '电线电缆', spuCount: 6, skuCount: 24 },
-  ],
-}
-
-export const MOCK_ABNORMAL_PRODUCTS: AbnormalProduct[] = [
-  {
-    skuId: 'SKU011',
-    skuCode: 'GC-DX-001-DN100-4.0',
-    skuName: '镀锌钢管 DN100 4.0mm',
-    spuName: '镀锌钢管',
-    abnormalType: 'no_supplier',
-    abnormalDesc: '该SKU暂无供应商报价',
-    lastUpdateTime: '2024-01-06 00:00:00',
-  },
-  {
-    skuId: 'SKU013',
-    skuCode: 'GJ-GB-001-10',
-    skuName: '钢板 Q235B 10mm',
-    spuName: '钢板',
-    abnormalType: 'no_stock',
-    abnormalDesc: '该SKU库存为0',
-    lastUpdateTime: '2024-01-08 00:00:00',
-  },
-  {
-    skuId: 'SKU015',
-    skuCode: 'XC-DL-001-10',
-    skuName: '电线 BV 10mm²',
-    spuName: '电线',
-    abnormalType: 'long_off_shelf',
-    abnormalDesc: '该SKU已下架超过30天',
-    lastUpdateTime: '2023-12-01 00:00:00',
-  },
-]
-
-export function getMockCategoryTree(): ProductCategory[] {
-  return MOCK_CATEGORIES
-}
-
-export function getMockCategoryList(): ProductCategory[] {
-  const result: ProductCategory[] = []
-  function flatten(categories: ProductCategory[]) {
-    categories.forEach(cat => {
-      result.push(cat)
-      if (cat.children) {
-        flatten(cat.children)
-      }
-    })
+function flattenCategories(categories: ProductCategory[], result: ProductCategory[] = []): ProductCategory[] {
+  for (const category of categories) {
+    result.push(category)
+    if (category.children) {
+      flattenCategories(category.children, result)
+    }
   }
-  flatten(MOCK_CATEGORIES)
   return result
 }
 
-export function getMockCategoryDetail(categoryId: string): ProductCategory | null {
-  const list = getMockCategoryList()
-  return list.find(c => c.categoryId === categoryId) || null
+export function getMockCategoryTree() {
+  return MOCK_CATEGORIES
 }
 
-export function createMockCategory(data: CreateCategoryParams): ProductCategory {
-  const list = getMockCategoryList()
-  const maxId = list.reduce((max, c) => {
-    const num = parseInt(c.categoryId.replace('CAT', '').replace(/-\d+/, ''))
-    return num > max ? num : max
-  }, 0)
-  
-  const parent = data.parentId ? list.find(c => c.categoryId === data.parentId) : null
-  const level = parent ? parent.level + 1 : 1
-  
+export function getMockCategoryList() {
+  return flattenCategories(MOCK_CATEGORIES)
+}
+
+export function getMockCategoryDetail(categoryId: string) {
+  const allCategories = flattenCategories(MOCK_CATEGORIES)
+  return allCategories.find(c => c.categoryId === categoryId) || null
+}
+
+export function createMockCategory(data: CreateCategoryParams) {
   const newCategory: ProductCategory = {
-    categoryId: 'CAT' + String(maxId + 1).padStart(3, '0'),
+    categoryId: `CAT${Date.now()}`,
     categoryName: data.categoryName,
+    level: data.level || 1,
     parentId: data.parentId,
-    level,
     sortOrder: data.sortOrder || 0,
-    status: data.status ?? ProductCategoryStatus.ENABLED,
-    icon: data.icon,
+    status: ProductCategoryStatus.ENABLED,
     spuCount: 0,
     skuCount: 0,
-    createdAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
-    updatedAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }
+  
+  if (data.parentId) {
+    const parent = getMockCategoryDetail(data.parentId)
+    if (parent) {
+      if (!parent.children) {
+        parent.children = []
+      }
+      parent.children.push(newCategory)
+    }
+  } else {
+    MOCK_CATEGORIES.push(newCategory)
   }
   
   return newCategory
 }
 
-export function updateMockCategory(categoryId: string, data: UpdateCategoryParams): ProductCategory | null {
+export function updateMockCategory(categoryId: string, data: UpdateCategoryParams) {
   const category = getMockCategoryDetail(categoryId)
-  if (!category) return null
-  
-  return {
-    ...category,
-    ...data,
-    updatedAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
+  if (category) {
+    Object.assign(category, data)
+    category.updatedAt = new Date().toISOString()
   }
+  return category
 }
 
-export function deleteMockCategory(categoryId: string): { success: boolean; message: string } {
+export function deleteMockCategory(categoryId: string) {
   const category = getMockCategoryDetail(categoryId)
   if (!category) {
     return { success: false, message: '分类不存在' }
   }
   
-  if (category.children && category.children.length > 0) {
-    return { success: false, message: '该分类下存在子分类，无法删除' }
+  const allCategories = flattenCategories(MOCK_CATEGORIES)
+  const index = allCategories.findIndex(c => c.categoryId === categoryId)
+  if (index > -1) {
+    allCategories.splice(index, 1)
   }
   
-  if (category.spuCount && category.spuCount > 0) {
-    return { success: false, message: '该分类下存在商品，无法删除' }
-  }
-  
-  return { success: true, message: '删除成功' }
+  return { success: true }
 }
 
-export function getMockAttrList(params: PaginationParams & { keyword?: string; status?: number }): PaginationResult<ProductAttr> {
-  let list = [...MOCK_ATTRS]
+export function getMockAttrList(params: PaginationParams & { keyword?: string; status?: number }) {
+  let result = [...MOCK_ATTRS]
   
   if (params.keyword) {
-    const keyword = params.keyword.toLowerCase()
-    list = list.filter(a => a.attrName.toLowerCase().includes(keyword))
+    result = result.filter(attr => 
+      attr.attrName.includes(params.keyword)
+    )
   }
   
   if (params.status !== undefined) {
-    list = list.filter(a => a.status === params.status)
+    result = result.filter(attr => attr.status === params.status)
   }
   
-  const total = list.length
-  const start = (params.page - 1) * params.pageSize
-  const end = start + params.pageSize
+  const page = params.page || 1
+  const pageSize = params.pageSize || 10
+  const start = (page - 1) * pageSize
+  const end = start + pageSize
   
   return {
-    list: list.slice(start, end),
-    total,
-    page: params.page,
-    pageSize: params.pageSize,
-    totalPages: Math.ceil(total / params.pageSize),
+    list: result.slice(start, end),
+    total: result.length,
+    page,
+    pageSize,
+    totalPages: Math.ceil(result.length / pageSize),
   }
 }
 
-export function getMockAttrDetail(attrId: string): ProductAttr | null {
-  return MOCK_ATTRS.find(a => a.attrId === attrId) || null
+export function getMockAttrDetail(attrId: string) {
+  return MOCK_ATTRS.find(attr => attr.attrId === attrId) || null
 }
 
-export function createMockAttr(data: CreateAttrParams): ProductAttr {
-  const maxId = MOCK_ATTRS.reduce((max, a) => {
-    const num = parseInt(a.attrId.replace('ATTR', ''))
-    return num > max ? num : max
-  }, 0)
-  
+export function createMockAttr(data: CreateAttrParams) {
   const newAttr: ProductAttr = {
-    attrId: 'ATTR' + String(maxId + 1).padStart(3, '0'),
+    attrId: `ATTR${Date.now()}`,
     attrName: data.attrName,
     attrType: data.attrType,
-    optionValues: data.optionValues,
+    optionValues: data.optionValues || [],
     sortOrder: data.sortOrder || 0,
     status: 1,
     usedCount: 0,
-    createdAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
-    updatedAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   }
   
   MOCK_ATTRS.push(newAttr)
   return newAttr
 }
 
-export function updateMockAttr(attrId: string, data: UpdateAttrParams): ProductAttr | null {
-  const index = MOCK_ATTRS.findIndex(a => a.attrId === attrId)
-  if (index === -1) return null
-  
-  MOCK_ATTRS[index] = {
-    ...MOCK_ATTRS[index],
-    ...data,
-    updatedAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
+export function updateMockAttr(attrId: string, data: UpdateAttrParams) {
+  const attr = getMockAttrDetail(attrId)
+  if (attr) {
+    Object.assign(attr, data)
+    attr.updatedAt = new Date().toISOString()
   }
-  return MOCK_ATTRS[index]
+  return attr
 }
 
-export function deleteMockAttr(attrId: string): { success: boolean; message: string } {
-  const attr = MOCK_ATTRS.find(a => a.attrId === attrId)
-  if (!attr) {
-    return { success: false, message: '属性不存在' }
-  }
-  
-  if (attr.usedCount && attr.usedCount > 0) {
-    return { success: false, message: '该属性已被SPU使用，无法删除' }
-  }
-  
-  const index = MOCK_ATTRS.findIndex(a => a.attrId === attrId)
+export function deleteMockAttr(attrId: string) {
+  const index = MOCK_ATTRS.findIndex(attr => attr.attrId === attrId)
   if (index > -1) {
     MOCK_ATTRS.splice(index, 1)
+    return { success: true }
   }
-  
-  return { success: true, message: '删除成功' }
+  return { success: false, message: '属性不存在' }
 }
 
-export function getMockSpuList(params: PaginationParams & { keyword?: string; categoryId?: string; status?: number }): PaginationResult<Spu> {
-  let list = [...MOCK_SPUS]
+export function getMockSpuList(params: PaginationParams & { keyword?: string; categoryId?: string }) {
+  let result = [...MOCK_SPUS]
   
   if (params.keyword) {
-    const keyword = params.keyword.toLowerCase()
-    list = list.filter(s => 
-      s.spuName.toLowerCase().includes(keyword) ||
-      (s.spuCode && s.spuCode.toLowerCase().includes(keyword))
+    result = result.filter(spu => 
+      spu.spuName.includes(params.keyword) || 
+      spu.spuCode.includes(params.keyword)
     )
   }
   
   if (params.categoryId) {
-    list = list.filter(s => s.categoryId === params.categoryId)
+    result = result.filter(spu => spu.categoryId === params.categoryId)
   }
   
-  if (params.status !== undefined) {
-    list = list.filter(s => s.status === params.status)
-  }
-  
-  const total = list.length
+  const total = result.length
   const start = (params.page - 1) * params.pageSize
-  const end = start + params.pageSize
+  const list = result.slice(start, start + params.pageSize)
   
-  return {
-    list: list.slice(start, end),
-    total,
-    page: params.page,
-    pageSize: params.pageSize,
-    totalPages: Math.ceil(total / params.pageSize),
-  }
+  return { list, total, page: params.page, pageSize: params.pageSize }
 }
 
-export function getMockSpuDetail(spuId: string): Spu | null {
-  return MOCK_SPUS.find(s => s.spuId === spuId) || null
+export function getMockSpuDetail(spuId: string) {
+  return MOCK_SPUS.find(spu => spu.spuId === spuId) || null
 }
 
-export function createMockSpu(data: CreateSpuParams): Spu {
-  const maxId = MOCK_SPUS.reduce((max, s) => {
-    const num = parseInt(s.spuId.replace('SPU', ''))
-    return num > max ? num : max
-  }, 0)
-  
-  const category = getMockCategoryDetail(data.categoryId)
-  
+export function createMockSpu(data: CreateSpuParams) {
   const newSpu: Spu = {
-    spuId: 'SPU' + String(maxId + 1).padStart(3, '0'),
-    spuName: data.spuName,
+    spuId: `SPU${Date.now()}`,
     spuCode: data.spuCode,
+    spuName: data.spuName,
     categoryId: data.categoryId,
-    categoryName: category?.categoryName,
+    categoryName: data.categoryName || '',
     unit: data.unit,
-    attrIds: data.attrIds,
-    mainImage: data.mainImage,
-    images: data.images,
-    description: data.description,
-    status: SpuStatus.ENABLED,
+    mainImage: data.mainImage || '',
+    attrNames: data.attrNames || [],
     skuCount: 0,
-    createdAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
-    updatedAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
-    createdBy: 'admin',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   }
   
   MOCK_SPUS.push(newSpu)
   return newSpu
 }
 
-export function updateMockSpu(spuId: string, data: UpdateSpuParams): Spu | null {
-  const index = MOCK_SPUS.findIndex(s => s.spuId === spuId)
-  if (index === -1) return null
-  
-  let categoryName = MOCK_SPUS[index].categoryName
-  if (data.categoryId) {
-    const category = getMockCategoryDetail(data.categoryId)
-    categoryName = category?.categoryName
+export function updateMockSpu(spuId: string, data: UpdateSpuParams) {
+  const spu = getMockSpuDetail(spuId)
+  if (spu) {
+    Object.assign(spu, data)
+    spu.updatedAt = new Date().toISOString()
   }
-  
-  MOCK_SPUS[index] = {
-    ...MOCK_SPUS[index],
-    ...data,
-    categoryName,
-    updatedAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
-  }
-  return MOCK_SPUS[index]
+  return spu
 }
 
-export function deleteMockSpu(spuId: string): { success: boolean; message: string } {
-  const spu = MOCK_SPUS.find(s => s.spuId === spuId)
-  if (!spu) {
-    return { success: false, message: 'SPU不存在' }
-  }
-  
-  if (spu.skuCount && spu.skuCount > 0) {
-    return { success: false, message: '该SPU下存在SKU，无法删除' }
-  }
-  
-  const index = MOCK_SPUS.findIndex(s => s.spuId === spuId)
+export function deleteMockSpu(spuId: string) {
+  const index = MOCK_SPUS.findIndex(spu => spu.spuId === spuId)
   if (index > -1) {
     MOCK_SPUS.splice(index, 1)
+    return { success: true }
   }
-  
-  return { success: true, message: '删除成功' }
+  return { success: false, message: 'SPU不存在' }
 }
 
-export function getMockSkuList(params: PaginationParams & { keyword?: string; spuId?: string; categoryId?: string; status?: number }): PaginationResult<Sku> {
-  let list = [...MOCK_SKUS]
+export function getMockSkuList(params: PaginationParams & { keyword?: string; categoryId?: string; spuId?: string }) {
+  let result = [...MOCK_SKUS]
   
   if (params.keyword) {
-    const keyword = params.keyword.toLowerCase()
-    list = list.filter(s => 
-      s.skuName.toLowerCase().includes(keyword) ||
-      s.skuCode.toLowerCase().includes(keyword)
+    result = result.filter(sku => 
+      sku.skuName.includes(params.keyword) || 
+      sku.skuCode.includes(params.keyword)
     )
   }
   
-  if (params.spuId) {
-    list = list.filter(s => s.spuId === params.spuId)
-  }
-  
   if (params.categoryId) {
-    list = list.filter(s => s.categoryId === params.categoryId)
+    result = result.filter(sku => sku.categoryId === params.categoryId)
   }
   
-  if (params.status !== undefined) {
-    list = list.filter(s => s.status === params.status)
+  if (params.spuId) {
+    result = result.filter(sku => sku.spuId === params.spuId)
   }
   
-  const total = list.length
+  const total = result.length
   const start = (params.page - 1) * params.pageSize
-  const end = start + params.pageSize
+  const list = result.slice(start, start + params.pageSize)
   
-  return {
-    list: list.slice(start, end),
-    total,
-    page: params.page,
-    pageSize: params.pageSize,
-    totalPages: Math.ceil(total / params.pageSize),
-  }
+  return { list, total, page: params.page, pageSize: params.pageSize }
 }
 
-export function getMockSkuDetail(skuId: string): Sku | null {
-  return MOCK_SKUS.find(s => s.skuId === skuId) || null
+export function getMockSkuDetail(skuId: string) {
+  return MOCK_SKUS.find(sku => sku.skuId === skuId) || null
 }
 
-export function createMockSku(data: CreateSkuParams): Sku {
-  const maxId = MOCK_SKUS.reduce((max, s) => {
-    const num = parseInt(s.skuId.replace('SKU', ''))
-    return num > max ? num : max
-  }, 0)
-  
-  const spu = getMockSpuDetail(data.spuId)
-  
+export function createMockSku(data: CreateSkuParams) {
   const newSku: Sku = {
-    skuId: 'SKU' + String(maxId + 1).padStart(3, '0'),
+    skuId: `SKU${Date.now()}`,
     skuCode: data.skuCode,
     skuName: data.skuName,
     spuId: data.spuId,
-    spuName: spu?.spuName,
-    categoryId: spu?.categoryId,
-    categoryName: spu?.categoryName,
+    spuName: data.spuName || '',
+    categoryId: data.categoryId,
+    categoryName: data.categoryName || '',
     specs: data.specs,
-    barcode: data.barcode,
     unit: data.unit,
-    mainImage: data.mainImage,
-    images: data.images,
+    mainImage: data.mainImage || '',
+    suggestPrice: data.suggestPrice || 0,
+    supplyPrice: data.supplyPrice || 0,
+    salePrice: data.salePrice || 0,
+    costPrice: data.costPrice || 0,
+    marketPrice: data.marketPrice || 0,
     status: SkuStatus.ON_SHELF,
     supplierCount: 0,
     stockTotal: 0,
-    createdAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
-    updatedAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     createdBy: 'admin',
   }
   
@@ -1158,77 +1182,53 @@ export function createMockSku(data: CreateSkuParams): Sku {
   return newSku
 }
 
-export function updateMockSku(skuId: string, data: UpdateSkuParams): Sku | null {
-  const index = MOCK_SKUS.findIndex(s => s.skuId === skuId)
-  if (index === -1) return null
-  
-  MOCK_SKUS[index] = {
-    ...MOCK_SKUS[index],
-    ...data,
-    updatedAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
+export function updateMockSku(skuId: string, data: UpdateSkuParams) {
+  const sku = getMockSkuDetail(skuId)
+  if (sku) {
+    Object.assign(sku, data)
+    sku.updatedAt = new Date().toISOString()
   }
-  return MOCK_SKUS[index]
+  return sku
 }
 
-export function batchUpdateMockSkuStatus(skuIds: string[], status: SkuStatus): boolean {
-  skuIds.forEach(skuId => {
-    const index = MOCK_SKUS.findIndex(s => s.skuId === skuId)
-    if (index > -1) {
-      MOCK_SKUS[index].status = status
-      MOCK_SKUS[index].updatedAt = new Date().toISOString().replace('T', ' ').slice(0, 19)
+export function batchUpdateMockSkuStatus(skuIds: string[], status: SkuStatus) {
+  for (const skuId of skuIds) {
+    const sku = getMockSkuDetail(skuId)
+    if (sku) {
+      sku.status = status
+      sku.updatedAt = new Date().toISOString()
     }
-  })
-  return true
-}
-
-export function getMockSkuListBySpu(spuId: string): Sku[] {
-  return MOCK_SKUS.filter(s => s.spuId === spuId)
-}
-
-export function getMockProductStatistics(): ProductStatistics {
-  return MOCK_STATISTICS
-}
-
-export function getMockOperationLogs(params: PaginationParams & { targetType?: string; targetId?: string }): PaginationResult<ProductOperationLog> {
-  let list = [...MOCK_OPERATION_LOGS]
-  
-  if (params.targetType) {
-    list = list.filter(l => l.targetType === params.targetType)
   }
-  
-  if (params.targetId) {
-    list = list.filter(l => l.targetId === params.targetId)
+  return { success: true }
+}
+
+export function getMockSkuListBySpu(spuId: string) {
+  return MOCK_SKUS.filter(sku => sku.spuId === spuId)
+}
+
+export function deleteMockSku(skuId: string) {
+  const index = MOCK_SKUS.findIndex(sku => sku.skuId === skuId)
+  if (index > -1) {
+    MOCK_SKUS.splice(index, 1)
+    return { success: true }
   }
-  
-  const total = list.length
-  const start = (params.page - 1) * params.pageSize
-  const end = start + params.pageSize
-  
+  return { success: false, message: 'SKU不存在' }
+}
+
+export function getMockProductStatistics() {
   return {
-    list: list.slice(start, end),
-    total,
-    page: params.page,
-    pageSize: params.pageSize,
-    totalPages: Math.ceil(total / params.pageSize),
+    totalSpu: MOCK_SPUS.length,
+    totalSku: MOCK_SKUS.length,
+    onShelfCount: MOCK_SKUS.filter(sku => sku.status === SkuStatus.ON_SHELF).length,
+    offShelfCount: MOCK_SKUS.filter(sku => sku.status === SkuStatus.OFF_SHELF).length,
+    lowStockCount: MOCK_SKUS.filter(sku => sku.stockTotal < 100).length,
   }
 }
 
-export function getMockAbnormalProducts(params: PaginationParams & { abnormalType?: string }): PaginationResult<AbnormalProduct> {
-  let list = [...MOCK_ABNORMAL_PRODUCTS]
-  
-  if (params.abnormalType) {
-    list = list.filter(p => p.abnormalType === params.abnormalType)
-  }
-  
-  const total = list.length
-  const start = (params.page - 1) * params.pageSize
-  const end = start + params.pageSize
-  
-  return {
-    list: list.slice(start, end),
-    total,
-    page: params.page,
-    pageSize: params.pageSize,
-    totalPages: Math.ceil(total / params.pageSize),
-  }
+export function getMockOperationLogs() {
+  return []
+}
+
+export function getMockAbnormalProducts() {
+  return []
 }

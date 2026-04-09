@@ -1,7 +1,7 @@
 <template>
   <div class="mp-page transaction">
     <div class="page-header">
-      <div class="header-back" @click="$emit('navigate', 'fund-management')">
+      <div class="header-back" @click="$emit('navigate', 'mine')">
         <icon-left />
       </div>
       <div class="header-title">交易明细</div>

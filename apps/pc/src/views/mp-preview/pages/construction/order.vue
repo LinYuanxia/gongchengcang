@@ -1,13 +1,13 @@
 <template>
   <div class="mp-page order">
     <div class="page-header">
-      <div class="header-title">订单管理</div>
-      <div class="header-action" @click="handleSearch">
-        <icon-search />
+      <div class="search-bar" @click="showSearchPopup = true">
+        <icon-search class="search-icon" />
+        <span class="search-placeholder">搜索商品/订单号</span>
       </div>
     </div>
     
-    <div class="status-tabs">
+    <div class="status-tabs" ref="tabsRef">
       <div 
         class="tab-item" 
         :class="{ active: activeStatus === 'all' }"
@@ -28,8 +28,16 @@
         :class="{ active: activeStatus === 'shipping' }"
         @click="activeStatus = 'shipping'"
       >
-        待收货
+        待发货
         <span class="badge" v-if="statusCount.shipping > 0">{{ statusCount.shipping }}</span>
+      </div>
+      <div 
+        class="tab-item" 
+        :class="{ active: activeStatus === 'receiving' }"
+        @click="activeStatus = 'receiving'"
+      >
+        待收货
+        <span class="badge" v-if="statusCount.receiving > 0">{{ statusCount.receiving }}</span>
       </div>
       <div 
         class="tab-item" 
@@ -40,19 +48,11 @@
       </div>
       <div 
         class="tab-item" 
-        :class="{ active: activeStatus === 'refund' }"
-        @click="activeStatus = 'refund'"
+        :class="{ active: activeStatus === 'aftersale' }"
+        @click="activeStatus = 'aftersale'"
       >
-        售后中
-      </div>
-    </div>
-    
-    <div class="project-filter">
-      <div class="filter-label">项目筛选</div>
-      <div class="filter-picker" @click="showProjectPicker = true">
-        <span v-if="selectedProject">{{ selectedProject }}</span>
-        <span class="placeholder" v-else>全部项目</span>
-        <icon-down class="picker-arrow" />
+        售后
+        <span class="badge" v-if="statusCount.aftersale > 0">{{ statusCount.aftersale }}</span>
       </div>
     </div>
     
@@ -86,16 +86,8 @@
         
         <div class="order-summary">
           <div class="summary-row">
-            <span class="label">工程仓</span>
-            <span class="value">{{ item.warehouseName }}</span>
-          </div>
-          <div class="summary-row">
-            <span class="label">下单时间</span>
-            <span class="value">{{ item.createTime }}</span>
-          </div>
-          <div class="summary-row total">
-            <span class="label">订单金额</span>
-            <span class="value price">¥{{ item.totalAmount }}</span>
+            <span class="label">共{{ item.totalQty }}件商品</span>
+            <span class="value price">实付 ¥{{ item.totalAmount }}</span>
           </div>
         </div>
         
@@ -105,16 +97,68 @@
             <span class="action-btn primary" @click.stop="handlePay(item)">立即支付</span>
           </template>
           <template v-if="item.status === 'shipping'">
+            <span class="action-btn" @click.stop="handleRemind(item)">提醒发货</span>
+          </template>
+          <template v-if="item.status === 'receiving'">
             <span class="action-btn" @click.stop="handleLogistics(item)">查看物流</span>
             <span class="action-btn primary" @click.stop="handleConfirm(item)">确认收货</span>
           </template>
           <template v-if="item.status === 'completed'">
-            <span class="action-btn" @click.stop="handleRefund(item)">申请售后</span>
+            <span class="action-btn" @click.stop="handleAftersale(item)">申请售后</span>
             <span class="action-btn" @click.stop="handleInvoice(item)">申请开票</span>
+            <span class="action-btn primary" @click.stop="handleRebuy(item)">再次购买</span>
           </template>
-          <template v-if="item.status === 'refund'">
-            <span class="action-btn" @click.stop="handleRefundDetail(item)">售后详情</span>
+          <template v-if="item.status === 'aftersale'">
+            <span class="action-btn" @click.stop="handleAftersaleDetail(item)">售后详情</span>
           </template>
+        </div>
+      </div>
+    </div>
+    
+    <div class="empty-state" v-if="filteredOrders.length === 0">
+      <icon-file />
+      <span>暂无相关订单</span>
+    </div>
+    
+    <div class="search-popup" v-if="showSearchPopup">
+      <div class="popup-mask" @click="showSearchPopup = false"></div>
+      <div class="popup-content">
+        <div class="search-header">
+          <div class="search-input-wrap">
+            <icon-search class="search-icon" />
+            <input 
+              v-model="searchKeyword" 
+              type="text" 
+              placeholder="搜索商品/订单号" 
+              class="search-input"
+              autofocus
+            />
+            <div class="search-clear" v-if="searchKeyword" @click="searchKeyword = ''">
+              <icon-close />
+            </div>
+          </div>
+          <div class="search-cancel" @click="showSearchPopup = false">取消</div>
+        </div>
+        <div class="search-result">
+          <div class="result-empty" v-if="!searchKeyword">
+            <icon-search />
+            <span>请输入关键词搜索</span>
+          </div>
+          <div class="result-list" v-else-if="searchResults.length > 0">
+            <div 
+              class="result-item" 
+              v-for="item in searchResults" 
+              :key="item.id"
+              @click="handleDetail(item)"
+            >
+              <div class="item-order-no">{{ item.orderNo }}</div>
+              <div class="item-project">{{ item.projectName }}</div>
+            </div>
+          </div>
+          <div class="result-empty" v-else>
+            <icon-search />
+            <span>未找到相关订单</span>
+          </div>
         </div>
       </div>
     </div>
@@ -146,117 +190,141 @@ import { ref, computed } from 'vue'
 const emit = defineEmits(['navigate'])
 
 const activeStatus = ref('all')
-const selectedProject = ref('')
-const showProjectPicker = ref(false)
+const showSearchPopup = ref(false)
+const searchKeyword = ref('')
 
 const statusCount = ref({
   pending: 2,
-  shipping: 3,
+  shipping: 2,
+  receiving: 1,
   completed: 10,
-  refund: 1
+  aftersale: 1,
 })
+
+function getStatusText(status: string) {
+  const statusMap: Record<string, string> = {
+    pending: '待付款',
+    shipping: '待发货',
+    receiving: '待收货',
+    completed: '已完成',
+    aftersale: '售后中',
+  }
+  return statusMap[status] || '未知状态'
+}
 
 const orders = ref([
   {
     id: 1,
     orderNo: 'PO202401150001',
     projectName: '星巴克深圳万象城店',
-    warehouseName: '深圳工程仓',
     status: 'pending',
     totalAmount: '35,000',
-    createTime: '2024-01-15 14:30',
+    totalQty: 3,
     products: [
-      { id: 1, name: '水泥 P.O 42.5', spec: '50kg/袋', price: '350', quantity: 100, image: 'https://via.placeholder.com/80' }
+      { id: 1, name: '水泥 P.O 42.5', spec: '50kg/袋', price: '350', quantity: 100, image: 'https://picsum.photos/80/80?random=1' }
     ]
   },
   {
     id: 2,
-    orderNo: 'PO202401120002',
-    projectName: '星巴克深圳万象城店',
-    warehouseName: '深圳工程仓',
+    orderNo: 'PO202401140002',
+    projectName: '喜茶广州天河城店',
     status: 'shipping',
-    totalAmount: '28,500',
-    createTime: '2024-01-12 10:20',
+    totalAmount: '12,500',
+    totalQty: 5,
     products: [
-      { id: 2, name: '螺纹钢 HRB400', spec: '12mm', price: '4,200', quantity: 5, image: 'https://via.placeholder.com/80' },
-      { id: 3, name: '防水涂料', spec: 'JS型 20kg/桶', price: '170', quantity: 10, image: 'https://via.placeholder.com/80' }
+      { id: 2, name: 'PPR冷热水管 S3.2', spec: 'DN20 4米/根', price: '32', quantity: 50, image: 'https://picsum.photos/80/80?random=2' }
     ]
   },
   {
     id: 3,
-    orderNo: 'PO202401100003',
-    projectName: '喜茶广州天河城店',
-    warehouseName: '广州工程仓',
-    status: 'completed',
-    totalAmount: '21,500',
-    createTime: '2024-01-10 16:45',
+    orderNo: 'PO202401130003',
+    projectName: '瑞幸咖啡东莞万达店',
+    status: 'receiving',
+    totalAmount: '8,600',
+    totalQty: 2,
     products: [
-      { id: 4, name: 'PVC管材', spec: 'DN110', price: '32', quantity: 200, image: 'https://via.placeholder.com/80' }
+      { id: 3, name: 'BV铜芯线 2.5mm²', spec: '100米/卷', price: '185', quantity: 20, image: 'https://picsum.photos/80/80?random=3' }
     ]
   },
   {
     id: 4,
-    orderNo: 'PO202401080004',
-    projectName: '奈雪深圳海岸城店',
-    warehouseName: '深圳工程仓',
-    status: 'refund',
-    totalAmount: '8,500',
-    createTime: '2024-01-08 09:15',
+    orderNo: 'PO202401100004',
+    projectName: '星巴克深圳万象城店',
+    status: 'completed',
+    totalAmount: '45,200',
+    totalQty: 8,
     products: [
-      { id: 5, name: '电线 BV', spec: '2.5mm²', price: '5.6', quantity: 500, image: 'https://via.placeholder.com/80' }
+      { id: 4, name: '防水涂料 K11', spec: '20kg/桶', price: '280', quantity: 30, image: 'https://picsum.photos/80/80?random=4' }
     ]
-  }
+  },
+  {
+    id: 5,
+    orderNo: 'PO202401080005',
+    projectName: '喜茶广州天河城店',
+    status: 'aftersale',
+    totalAmount: '6,800',
+    totalQty: 1,
+    products: [
+      { id: 5, name: '黄砂 中砂', spec: '吨', price: '95', quantity: 50, image: 'https://picsum.photos/80/80?random=5' }
+    ]
+  },
 ])
 
 const filteredOrders = computed(() => {
-  if (activeStatus.value === 'all') return orders.value
-  return orders.value.filter(order => order.status === activeStatus.value)
+  return orders.value.filter(order => {
+    if (activeStatus.value === 'all') return true
+    return order.status === activeStatus.value
+  })
 })
 
-function getStatusText(status: string) {
-  const map: Record<string, string> = {
-    'pending': '待付款',
-    'shipping': '待收货',
-    'completed': '已完成',
-    'refund': '售后中'
-  }
-  return map[status] || status
-}
-
-function handleSearch() {
-  console.log('搜索订单')
-}
+const searchResults = computed(() => {
+  if (!searchKeyword.value) return []
+  return orders.value.filter(item => 
+    item.orderNo.toLowerCase().includes(searchKeyword.value.toLowerCase()) || 
+    item.projectName.includes(searchKeyword.value) ||
+    item.products.some(p => p.name.includes(searchKeyword.value))
+  )
+})
 
 function handleDetail(item: any) {
-  console.log('订单详情:', item.orderNo)
+  showSearchPopup.value = false
+  emit('navigate', 'order-detail', { orderId: item.id })
 }
 
 function handleCancel(item: any) {
-  console.log('取消订单:', item.orderNo)
+  console.log('取消订单', item)
 }
 
 function handlePay(item: any) {
-  console.log('支付订单:', item.orderNo)
+  emit('navigate', 'payment', { orderId: item.id })
+}
+
+function handleRemind(item: any) {
+  console.log('提醒发货', item)
 }
 
 function handleLogistics(item: any) {
-  console.log('查看物流:', item.orderNo)
+  emit('navigate', 'logistics', { orderId: item.id })
 }
 
 function handleConfirm(item: any) {
-  console.log('确认收货:', item.orderNo)
+  console.log('确认收货', item)
 }
 
-function handleRefund(item: any) {
-  console.log('申请售后:', item.orderNo)
+function handleAftersale(item: any) {
+  emit('navigate', 'aftersale-apply', { orderId: item.id })
+}
+
+function handleAftersaleDetail(item: any) {
+  emit('navigate', 'aftersale-detail', { orderId: item.id })
 }
 
 function handleInvoice(item: any) {
-  console.log('申请开票:', item.orderNo)
+  emit('navigate', 'invoice-apply', { orderId: item.id })
 }
 
-function handleRefundDetail(item: any) {
-  console.log('售后详情:', item.orderNo)
+function handleRebuy(item: any) {
+  emit('navigate', 'market')
 }
 </script>
 
@@ -272,43 +340,64 @@ function handleRefundDetail(item: any) {
   top: 0;
   left: 0;
   right: 0;
-  height: 44px;
-  background: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
+  background: linear-gradient(135deg, #165dff, #4080ff);
+  padding: 10px 16px;
   z-index: 100;
   
-  .header-title {
-    font-size: 16px;
-    font-weight: 500;
-  }
-  
-  .header-action {
-    width: 32px;
-    height: 32px;
+  .search-bar {
     display: flex;
     align-items: center;
-    justify-content: center;
-    color: #4e5969;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 20px;
+    padding: 0 14px;
+    height: 36px;
+    
+    .search-icon {
+      color: #86909c;
+      font-size: 16px;
+      margin-right: 8px;
+    }
+    
+    .search-placeholder {
+      font-size: 14px;
+      color: #86909c;
+    }
   }
 }
 
 .status-tabs {
-  display: flex;
+  position: fixed;
+  top: 56px;
+  left: 0;
+  right: 0;
   background: #fff;
+  display: flex;
+  overflow-x: auto;
   padding: 0 12px;
-  border-bottom: 1px solid #eee;
-  margin-top: 44px;
+  z-index: 99;
   
   .tab-item {
-    padding: 12px 12px;
+    flex-shrink: 0;
+    padding: 14px 16px;
     font-size: 14px;
-    color: #666;
+    color: #4e5969;
     position: relative;
     display: flex;
     align-items: center;
+    gap: 4px;
+    
+    .badge {
+      background: #f53f3f;
+      color: #fff;
+      font-size: 10px;
+      min-width: 16px;
+      height: 16px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 4px;
+    }
     
     &.active {
       color: #165dff;
@@ -321,217 +410,306 @@ function handleRefundDetail(item: any) {
         left: 50%;
         transform: translateX(-50%);
         width: 20px;
-        height: 2px;
-        background: #165dff;
-        border-radius: 1px;
+        height: 3px;
+        background: linear-gradient(90deg, #165dff, #4080ff);
+        border-radius: 2px;
       }
-    }
-    
-    .badge {
-      background: #f53f3f;
-      color: #fff;
-      font-size: 10px;
-      padding: 1px 4px;
-      border-radius: 8px;
-      margin-left: 4px;
-    }
-  }
-}
-
-.project-filter {
-  display: flex;
-  align-items: center;
-  background: #fff;
-  padding: 10px 16px;
-  border-bottom: 1px solid #f2f3f5;
-  
-  .filter-label {
-    font-size: 13px;
-    color: #86909c;
-    margin-right: 12px;
-  }
-  
-  .filter-picker {
-    display: flex;
-    align-items: center;
-    font-size: 13px;
-    color: #1d2129;
-    
-    .placeholder {
-      color: #c9cdd4;
-    }
-    
-    .picker-arrow {
-      margin-left: 4px;
-      color: #c9cdd4;
     }
   }
 }
 
 .order-list {
-  padding: 12px;
-}
-
-.order-item {
-  background: #fff;
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 12px;
+  padding: 106px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   
-  .order-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
+  .order-item {
+    background: #fff;
+    border-radius: 10px;
+    padding: 14px;
     
-    .order-no {
-      font-size: 13px;
-      color: #86909c;
-    }
-    
-    .order-status {
-      font-size: 12px;
-      font-weight: 500;
-      
-      &.pending {
-        color: #ff7d00;
-      }
-      
-      &.shipping {
-        color: #165dff;
-      }
-      
-      &.completed {
-        color: #00b42a;
-      }
-      
-      &.refund {
-        color: #f53f3f;
-      }
-    }
-  }
-  
-  .order-project {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    color: #4e5969;
-    margin-bottom: 10px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #f2f3f5;
-    
-    .project-icon {
-      color: #165dff;
-    }
-  }
-  
-  .order-products {
-    .product-item {
+    .order-header {
       display: flex;
-      gap: 10px;
-      padding: 10px 0;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      
+      .order-no {
+        font-size: 13px;
+        color: #86909c;
+      }
+      
+      .order-status {
+        font-size: 13px;
+        font-weight: 500;
+        
+        &.pending {
+          color: #ff7d00;
+        }
+        
+        &.shipping {
+          color: #165dff;
+        }
+        
+        &.receiving {
+          color: #722ed1;
+        }
+        
+        &.completed {
+          color: #00b42a;
+        }
+        
+        &.aftersale {
+          color: #f53f3f;
+        }
+      }
+    }
+    
+    .order-project {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      color: #1d2129;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
       border-bottom: 1px solid #f2f3f5;
       
-      &:last-child {
-        border-bottom: none;
+      .project-icon {
+        color: #165dff;
+        font-size: 16px;
       }
-      
-      .product-image {
-        width: 60px;
-        height: 60px;
-        border-radius: 4px;
-        overflow: hidden;
-        flex-shrink: 0;
+    }
+    
+    .order-products {
+      .product-item {
+        display: flex;
+        margin-bottom: 10px;
         
-        img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-      }
-      
-      .product-info {
-        flex: 1;
-        
-        .product-name {
-          font-size: 14px;
-          color: #1d2129;
-          margin-bottom: 4px;
+        .product-image {
+          width: 60px;
+          height: 60px;
+          border-radius: 6px;
+          overflow: hidden;
+          flex-shrink: 0;
+          
+          img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
         }
         
-        .product-spec {
-          font-size: 12px;
-          color: #86909c;
-          margin-bottom: 6px;
-        }
-        
-        .product-price {
+        .product-info {
+          flex: 1;
+          margin-left: 10px;
           display: flex;
+          flex-direction: column;
           justify-content: space-between;
           
-          .price {
-            font-size: 14px;
-            color: #f53f3f;
+          .product-name {
+            font-size: 13px;
+            color: #1d2129;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
           }
           
-          .qty {
+          .product-spec {
+            font-size: 11px;
+            color: #86909c;
+          }
+          
+          .product-price {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            
+            .price {
+              font-size: 14px;
+              font-weight: 600;
+              color: #f53f3f;
+            }
+            
+            .qty {
+              font-size: 12px;
+              color: #86909c;
+            }
+          }
+        }
+      }
+    }
+    
+    .order-summary {
+      padding: 10px 0;
+      border-top: 1px solid #f2f3f5;
+      
+      .summary-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        
+        .label {
+          font-size: 12px;
+          color: #86909c;
+        }
+        
+        .value {
+          font-size: 12px;
+          color: #1d2129;
+          
+          &.price {
+            font-size: 15px;
+            font-weight: 600;
+            color: #f53f3f;
+          }
+        }
+      }
+    }
+    
+    .order-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #f2f3f5;
+      
+      .action-btn {
+        padding: 6px 16px;
+        border-radius: 16px;
+        font-size: 12px;
+        border: 1px solid #e5e6eb;
+        color: #4e5969;
+        
+        &.primary {
+          background: linear-gradient(135deg, #165dff, #4080ff);
+          color: #fff;
+          border: none;
+        }
+        
+        &.reminder {
+          border-color: #165dff;
+          color: #165dff;
+        }
+      }
+    }
+  }
+}
+
+.empty-state {
+  padding: 80px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #c9cdd4;
+  font-size: 14px;
+}
+
+.search-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  
+  .popup-mask {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+  }
+  
+  .popup-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    
+    .search-header {
+      display: flex;
+      align-items: center;
+      padding: 10px 16px;
+      gap: 12px;
+      border-bottom: 1px solid #f2f3f5;
+      
+      .search-input-wrap {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        background: #f2f3f5;
+        border-radius: 20px;
+        padding: 0 12px;
+        height: 36px;
+        
+        .search-icon {
+          color: #86909c;
+          font-size: 16px;
+        }
+        
+        .search-input {
+          flex: 1;
+          border: none;
+          background: transparent;
+          margin-left: 8px;
+          font-size: 14px;
+          outline: none;
+          
+          &::placeholder {
+            color: #c9cdd4;
+          }
+        }
+        
+        .search-clear {
+          color: #c9cdd4;
+          font-size: 16px;
+        }
+      }
+      
+      .search-cancel {
+        font-size: 14px;
+        color: #4e5969;
+      }
+    }
+    
+    .search-result {
+      flex: 1;
+      overflow-y: auto;
+      
+      .result-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 60px 20px;
+        gap: 12px;
+        color: #c9cdd4;
+        font-size: 14px;
+      }
+      
+      .result-list {
+        .result-item {
+          padding: 14px 16px;
+          border-bottom: 1px solid #f2f3f5;
+          
+          .item-order-no {
+            font-size: 14px;
+            color: #1d2129;
+            margin-bottom: 4px;
+          }
+          
+          .item-project {
             font-size: 12px;
             color: #86909c;
           }
         }
-      }
-    }
-  }
-  
-  .order-summary {
-    padding: 10px 0;
-    border-top: 1px solid #f2f3f5;
-    
-    .summary-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 12px;
-      padding: 4px 0;
-      
-      .label {
-        color: #86909c;
-      }
-      
-      .value {
-        color: #1d2129;
-        
-        &.price {
-          color: #f53f3f;
-          font-weight: 500;
-        }
-      }
-      
-      &.total {
-        margin-top: 4px;
-        padding-top: 8px;
-        border-top: 1px dashed #f2f3f5;
-      }
-    }
-  }
-  
-  .order-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    padding-top: 10px;
-    border-top: 1px solid #f2f3f5;
-    
-    .action-btn {
-      padding: 6px 12px;
-      border-radius: 4px;
-      font-size: 12px;
-      background: #f2f3f5;
-      color: #4e5969;
-      
-      &.primary {
-        background: #165dff;
-        color: #fff;
       }
     }
   }
@@ -546,24 +724,28 @@ function handleRefundDetail(item: any) {
   background: #fff;
   display: flex;
   border-top: 1px solid #e5e6eb;
-}
-
-.tabbar-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  color: #86909c;
+  z-index: 98;
   
-  &.active {
-    color: #165dff;
-  }
-  
-  :deep(.arco-icon) {
-    font-size: 20px;
-    margin-bottom: 2px;
+  .tabbar-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    color: #86909c;
+    
+    svg {
+      font-size: 20px;
+    }
+    
+    span {
+      font-size: 10px;
+    }
+    
+    &.active {
+      color: #165dff;
+    }
   }
 }
 </style>

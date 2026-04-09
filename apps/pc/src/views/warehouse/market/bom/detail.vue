@@ -49,22 +49,6 @@
           </div>
 
           <a-divider />
-
-          <div class="purchase-box">
-            <div class="quantity-row">
-              <span class="label">购买数量：</span>
-              <a-input-number v-model="quantity" :min="1" :max="999" />
-              <span class="stock-hint">（库存充足）</span>
-            </div>
-            <div class="action-row">
-              <a-button type="primary" size="large" @click="handleBuy">
-                立即购买
-              </a-button>
-              <a-button size="large" @click="handleAddToCart">
-                加入购物车
-              </a-button>
-            </div>
-          </div>
         </a-col>
       </a-row>
     </a-card>
@@ -271,7 +255,7 @@ function handleBuy() {
     Message.warning('请至少选择一个SKU')
     return
   }
-  router.push(`/warehouse/market/bom/order/${bom.value.id}`)
+  router.push(`/warehouse/product/bom/order/${bom.value.id}`)
 }
 
 function handleAddToCart() {

@@ -362,7 +362,7 @@ function handleExport() {
 
 function handleViewInbound(inboundNo: string) {
   router.push({
-    path: '/warehouse/stock/in/detail',
+    path: '/warehouse/warehouse/in/detail',
     query: { orderNo: inboundNo },
   })
 }

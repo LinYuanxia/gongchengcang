@@ -184,7 +184,7 @@
             </a-table-column>
             <a-table-column title="供货价" :width="120">
               <template #cell="{ record }">
-                <a-input-number v-model="record.supplyPrice" size="small" :min="0" :precision="2" style="width: 100%">
+                <a-input-number v-model="record.supplyPrice" size="small" :min="0" :precision="2" style="width: 100%" disabled>
                   <template #prefix>¥</template>
                 </a-input-number>
               </template>
@@ -389,7 +389,7 @@ const selectedSkus = computed(() => {
 const selectedSkuList = computed(() => {
   return selectedSkus.value.map(sku => ({
     ...sku,
-    supplyPrice: sku.supplyPrice,
+    supplyPrice: sku.supplyPrice ?? sku.platformPrice,
     estimatedStock: sku.estimatedStock,
     minOrderQty: sku.minOrderQty,
     leadTime: sku.leadTime,

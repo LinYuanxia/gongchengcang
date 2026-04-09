@@ -158,7 +158,7 @@ function handleSearch() {
 }
 
 function handleAdd() {
-  router.push('/warehouse/stock/out/create')
+  router.push('/warehouse/warehouse/out/create')
 }
 
 function handleExport() {

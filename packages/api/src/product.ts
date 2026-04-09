@@ -39,6 +39,7 @@ import {
   getMockSkuDetail,
   createMockSku,
   updateMockSku,
+  deleteMockSku,
   batchUpdateMockSkuStatus,
   getMockSkuListBySpu,
   getMockProductStatistics,
@@ -208,6 +209,15 @@ export function updateSku(skuId: string, data: UpdateSkuParams) {
     return Promise.resolve(sku)
   }
   return Promise.resolve(null)
+}
+
+export function deleteSku(skuId: string) {
+  if (isMock) {
+    const result = deleteMockSku(skuId)
+    if (!result.success) return Promise.reject(new Error(result.message))
+    return Promise.resolve()
+  }
+  return Promise.resolve()
 }
 
 export function batchUpdateSkuStatus(skuIds: string[], status: SkuStatus) {

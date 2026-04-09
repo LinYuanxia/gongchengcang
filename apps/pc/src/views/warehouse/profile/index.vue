@@ -132,102 +132,6 @@
         </a-table>
       </a-tab-pane>
 
-      <a-tab-pane key="custody" title="托管账户">
-        <a-descriptions title="账户信息" :column="2" bordered>
-          <a-descriptions-item label="账户ID">8888000001234567</a-descriptions-item>
-          <a-descriptions-item label="账户状态">
-            <a-tag color="green">正常</a-tag>
-          </a-descriptions-item>
-          <a-descriptions-item label="开户状态">
-            <a-tag color="green">已开户</a-tag>
-          </a-descriptions-item>
-          <a-descriptions-item label="开户时间">2024-01-15 10:30:00</a-descriptions-item>
-          <a-descriptions-item label="绑卡状态">
-            <a-tag color="green">已绑卡</a-tag>
-          </a-descriptions-item>
-          <a-descriptions-item label="绑卡时间">2024-01-15 11:00:00</a-descriptions-item>
-        </a-descriptions>
-
-        <a-descriptions title="资金信息" :column="3" bordered class="mt-16">
-          <a-descriptions-item label="可用余额">
-            <span class="money">¥520,680.50</span>
-          </a-descriptions-item>
-          <a-descriptions-item label="冻结余额">
-            <span class="money frozen">¥50,000.00</span>
-          </a-descriptions-item>
-          <a-descriptions-item label="总余额">
-            <span class="money total">¥570,680.50</span>
-          </a-descriptions-item>
-        </a-descriptions>
-
-        <div class="section-title mt-16">
-          <span>绑卡记录</span>
-          <a-button type="primary" size="small" @click="handleBindCard">
-            <template #icon><icon-plus /></template>
-            绑定银行卡
-          </a-button>
-        </div>
-        <a-table :data="bankCards" :pagination="false" size="small" class="mt-8">
-          <template #columns>
-            <a-table-column title="银行名称" data-index="bankName" :width="150" />
-            <a-table-column title="银行账号" :width="180">
-              <template #cell="{ record }">
-                {{ record.bankAccountMasked }}
-              </template>
-            </a-table-column>
-            <a-table-column title="卡类型" :width="100">
-              <template #cell="{ record }">
-                <a-tag :color="record.cardType === 'debit' ? 'blue' : 'orange'">
-                  {{ record.cardType === 'debit' ? '借记卡' : '信用卡' }}
-                </a-tag>
-              </template>
-            </a-table-column>
-            <a-table-column title="绑定状态" :width="100">
-              <template #cell="{ record }">
-                <a-tag :color="record.bindStatus === 'bound' ? 'green' : 'orange'">
-                  {{ record.bindStatus === 'bound' ? '已绑定' : '绑定中' }}
-                </a-tag>
-              </template>
-            </a-table-column>
-            <a-table-column title="绑定时间" data-index="bindTime" :width="180" />
-            <a-table-column title="默认" :width="80">
-              <template #cell="{ record }">
-                <a-tag v-if="record.isDefault" color="blue">默认</a-tag>
-              </template>
-            </a-table-column>
-            <a-table-column title="操作" :width="100">
-              <template #cell="{ record }">
-                <a-button type="text" size="small" @click="handleSetDefault(record)" v-if="!record.isDefault">设为默认</a-button>
-              </template>
-            </a-table-column>
-          </template>
-        </a-table>
-
-        <div class="section-title mt-16">
-          <span>开户记录</span>
-        </div>
-        <a-table :data="openRecords" :pagination="false" size="small" class="mt-8">
-          <template #columns>
-            <a-table-column title="申请类型" :width="120">
-              <template #cell="{ record }">
-                <a-tag :color="record.applyType === 'open' ? 'blue' : 'orange'">
-                  {{ record.applyType === 'open' ? '开户' : '变更' }}
-                </a-tag>
-              </template>
-            </a-table-column>
-            <a-table-column title="提交时间" data-index="submitTime" :width="180" />
-            <a-table-column title="审核状态" :width="100">
-              <template #cell="{ record }">
-                <a-tag :color="record.status === 'approved' ? 'green' : record.status === 'pending' ? 'orange' : 'red'">
-                  {{ record.status === 'approved' ? '已通过' : record.status === 'pending' ? '审核中' : '已拒绝' }}
-                </a-tag>
-              </template>
-            </a-table-column>
-            <a-table-column title="完成时间" data-index="completeTime" :width="180" />
-            <a-table-column title="备注" data-index="remark" />
-          </template>
-        </a-table>
-      </a-tab-pane>
     </a-tabs>
 
     <a-modal v-model:visible="qualificationVisible" title="添加资质" :width="500" @ok="handleSaveQualification">
@@ -262,28 +166,6 @@
         </a-form-item>
       </a-form>
     </a-modal>
-
-    <a-modal v-model:visible="bindCardVisible" title="绑定银行卡" :width="500" @ok="handleConfirmBindCard">
-      <a-form :model="bindCardForm" layout="vertical">
-        <a-form-item label="开户银行" :rules="[{ required: true, message: '请选择开户银行' }]">
-          <a-select v-model="bindCardForm.bankName" placeholder="请选择开户银行">
-            <a-option value="招商银行">招商银行</a-option>
-            <a-option value="工商银行">工商银行</a-option>
-            <a-option value="建设银行">建设银行</a-option>
-            <a-option value="农业银行">农业银行</a-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item label="银行卡号" :rules="[{ required: true, message: '请输入银行卡号' }]">
-          <a-input v-model="bindCardForm.cardNo" placeholder="请输入银行卡号" />
-        </a-form-item>
-        <a-form-item label="开户行名称" :rules="[{ required: true, message: '请输入开户行名称' }]">
-          <a-input v-model="bindCardForm.branchName" placeholder="请输入开户行名称" />
-        </a-form-item>
-        <a-form-item label="预留手机号" :rules="[{ required: true, message: '请输入预留手机号' }]">
-          <a-input v-model="bindCardForm.phone" placeholder="请输入银行预留手机号" />
-        </a-form-item>
-      </a-form>
-    </a-modal>
   </div>
 </template>
 
@@ -294,7 +176,6 @@ import { Message, Modal } from '@arco-design/web-vue'
 
 const router = useRouter()
 const qualificationVisible = ref(false)
-const bindCardVisible = ref(false)
 const fileList = ref([])
 
 const qualificationForm = reactive({
@@ -302,13 +183,6 @@ const qualificationForm = reactive({
   certNo: '',
   issueDate: '',
   expireDate: '',
-})
-
-const bindCardForm = reactive({
-  bankName: '',
-  cardNo: '',
-  branchName: '',
-  phone: '',
 })
 
 const contracts = ref([
@@ -359,37 +233,7 @@ const qualifications = ref([
   },
 ])
 
-const bankCards = ref([
-  {
-    id: '1',
-    bankName: '招商银行',
-    bankAccountMasked: '6214 **** **** 5678',
-    cardType: 'debit',
-    bindStatus: 'bound',
-    bindTime: '2024-01-15 11:00:00',
-    isDefault: true,
-  },
-  {
-    id: '2',
-    bankName: '工商银行',
-    bankAccountMasked: '6222 **** **** 1234',
-    cardType: 'debit',
-    bindStatus: 'bound',
-    bindTime: '2024-02-20 15:30:00',
-    isDefault: false,
-  },
-])
 
-const openRecords = ref([
-  {
-    id: '1',
-    applyType: 'open',
-    submitTime: '2024-01-10 09:00:00',
-    status: 'approved',
-    completeTime: '2024-01-15 10:30:00',
-    remark: '首次开户',
-  },
-])
 
 function handleAddQualification() {
   Object.assign(qualificationForm, {
@@ -420,28 +264,6 @@ function handleDeleteQualification(record: any) {
       Message.success('删除成功')
     },
   })
-}
-
-function handleBindCard() {
-  Object.assign(bindCardForm, {
-    bankName: '',
-    cardNo: '',
-    branchName: '',
-    phone: '',
-  })
-  bindCardVisible.value = true
-}
-
-function handleConfirmBindCard() {
-  Message.success('绑卡申请已提交，请等待验证')
-  bindCardVisible.value = false
-}
-
-function handleSetDefault(record: any) {
-  bankCards.value.forEach(card => {
-    card.isDefault = card.id === record.id
-  })
-  Message.success('已设为默认银行卡')
 }
 
 function getContractTypeColor(type: string) {

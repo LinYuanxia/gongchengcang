@@ -19,6 +19,12 @@
       </template>
     </a-page-header>
 
+    <SkuManageDrawer
+      v-model:visible="skuManageVisible"
+      :spu="spuData"
+      @success="handleSkuManageSuccess"
+    />
+
     <div class="page-content">
       <a-spin :loading="loading" style="width: 100%">
         <a-card title="基本信息" class="section-card">
@@ -166,12 +172,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import type { Spu, Sku, SplitRule } from '@gongchengcang/types'
 import { SPLIT_RULE_CATEGORY_OPTIONS } from '@gongchengcang/types'
 import { getSpuDetail, getSkuList, getSplitRulesBySpuId } from '@gongchengcang/api'
+import SkuManageDrawer from './components/SkuManageDrawer.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -182,6 +189,7 @@ const loading = ref(false)
 const spuData = ref<Partial<Spu>>({})
 const skuList = ref<Sku[]>([])
 const splitRules = ref<SplitRule[]>([])
+const skuManageVisible = ref(false)
 
 onMounted(async () => {
   await loadSpuDetail()
@@ -214,10 +222,11 @@ function handleEdit() {
 }
 
 function handleManageSku() {
-  router.push({
-    path: '/product/sku',
-    query: { spuId: spuId.value, spuName: spuData.value.spuName }
-  })
+  skuManageVisible.value = true
+}
+
+function handleSkuManageSuccess() {
+  loadSpuDetail()
 }
 
 function getRuleCategoryLabel(category: string) {

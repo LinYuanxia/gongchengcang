@@ -138,7 +138,7 @@ function handleBack() {
 }
 
 function handleWarehouseClick(warehouse: any) {
-  emit('navigate', 'product-detail', { warehouseId: warehouse.id })
+  emit('navigate', 'warehouse-detail', { warehouseId: warehouse.id })
 }
 </script>
 

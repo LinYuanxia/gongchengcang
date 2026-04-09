@@ -2,15 +2,20 @@
   <div class="spu-detail-page">
     <a-page-header
       :title="pageTitle"
-      :subtitle="isFromPlatform ? '从平台商品库选择，填写供货信息' : '供应商商品信息管理'"
+      :subtitle="isFromPlatform ? '从平台商品库选择，填写供货信息' : '供应商商品信息查看'"
       @back="handleBack"
     >
-      <template #extra>
+      <template #extra v-if="!isEdit">
         <a-space>
           <a-button @click="handleBack">取消</a-button>
           <a-button type="primary" :loading="submitting" @click="handleSave">
             提交审核
           </a-button>
+        </a-space>
+      </template>
+      <template #extra v-else>
+        <a-space>
+          <a-button @click="handleBack">返回</a-button>
         </a-space>
       </template>
     </a-page-header>
@@ -32,7 +37,7 @@
                     v-model="formData.spuName" 
                     placeholder="请输入SPU名称" 
                     :max-length="100"
-                    :disabled="isFromPlatform"
+                    :disabled="isFromPlatform || isEdit"
                   />
                 </a-form-item>
               </a-col>
@@ -48,7 +53,7 @@
                     :options="categoryTree"
                     placeholder="请选择所属分类"
                     :field-names="{ value: 'categoryId', label: 'categoryName', children: 'children' }"
-                    :disabled="isFromPlatform"
+                    :disabled="isFromPlatform || isEdit"
                     @change="handleCategoryChange"
                   />
                 </a-form-item>
@@ -62,7 +67,7 @@
                     placeholder="请选择或输入计量单位" 
                     allow-create 
                     allow-search
-                    :disabled="isFromPlatform"
+                    :disabled="isFromPlatform || isEdit"
                   >
                     <a-option v-for="item in unitOptions" :key="item" :value="item">{{ item }}</a-option>
                   </a-select>
@@ -78,7 +83,7 @@
                     :limit="1"
                     accept="image/*"
                     :auto-upload="false"
-                    :disabled="isFromPlatform"
+                    :disabled="isFromPlatform || isEdit"
                     @change="handleMainImageChange"
                   >
                     <template #upload-button>
@@ -99,7 +104,7 @@
                     accept="image/*"
                     :auto-upload="false"
                     multiple
-                    :disabled="isFromPlatform"
+                    :disabled="isFromPlatform || isEdit"
                     @change="handleImagesChange"
                   >
                     <template #upload-button>
@@ -121,7 +126,7 @@
                     :max-length="500" 
                     show-word-limit 
                     :auto-size="{ minRows: 3, maxRows: 6 }"
-                    :disabled="isFromPlatform"
+                    :disabled="isFromPlatform || isEdit"
                   />
                 </a-form-item>
               </a-col>
@@ -129,18 +134,6 @@
           </a-card>
 
           <a-card title="规格属性" class="section-card">
-            <template #extra>
-              <a-space>
-                <a-button type="primary" size="small" @click="addSpec">
-                  <template #icon><icon-plus /></template>
-                  添加规格
-                </a-button>
-                <a-button type="outline" size="small" @click="showAddSkuModal">
-                  <template #icon><icon-plus /></template>
-                  添加SKU
-                </a-button>
-              </a-space>
-            </template>
 
             <div v-if="formData.specList.length === 0" class="empty-spec">
               <a-empty description="暂无规格属性，请添加规格或直接添加SKU" />
@@ -156,7 +149,7 @@
                       allow-create
                       allow-search
                       style="width: 200px"
-                      :disabled="isFromPlatform"
+                      :disabled="isFromPlatform || isEdit"
                       @change="(val) => handleSpecNameChange(specIndex, val)"
                     >
                       <a-option v-for="attr in availableAttrList(specIndex)" :key="attr.attrId" :value="attr.attrName">
@@ -164,7 +157,7 @@
                       </a-option>
                     </a-select>
                   </div>
-                  <a-button type="text" status="danger" @click="removeSpec(specIndex)" :disabled="isFromPlatform">
+                  <a-button type="text" status="danger" @click="removeSpec(specIndex)" :disabled="isFromPlatform || isEdit">
                     <icon-delete />
                   </a-button>
                 </div>
@@ -174,7 +167,7 @@
                     :key="valueIndex"
                     closable
                     color="arcoblue"
-                    :disabled="isFromPlatform"
+                    :disabled="isFromPlatform || isEdit"
                     @close="removeSpecValue(specIndex, valueIndex)"
                   >
                     {{ value }}
@@ -186,7 +179,7 @@
                     allow-search
                     style="width: 150px"
                     size="small"
-                    :disabled="isFromPlatform"
+                    :disabled="isFromPlatform || isEdit"
                     @change="(val) => addSpecValue(specIndex, val)"
                   >
                     <a-option v-for="optVal in getAvailableOptionValues(specIndex)" :key="optVal" :value="optVal">
@@ -208,7 +201,6 @@
           <a-card title="SKU列表" class="section-card">
             <template #extra>
               <a-space>
-                <a-button size="small" @click="showBatchPriceModal">批量设置价格</a-button>
                 <a-button size="small" @click="showBatchSupplyModal">批量设置供货信息</a-button>
                 <span class="sku-count">共 {{ formData.skuList.length }} 个SKU</span>
               </a-space>
@@ -227,7 +219,7 @@
                       :show-file-list="false"
                       :auto-upload="false"
                       accept="image/*"
-                      :disabled="isFromPlatform"
+                      :disabled="isFromPlatform || isEdit"
                       @change="(fileList: any[]) => handleSkuImageChange(rowIndex, fileList)"
                     >
                       <template #upload-button>
@@ -248,7 +240,7 @@
                 </a-table-column>
                 <a-table-column title="SKU名称" :width="150">
                   <template #cell="{ record }">
-                    <a-input v-model="record.skuName" size="small" placeholder="SKU名称" :disabled="isFromPlatform" />
+                    <a-input v-model="record.skuName" size="small" placeholder="SKU名称" :disabled="isFromPlatform || isEdit" />
                   </template>
                 </a-table-column>
                 <a-table-column title="规格组合" :width="180">
@@ -258,16 +250,9 @@
                     </span>
                   </template>
                 </a-table-column>
-                <a-table-column title="建议售价" :width="120">
-                  <template #cell="{ record }">
-                    <a-input-number v-model="record.suggestPrice" size="small" placeholder="建议售价" :min="0" :precision="2">
-                      <template #prefix>¥</template>
-                    </a-input-number>
-                  </template>
-                </a-table-column>
                 <a-table-column title="供货价" :width="120">
                   <template #cell="{ record }">
-                    <a-input-number v-model="record.supplyPrice" size="small" placeholder="供货价" :min="0" :precision="2">
+                    <a-input-number v-model="record.supplyPrice" size="small" placeholder="供货价" :min="0" :precision="2" disabled>
                       <template #prefix>¥</template>
                     </a-input-number>
                   </template>
@@ -300,7 +285,7 @@
                       size="small" 
                       status="danger" 
                       @click="removeSku(rowIndex)"
-                      :disabled="isFromPlatform"
+                      :disabled="isFromPlatform || isEdit"
                     >
                       删除
                     </a-button>
@@ -317,21 +302,14 @@
       <a-form :model="batchPrice" layout="vertical">
         <a-row :gutter="16">
           <a-col :span="12">
-            <a-form-item label="建议售价">
-              <a-input-number v-model="batchPrice.suggestPrice" placeholder="建议售价" :min="0" :precision="2" style="width: 100%">
-                <template #prefix>¥</template>
-              </a-input-number>
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
             <a-form-item label="供货价">
-              <a-input-number v-model="batchPrice.supplyPrice" placeholder="供货价" :min="0" :precision="2" style="width: 100%">
+              <a-input-number v-model="batchPrice.supplyPrice" placeholder="供货价" :min="0" :precision="2" style="width: 100%" disabled>
                 <template #prefix>¥</template>
               </a-input-number>
             </a-form-item>
           </a-col>
         </a-row>
-        <a-alert type="info">填写的价格将应用到所有SKU，留空的价格字段不会被修改</a-alert>
+        <a-alert type="info">供货价由平台标准商品统一设置，不可修改</a-alert>
       </a-form>
     </a-modal>
 
@@ -447,7 +425,7 @@ const isFromPlatform = computed(() => route.query.source === 'platform')
 
 const pageTitle = computed(() => {
   if (isFromPlatform.value) return '申请供货'
-  if (isEdit.value) return '编辑SPU'
+  if (isEdit.value) return '查看SPU'
   return '新增SPU'
 })
 

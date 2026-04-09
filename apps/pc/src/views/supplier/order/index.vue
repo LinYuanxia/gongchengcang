@@ -4,15 +4,16 @@
       <template #title>
         <span>订单管理</span>
       </template>
-      <template #extra>
-        <a-radio-group v-model="viewMode" type="button">
-          <a-radio value="all">全部</a-radio>
-          <a-radio value="pending">待确认</a-radio>
-          <a-radio value="confirmed">已确认</a-radio>
-          <a-radio value="shipped">已发货</a-radio>
-          <a-radio value="completed">已完成</a-radio>
-        </a-radio-group>
-      </template>
+
+      <a-tabs v-model:active-tab="activeTab" class="order-tabs">
+        <a-tab-pane key="all" :title="`全部 (${orderStats.total})`" />
+        <a-tab-pane key="pending" :title="`待确认 (${orderStats.pending})`" />
+        <a-tab-pane key="unpaid" :title="`待支付 (${orderStats.unpaid})`" />
+        <a-tab-pane key="undelivered" :title="`待发货 (${orderStats.undelivered})`" />
+        <a-tab-pane key="delivered" :title="`待收货 (${orderStats.delivered})`" />
+        <a-tab-pane key="completed" :title="`已完成 (${orderStats.completed})`" />
+        <a-tab-pane key="refunded" :title="`已退款 (${orderStats.refunded})`" />
+      </a-tabs>
 
       <a-table
         :data="filteredOrders"
@@ -52,11 +53,35 @@
               </span>
             </template>
           </a-table-column>
-          <a-table-column title="订单状态" :width="100">
+          <a-table-column title="订单状态" :width="120">
             <template #cell="{ record }">
-              <a-tag :color="getStatusColor(record.status)">
-                {{ getStatusText(record.status) }}
-              </a-tag>
+              <a-space direction="vertical" size="mini">
+                <a-tag :color="getStatusColor(record.status)">
+                  {{ getStatusText(record.status) }}
+                </a-tag>
+                <a-tag 
+                  v-if="record.hasAfterSales || record.afterSalesStatus === 'processing'" 
+                  color="red" 
+                  size="small"
+                >
+                  🔴 售后中
+                </a-tag>
+                <a-tag 
+                  v-else-if="record.afterSalesStatus === 'resolved' || record.status === 'refunded'" 
+                  color="green" 
+                  size="small"
+                >
+                  🟡 已退款
+                </a-tag>
+              </a-space>
+            </template>
+          </a-table-column>
+          <a-table-column title="售后金额" :width="120" align="right">
+            <template #cell="{ record }">
+              <span v-if="record.refundAmount > 0" class="text-danger">
+                -¥{{ record.refundAmount?.toLocaleString() }}
+              </span>
+              <span v-else>-</span>
             </template>
           </a-table-column>
           <a-table-column title="下单时间" :width="160">
@@ -64,9 +89,9 @@
               {{ record.createTime }}
             </template>
           </a-table-column>
-          <a-table-column title="操作" :width="200" fixed="right">
+          <a-table-column title="操作" :width="260" fixed="right">
             <template #cell="{ record }">
-              <a-space>
+              <a-space wrap>
                 <a-button type="text" size="small" @click="handleView(record)">查看</a-button>
                 <a-button 
                   v-if="record.status === 'pending'" 
@@ -78,7 +103,25 @@
                   确认接单
                 </a-button>
                 <a-button 
-                  v-if="record.status === 'confirmed'" 
+                  v-if="record.status === 'confirmed' && record.paymentStatus === 'unpaid'" 
+                  type="text" 
+                  size="small"
+                  status="danger"
+                  @click="handleCancelOrder(record)"
+                >
+                  取消接单
+                </a-button>
+                <a-button 
+                  v-if="record.status === 'confirmed' && record.paymentStatus === 'unpaid'" 
+                  type="text" 
+                  size="small"
+                  status="warning"
+                  @click="handleVerifyPayment(record)"
+                >
+                  审核支付
+                </a-button>
+                <a-button 
+                  v-if="record.status === 'confirmed' && record.paymentStatus === 'paid'" 
                   type="text" 
                   size="small"
                   status="warning"
@@ -90,17 +133,26 @@
                   v-if="record.status === 'shipped'" 
                   type="text" 
                   size="small"
-                  @click="handleViewLogistics(record)"
+                  @click="handleTrackLogistics(record)"
                 >
                   物流跟踪
                 </a-button>
                 <a-button 
-                  v-if="record.status === 'completed' && record.invoiceStatus !== 'issued'" 
+                  v-if="record.status !== 'refunded' && record.status !== 'cancelled'" 
                   type="text" 
                   size="small"
-                  @click="handleInvoice(record)"
+                  status="danger"
+                  @click="handleApplyRefund(record)"
                 >
-                  开具发票
+                  申请退款
+                </a-button>
+                <a-button 
+                  v-if="record.hasAfterSales || record.afterSalesStatus" 
+                  type="text" 
+                  size="small"
+                  @click="handleViewAfterSales(record)"
+                >
+                  查看售后
                 </a-button>
               </a-space>
             </template>
@@ -269,29 +321,88 @@
     <a-modal 
       v-model:visible="confirmVisible" 
       title="确认接单" 
-      :width="800"
+      :width="1000"
       @ok="handleConfirmSubmit"
       @cancel="confirmVisible = false"
     >
       <a-alert type="info" style="margin-bottom: 16px">
-        确认接单后，请按约定时间发货。如有特殊情况请提前沟通。
+        <template #message>
+          <div>支持部分接单，请为每种商品选择「确认接单」或「无法供货」。无法供货的商品请填写原因。</div>
+        </template>
       </a-alert>
 
-      <a-descriptions :column="2" bordered size="small">
+      <a-descriptions :column="3" bordered size="small">
         <a-descriptions-item label="订单编号">{{ currentOrder.orderNo }}</a-descriptions-item>
         <a-descriptions-item label="采购方">{{ currentOrder.warehouseName }}</a-descriptions-item>
-        <a-descriptions-item label="商品数量">{{ currentOrder.skuCount }} 种</a-descriptions-item>
-        <a-descriptions-item label="订单金额">¥{{ currentOrder.totalAmount?.toLocaleString() }}</a-descriptions-item>
         <a-descriptions-item label="要求交货日期">{{ currentOrder.deliveryDate }}</a-descriptions-item>
-        <a-descriptions-item label="下单时间">{{ currentOrder.createTime }}</a-descriptions-item>
       </a-descriptions>
 
+      <a-divider>接单确认清单</a-divider>
+
+      <div class="confirm-summary" style="margin-bottom: 16px">
+        <a-tag color="green">确认接单：{{ confirmItems.filter(i => i.status === 'accept').length }} 种</a-tag>
+        <a-tag color="red" style="margin-left: 8px">无法供货：{{ confirmItems.filter(i => i.status === 'reject').length }} 种</a-tag>
+        <a-tag color="orange" style="margin-left: 8px">待确认：{{ confirmItems.filter(i => !i.status).length }} 种</a-tag>
+      </div>
+
+      <a-table :data="confirmItems" :pagination="false">
+        <template #columns>
+          <a-table-column title="商品名称" data-index="productName" :width="200" />
+          <a-table-column title="规格" data-index="specValues" :width="120" />
+          <a-table-column title="采购数量" data-index="quantity" :width="100" align="center" />
+          <a-table-column title="接单状态" :width="130">
+            <template #cell="{ record }">
+              <a-radio-group v-model="record.status" size="small">
+                <a-radio value="accept">确认接单</a-radio>
+                <a-radio value="reject">无法供货</a-radio>
+              </a-radio-group>
+            </template>
+          </a-table-column>
+          <a-table-column title="预计发货时间" :width="160" v-if="confirmItems.some(i => i.status === 'accept')">
+            <template #cell="{ record }">
+              <a-date-picker 
+                v-if="record.status === 'accept'" 
+                v-model="record.estimatedShipDate" 
+                size="small" 
+                style="width: 100%"
+                placeholder="选择发货时间"
+              />
+              <span v-else class="text-disabled">-</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="无法供货原因" :width="160" v-if="confirmItems.some(i => i.status === 'reject')">
+            <template #cell="{ record }">
+              <a-select 
+                v-if="record.status === 'reject'" 
+                v-model="record.rejectReason" 
+                size="small" 
+                placeholder="选择原因"
+                style="width: 100%"
+              >
+                <a-option value="stock">库存不足</a-option>
+                <a-option value="stop_production">停产</a-option>
+                <a-option value="price">价格变动</a-option>
+                <a-option value="other">其他原因</a-option>
+              </a-select>
+              <span v-else class="text-disabled">-</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="备注" :width="180">
+            <template #cell="{ record }">
+              <a-input 
+                v-model="record.remark" 
+                size="small" 
+                placeholder="备注说明" 
+                :max-length="100"
+              />
+            </template>
+          </a-table-column>
+        </template>
+      </a-table>
+
       <a-form :model="confirmForm" layout="vertical" style="margin-top: 16px">
-        <a-form-item label="预计发货时间" required>
-          <a-date-picker v-model="confirmForm.estimatedShipDate" style="width: 100%" />
-        </a-form-item>
-        <a-form-item label="备注">
-          <a-textarea v-model="confirmForm.remark" placeholder="如有特殊情况请备注说明" :max-length="200" />
+        <a-form-item label="整体备注">
+          <a-textarea v-model="confirmForm.remark" placeholder="整体接单说明（选填）" :max-length="200" />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -342,56 +453,237 @@
     </a-modal>
 
     <a-modal
+      v-model:visible="logisticsModalVisible"
+      title="物流跟踪"
+      :width="700"
+      :footer="false"
+    >
+      <a-form layout="inline" style="margin-bottom: 16px" v-if="orderLogisticsList.length > 1">
+        <a-form-item label="选择物流">
+          <a-select v-model="selectedLogisticsId" style="width: 400px" @change="handleLogisticsChange">
+            <a-option v-for="logistics in orderLogisticsList" :key="logistics.id" :value="logistics.id">
+              {{ logistics.company }} - {{ logistics.no }}
+            </a-option>
+          </a-select>
+        </a-form-item>
+      </a-form>
+
+      <a-descriptions :column="2" bordered>
+        <a-descriptions-item label="发货单号">{{ currentLogistics.shipmentNo }}</a-descriptions-item>
+        <a-descriptions-item label="发货时间">{{ currentLogistics.shipTime }}</a-descriptions-item>
+        <a-descriptions-item label="物流公司">{{ currentLogistics.company }}</a-descriptions-item>
+        <a-descriptions-item label="物流单号">{{ currentLogistics.no }}</a-descriptions-item>
+      </a-descriptions>
+
+      <a-divider />
+
+      <a-timeline>
+        <a-timeline-item v-for="(trace, index) in currentLogisticsTraces" :key="index" :label="trace.time">
+          {{ trace.content }}
+          <template #dot v-if="index === 0">
+            <icon-check-circle-fill style="color: #00b42a" />
+          </template>
+        </a-timeline-item>
+      </a-timeline>
+    </a-modal>
+
+    <a-modal
       v-model:visible="invoiceVisible"
       title="开具发票"
-      :width="600"
+      :width="800"
       @ok="handleInvoiceSubmit"
       @cancel="invoiceVisible = false"
     >
-      <a-alert type="info" style="margin-bottom: 16px">
-        开具发票后，发票信息将同步给采购方
+      <a-radio-group v-model="invoiceForm.issueType" style="margin-bottom: 20px">
+        <a-radio value="upload">
+          <template #icon><icon-upload /></template>
+          上传已有发票
+        </a-radio>
+        <a-radio value="online">
+          <template #icon><icon-cloud-server /></template>
+          在线开具电子发票
+        </a-radio>
+      </a-radio-group>
+
+      <a-alert v-if="invoiceForm.issueType === 'online'" type="info" style="margin-bottom: 16px">
+        将自动带入订单信息开具电子发票，开票成功后将自动获取发票PDF
       </a-alert>
 
       <a-form :model="invoiceForm" layout="vertical">
         <a-form-item label="发票类型" required>
-          <a-select v-model="invoiceForm.invoiceType" placeholder="请选择发票类型">
-            <a-option value="增值税专用发票">增值税专用发票</a-option>
-            <a-option value="增值税普通发票">增值税普通发票</a-option>
-          </a-select>
+          <a-radio-group v-model="invoiceForm.invoiceType">
+            <a-radio value="special">增值税专用发票</a-radio>
+            <a-radio value="normal">增值税普通发票</a-radio>
+            <a-radio value="electronic">电子普通发票</a-radio>
+          </a-radio-group>
         </a-form-item>
-        <a-form-item label="发票号码" required>
-          <a-input v-model="invoiceForm.invoiceNo" placeholder="请输入发票号码" />
-        </a-form-item>
-        <a-form-item label="发票金额" required>
-          <a-input-number v-model="invoiceForm.invoiceAmount" :precision="2" style="width: 100%">
-            <template #prefix>¥</template>
-          </a-input-number>
-        </a-form-item>
+
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="发票号码" required>
+              <a-input v-model="invoiceForm.invoiceNo" placeholder="请输入发票号码" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="发票代码">
+              <a-input v-model="invoiceForm.invoiceCode" placeholder="请输入发票代码" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="开票日期" required>
+              <a-date-picker v-model="invoiceForm.invoiceDate" style="width: 100%" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="价税合计" required>
+              <a-input-number 
+                v-model="invoiceForm.invoiceAmount" 
+                :min="0" 
+                :precision="2" 
+                style="width: 100%"
+              >
+                <template #prefix>¥</template>
+              </a-input-number>
+            </a-form-item>
+          </a-col>
+        </a-row>
+
         <a-form-item label="税率" required>
-          <a-select v-model="invoiceForm.taxRate" placeholder="请选择税率">
-            <a-option value="13%">13%</a-option>
-            <a-option value="9%">9%</a-option>
-            <a-option value="6%">6%</a-option>
-            <a-option value="3%">3%</a-option>
+          <a-select v-model="invoiceForm.taxRate" placeholder="请选择税率" style="width: 200px">
+            <a-option value="13%">13% (一般货物)</a-option>
+            <a-option value="9%">9% (建筑服务)</a-option>
+            <a-option value="6%">6% (服务)</a-option>
+            <a-option value="3%">3% (小规模)</a-option>
+            <a-option value="0%">0% (免税)</a-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="开票日期" required>
-          <a-date-picker v-model="invoiceForm.invoiceDate" style="width: 100%" />
+
+        <a-form-item v-if="invoiceForm.issueType === 'upload'" label="上传发票附件" required>
+          <a-upload
+            :auto-upload="false"
+            :limit="1"
+            accept=".pdf,.jpg,.jpeg,.png"
+            @change="handleFileChange"
+          >
+            <a-button>
+              <template #icon><icon-upload /></template>
+              选择文件
+            </a-button>
+            <template #tip>
+              <div style="color: #86909c; font-size: 12px; margin-top: 4px">
+                支持 PDF、JPG、PNG 格式，单个文件不超过 10MB
+              </div>
+            </template>
+          </a-upload>
+          <div v-if="invoiceForm.file" style="margin-top: 8px">
+            <a-tag color="blue" closable @close="invoiceForm.file = null">
+              <icon-file /> {{ invoiceForm.file.name }}
+            </a-tag>
+          </div>
         </a-form-item>
+
         <a-form-item label="备注">
-          <a-textarea v-model="invoiceForm.remark" placeholder="备注（选填）" :max-length="200" />
+          <a-textarea v-model="invoiceForm.remark" placeholder="备注信息（选填）" :max-length="200" />
         </a-form-item>
       </a-form>
+    </a-modal>
+
+    <a-modal 
+      v-model:visible="verifyPaymentVisible" 
+      title="审核支付" 
+      :width="700"
+      :footer="false"
+    >
+      <a-descriptions :column="2" bordered>
+        <a-descriptions-item label="订单编号">{{ currentOrder.orderNo }}</a-descriptions-item>
+        <a-descriptions-item label="采购方">{{ currentOrder.warehouseName }}</a-descriptions-item>
+        <a-descriptions-item label="订单金额">¥{{ currentOrder.totalAmount?.toLocaleString() }}</a-descriptions-item>
+        <a-descriptions-item label="应支付金额">¥{{ currentOrder.totalAmount?.toLocaleString() }}</a-descriptions-item>
+        <a-descriptions-item label="支付方式">{{ currentOrder.paymentMethod || '银行转账' }}</a-descriptions-item>
+        <a-descriptions-item label="支付时间">{{ currentOrder.paymentTime || '2024-01-18 10:30:00' }}</a-descriptions-item>
+      </a-descriptions>
+
+      <a-divider>转账凭证</a-divider>
+
+      <a-card size="small" title="转账回单">
+        <a-space direction="vertical" style="width: 100%">
+          <div class="voucher-preview">
+            <a-empty description="暂无转账凭证" v-if="!currentOrder.paymentVoucher" />
+            <img 
+              v-else 
+              :src="currentOrder.paymentVoucher" 
+              alt="转账凭证" 
+              style="max-width: 100%; border-radius: 4px"
+            />
+          </div>
+          <div class="voucher-info">
+            <a-tag color="blue">银行转账回执</a-tag>
+            <span style="margin-left: 8px; color: #86909c">
+              转账流水号：{{ currentOrder.paymentSerial || 'BT202401181030001' }}
+            </span>
+          </div>
+        </a-space>
+      </a-card>
+
+      <a-divider>审核操作</a-divider>
+
+      <a-form :model="verifyPaymentForm" layout="vertical">
+        <a-form-item label="审核结果" required>
+          <a-radio-group v-model="verifyPaymentForm.result">
+            <a-radio value="success">审核通过，确认到账</a-radio>
+            <a-radio value="fail">审核不通过</a-radio>
+          </a-radio-group>
+        </a-form-item>
+        <a-form-item 
+          v-if="verifyPaymentForm.result === 'fail'" 
+          label="失败原因" 
+          required
+        >
+          <a-textarea 
+            v-model="verifyPaymentForm.failReason" 
+            placeholder="请填写审核不通过的原因，如：凭证模糊不清、金额不匹配、未查到到账记录等"
+            :max-length="200"
+            :rows="3"
+          />
+        </a-form-item>
+        <a-form-item label="备注">
+          <a-textarea 
+            v-model="verifyPaymentForm.remark" 
+            placeholder="审核备注（选填）" 
+            :max-length="200"
+          />
+        </a-form-item>
+      </a-form>
+
+      <template #footer>
+        <a-space>
+          <a-button @click="verifyPaymentVisible = false">取消</a-button>
+          <a-button status="danger" @click="handleVerifyPaymentSubmit" :disabled="!verifyPaymentForm.result">
+            提交审核
+          </a-button>
+        </a-space>
+      </template>
     </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
+import { 
+  getSupplierOrderList, 
+  confirmSupplierOrder, 
+  shipSupplierOrder 
+} from '@gongchengcang/api'
+
+const router = useRouter()
 
 const loading = ref(false)
-const viewMode = ref('all')
+const activeTab = ref('all')
 
 const pagination = reactive({
   current: 1,
@@ -399,105 +691,40 @@ const pagination = reactive({
   total: 50
 })
 
-const orderList = ref([
-  {
-    id: '1',
-    orderNo: 'PO202401001',
-    warehouseName: '深圳宝安工程仓',
-    skuCount: 5,
-    totalAmount: 28500,
-    deliveryDate: '2024-01-25',
-    status: 'pending',
-    paymentStatus: 'paid',
-    createTime: '2024-01-20 10:30:00',
-    address: '深圳市宝安区西乡街道XX路XX号',
-    remark: '请尽快发货',
-    invoiceStatus: '',
-  },
-  {
-    id: '2',
-    orderNo: 'PO202401002',
-    warehouseName: '广州天河工程仓',
-    skuCount: 8,
-    totalAmount: 156000,
-    deliveryDate: '2024-01-28',
-    status: 'confirmed',
-    paymentStatus: 'paid',
-    createTime: '2024-01-19 14:00:00',
-    confirmTime: '2024-01-19 16:30:00',
-    address: '广州市天河区棠下街道XX路XX号',
-    remark: '',
-    invoiceStatus: '',
-  },
-  {
-    id: '3',
-    orderNo: 'PO202401003',
-    warehouseName: '东莞南城工程仓',
-    skuCount: 12,
-    totalAmount: 89000,
-    deliveryDate: '2024-01-30',
-    status: 'shipped',
-    paymentStatus: 'paid',
-    createTime: '2024-01-18 09:00:00',
-    confirmTime: '2024-01-18 11:00:00',
-    shipTime: '2024-01-20 15:00:00',
-    address: '东莞市南城区鸿福路XX号',
-    logisticsCompany: '顺丰速运',
-    logisticsNo: 'SF1234567890',
-    logisticsStatus: 'transporting',
-    logisticsTracks: [
-      { time: '2024-01-20 15:00', content: '已发货，顺丰速运揽收' },
-      { time: '2024-01-20 18:30', content: '快件已到达深圳集散中心' },
-      { time: '2024-01-21 08:00', content: '快件已发出，下一站东莞转运中心' },
-    ],
-    invoiceStatus: '',
-  },
-  {
-    id: '4',
-    orderNo: 'PO202401004',
-    warehouseName: '佛山禅城工程仓',
-    skuCount: 3,
-    totalAmount: 12500,
-    deliveryDate: '2024-01-22',
-    status: 'completed',
-    paymentStatus: 'paid',
-    createTime: '2024-01-21 16:00:00',
-    confirmTime: '2024-01-21 17:00:00',
-    shipTime: '2024-01-22 09:00:00',
-    completeTime: '2024-01-23 14:00:00',
-    address: '佛山市禅城区祖庙路XX号',
-    logisticsCompany: '京东物流',
-    logisticsNo: 'JD9876543210',
-    invoiceStatus: 'pending',
-  },
-  {
-    id: '5',
-    orderNo: 'PO202401005',
-    warehouseName: '惠州惠城工程仓',
-    skuCount: 6,
-    totalAmount: 45000,
-    deliveryDate: '2024-01-26',
-    status: 'completed',
-    paymentStatus: 'paid',
-    createTime: '2024-01-20 11:00:00',
-    confirmTime: '2024-01-20 13:00:00',
-    shipTime: '2024-01-21 10:00:00',
-    completeTime: '2024-01-22 16:00:00',
-    address: '惠州市惠城区XX路XX号',
-    logisticsCompany: '中通快递',
-    logisticsNo: 'ZT1234567890',
-    invoiceStatus: 'issued',
-    invoiceNo: 'INV20240122001',
-    invoiceType: '增值税专用发票',
-    invoiceTime: '2024-01-23 10:00:00',
-    invoiceAmount: '45000',
-    taxRate: '13%',
-  },
-])
+const initialData = getSupplierOrderList()
+const orderList = ref(initialData.list)
+pagination.total = initialData.total
+
+const orderStats = computed(() => {
+  return {
+    total: orderList.value.length,
+    pending: orderList.value.filter(o => o.status === 'pending').length,
+    unpaid: orderList.value.filter(o => o.paymentStatus === 'unpaid' && o.status !== 'pending').length,
+    undelivered: orderList.value.filter(o => o.status === 'confirmed' && o.paymentStatus === 'paid').length,
+    delivered: orderList.value.filter(o => o.status === 'shipped').length,
+    completed: orderList.value.filter(o => o.status === 'completed').length,
+    refunded: orderList.value.filter(o => o.status === 'refunded').length,
+  }
+})
 
 const filteredOrders = computed(() => {
-  if (viewMode.value === 'all') return orderList.value
-  return orderList.value.filter(o => o.status === viewMode.value)
+  let result = orderList.value
+  
+  if (activeTab.value === 'pending') {
+    result = result.filter(o => o.status === 'pending')
+  } else if (activeTab.value === 'unpaid') {
+    result = result.filter(o => o.paymentStatus === 'unpaid' && o.status !== 'pending')
+  } else if (activeTab.value === 'undelivered') {
+    result = result.filter(o => o.status === 'confirmed' && o.paymentStatus === 'paid')
+  } else if (activeTab.value === 'delivered') {
+    result = result.filter(o => o.status === 'shipped')
+  } else if (activeTab.value === 'completed') {
+    result = result.filter(o => o.status === 'completed')
+  } else if (activeTab.value === 'refunded') {
+    result = result.filter(o => o.status === 'refunded')
+  }
+  
+  return result
 })
 
 const detailVisible = ref(false)
@@ -510,6 +737,7 @@ const confirmForm = reactive({
   estimatedShipDate: '',
   remark: ''
 })
+const confirmItems = ref<any[]>([])
 
 const shipVisible = ref(false)
 const shipForm = reactive({
@@ -519,14 +747,89 @@ const shipForm = reactive({
 })
 
 const invoiceVisible = ref(false)
-const invoiceForm = reactive({
-  invoiceType: '',
+const invoiceForm = reactive<any>({
+  issueType: 'upload',
+  invoiceType: 'special',
   invoiceNo: '',
+  invoiceCode: '',
   invoiceAmount: 0,
   taxRate: '',
   invoiceDate: '',
+  file: null,
   remark: '',
 })
+
+function handleInvoice(record: any) {
+  currentOrder.value = record
+  invoiceForm.issueType = 'upload'
+  invoiceForm.invoiceType = 'special'
+  invoiceForm.invoiceNo = ''
+  invoiceForm.invoiceCode = ''
+  invoiceForm.invoiceAmount = record.totalAmount
+  invoiceForm.taxRate = '13%'
+  invoiceForm.invoiceDate = ''
+  invoiceForm.file = null
+  invoiceForm.remark = ''
+  invoiceVisible.value = true
+}
+
+function handleFileChange(fileItem: any) {
+  if (fileItem.file) {
+    invoiceForm.file = fileItem.file
+    Message.success('文件上传成功')
+  }
+}
+
+const logisticsModalVisible = ref(false)
+const selectedLogisticsId = ref('')
+const currentLogistics = ref<any>({})
+
+const orderLogisticsList = computed(() => {
+  return [
+    { id: '1', shipmentNo: 'SH202401160001', shipTime: '2024-01-16 09:00:00', company: '顺丰速运', no: 'SF1234567890' },
+    { id: '2', shipmentNo: 'SH202401170002', shipTime: '2024-01-17 14:30:00', company: '京东物流', no: 'JD9876543210' },
+  ]
+})
+
+const currentLogisticsTraces = computed(() => {
+  const tracesMap: Record<string, any[]> = {
+    '1': [
+      { time: '2024-01-16 14:30', content: '快件正在派送中，派送员：张师傅(13800138000)' },
+      { time: '2024-01-16 10:20', content: '快件到达【深圳南山营业点】' },
+      { time: '2024-01-16 08:15', content: '快件已从【深圳宝安中转场】发出' },
+      { time: '2024-01-16 02:30', content: '快件已发车' },
+      { time: '2024-01-15 22:00', content: '快件已揽收' },
+    ],
+    '2': [
+      { time: '2024-01-18 12:30', content: '快件已签收，签收人：材料仓管王主管' },
+      { time: '2024-01-18 09:20', content: '快件正在派送中，派送员：李师傅(13900139000)' },
+      { time: '2024-01-18 07:15', content: '快件到达【深圳南山营业点】' },
+      { time: '2024-01-17 18:30', content: '快件已发车' },
+      { time: '2024-01-17 15:00', content: '快件已揽收' },
+    ],
+  }
+  return tracesMap[selectedLogisticsId.value || '1'] || tracesMap['1']
+})
+
+function handleLogisticsChange() {
+  const selected = orderLogisticsList.value.find(l => l.id === selectedLogisticsId.value)
+  if (selected) {
+    currentLogistics.value = selected
+  }
+}
+
+function handleTrackLogistics(record: any) {
+  selectedLogisticsId.value = '1'
+  currentLogistics.value = orderLogisticsList.value[0]
+  logisticsModalVisible.value = true
+}
+
+function handleApplyRefund(record: any) {
+  router.push({
+    path: '/supplier/order/refund',
+    query: { orderId: record.id, action: 'apply' }
+  })
+}
 
 function isUrgent(deliveryDate: string) {
   const days = Math.ceil((new Date(deliveryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
@@ -538,33 +841,7 @@ function handlePageChange(page: number) {
 }
 
 function handleView(record: any) {
-  currentOrder.value = {
-    ...record,
-    skuList: [
-      { skuCode: 'SKU001', productName: '普通硅酸盐水泥P.O42.5', specValues: '50kg/袋', unit: '袋', quantity: 200, price: 26, remark: '' },
-      { skuCode: 'SKU003', productName: '抛光砖', specValues: '800×800mm', unit: '片', quantity: 300, price: 42, remark: '' },
-      { skuCode: 'SKU004', productName: '内墙乳胶漆', specValues: '20L/桶', unit: '桶', quantity: 15, price: 360, remark: '' }
-    ],
-    logs: [
-      { time: record.createTime, content: '订单创建' },
-      ...(record.confirmTime ? [{ time: record.confirmTime, content: '订单已确认' }] : []),
-      ...(record.shipTime ? [{ time: record.shipTime, content: `已发货，物流公司：${record.logisticsCompany}，运单号：${record.logisticsNo}` }] : []),
-      ...(record.completeTime ? [{ time: record.completeTime, content: '订单已完成' }] : []),
-    ],
-  }
-
-  paymentRecords.value = record.paymentStatus === 'paid' ? [
-    {
-      paymentNo: `PAY${Date.now()}`,
-      paymentMethod: 'escrow',
-      amount: record.totalAmount,
-      status: 'paid',
-      paymentTime: record.createTime,
-      remark: '工程仓托管账户支付',
-    },
-  ] : []
-
-  detailVisible.value = true
+  router.push(`/supplier/order/detail/${record.id}`)
 }
 
 function handleConfirm(record: any) {
@@ -572,6 +849,13 @@ function handleConfirm(record: any) {
   confirmForm.estimatedShipDate = ''
   confirmForm.remark = ''
   detailVisible.value = false
+  
+  confirmItems.value = [
+    { id: '1', productName: '普通硅酸盐水泥P.O42.5', specValues: '50kg/袋', quantity: 200, status: 'accept', estimatedShipDate: '', rejectReason: '', remark: '' },
+    { id: '2', productName: '抛光砖', specValues: '800×800mm', quantity: 300, status: 'accept', estimatedShipDate: '', rejectReason: '', remark: '' },
+    { id: '3', productName: '内墙乳胶漆', specValues: '20L/桶', quantity: 15, status: '', estimatedShipDate: '', rejectReason: '', remark: '' },
+  ]
+  
   confirmVisible.value = true
 }
 
@@ -581,14 +865,53 @@ function handleConfirmFromDetail() {
 }
 
 function handleConfirmSubmit() {
-  if (!confirmForm.estimatedShipDate) {
-    Message.warning('请选择预计发货时间')
+  const pendingItems = confirmItems.value.filter(i => !i.status)
+  if (pendingItems.length > 0) {
+    Message.warning(`还有 ${pendingItems.length} 种商品未确认接单状态`)
     return
   }
-  Message.success('接单成功，请按约定时间发货')
+  
+  const acceptItems = confirmItems.value.filter(i => i.status === 'accept')
+  const rejectItems = confirmItems.value.filter(i => i.status === 'reject')
+  
+  if (acceptItems.length === 0 && rejectItems.length === 0) {
+    Message.warning('请至少选择一种商品')
+    return
+  }
+  
+  const rejectItemsWithoutReason = rejectItems.filter(i => !i.rejectReason)
+  if (rejectItemsWithoutReason.length > 0) {
+    Message.warning('请为无法供货的商品选择原因')
+    return
+  }
+  
+  const acceptItemsWithoutDate = acceptItems.filter(i => !i.estimatedShipDate)
+  if (acceptItemsWithoutDate.length > 0) {
+    Message.warning('请为确认接单的商品选择预计发货时间')
+    return
+  }
+  
+  confirmSupplierOrder(currentOrder.value.id, {
+    acceptItems,
+    rejectItems,
+    remark: confirmForm.remark,
+  })
+  
+  const acceptCount = acceptItems.length
+  const rejectCount = rejectItems.length
+  
+  if (rejectCount > 0) {
+    Message.success(`接单成功：确认 ${acceptCount} 种，无法供货 ${rejectCount} 种`)
+  } else {
+    Message.success('接单成功，请按约定时间发货')
+  }
+  
   currentOrder.value.status = 'confirmed'
   currentOrder.value.confirmTime = new Date().toLocaleString()
+  currentOrder.value.acceptItemCount = acceptCount
+  currentOrder.value.rejectItemCount = rejectCount
   confirmVisible.value = false
+  refreshOrderList()
 }
 
 function handleReject() {
@@ -597,11 +920,7 @@ function handleReject() {
 }
 
 function handleShip(record: any) {
-  currentOrder.value = record
-  shipForm.logisticsCompany = ''
-  shipForm.logisticsNo = ''
-  shipForm.remark = ''
-  shipVisible.value = true
+  router.push(`/supplier/order/detail/${record.id}`)
 }
 
 function handleShipSubmit() {
@@ -613,44 +932,84 @@ function handleShipSubmit() {
     Message.warning('请输入物流单号')
     return
   }
+  
+  shipSupplierOrder(currentOrder.value.id, {
+    logisticsCompany: shipForm.logisticsCompany,
+    logisticsNo: shipForm.logisticsNo,
+    remark: shipForm.remark,
+  })
+  
   Message.success('发货成功，物流信息已更新')
   currentOrder.value.status = 'shipped'
   currentOrder.value.shipTime = new Date().toLocaleString()
   currentOrder.value.logisticsCompany = shipForm.logisticsCompany
   currentOrder.value.logisticsNo = shipForm.logisticsNo
   shipVisible.value = false
+  refreshOrderList()
 }
 
-function handleViewLogistics(record: any) {
-  handleView(record)
+function refreshOrderList() {
+  const result = getSupplierOrderList()
+  orderList.value = result.list
+  pagination.total = result.total
 }
 
-function handleInvoice(record: any) {
-  currentOrder.value = record
-  invoiceForm.invoiceType = '增值税专用发票'
-  invoiceForm.invoiceNo = ''
-  invoiceForm.invoiceAmount = record.totalAmount
-  invoiceForm.taxRate = '13%'
-  invoiceForm.invoiceDate = ''
-  invoiceForm.remark = ''
-  invoiceVisible.value = true
+function handleCancelOrder(record: any) {
+  Message.info('取消接单功能开发中')
 }
 
-function handleInvoiceSubmit() {
-  if (!invoiceForm.invoiceType || !invoiceForm.invoiceNo || !invoiceForm.invoiceAmount || !invoiceForm.taxRate || !invoiceForm.invoiceDate) {
-    Message.warning('请完善发票信息')
+
+
+async function handleInvoiceSubmit() {
+  if (!invoiceForm.invoiceType) {
+    Message.warning('请选择发票类型')
+    return
+  }
+  if (!invoiceForm.invoiceNo) {
+    Message.warning('请输入发票号码')
+    return
+  }
+  if (!invoiceForm.invoiceDate) {
+    Message.warning('请选择开票日期')
+    return
+  }
+  if (!invoiceForm.invoiceAmount) {
+    Message.warning('请输入价税合计')
+    return
+  }
+  if (!invoiceForm.taxRate) {
+    Message.warning('请选择税率')
+    return
+  }
+  if (invoiceForm.issueType === 'upload' && !invoiceForm.file) {
+    Message.warning('请上传发票附件')
     return
   }
 
-  currentOrder.value.invoiceStatus = 'issued'
-  currentOrder.value.invoiceNo = invoiceForm.invoiceNo
-  currentOrder.value.invoiceType = invoiceForm.invoiceType
-  currentOrder.value.invoiceTime = new Date().toLocaleString()
-  currentOrder.value.invoiceAmount = invoiceForm.invoiceAmount
-  currentOrder.value.taxRate = invoiceForm.taxRate
+  try {
+    if (invoiceForm.issueType === 'online') {
+      Message.loading('正在调用开票接口...')
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      Message.clear()
+    }
 
-  invoiceVisible.value = false
-  Message.success('发票开具成功')
+    currentOrder.value.invoiceStatus = 'issued'
+    currentOrder.value.invoiceNo = invoiceForm.invoiceNo
+    currentOrder.value.invoiceType = invoiceForm.invoiceType
+    currentOrder.value.invoiceTime = new Date().toLocaleString()
+    currentOrder.value.invoiceAmount = invoiceForm.invoiceAmount
+    currentOrder.value.taxRate = invoiceForm.taxRate
+
+    invoiceVisible.value = false
+    Message.success(
+      invoiceForm.issueType === 'online' 
+        ? '电子发票开具成功，PDF已自动生成' 
+        : '发票信息保存成功'
+    )
+  } catch (error) {
+    Message.clear()
+    Message.error('操作失败，请重试')
+  }
 }
 
 function getStatusColor(status: string) {
@@ -668,11 +1027,66 @@ function getStatusText(status: string) {
   const texts: Record<string, string> = {
     pending: '待确认',
     confirmed: '已确认',
-    shipped: '已发货',
+    shipped: '待收货',
     completed: '已完成',
-    cancelled: '已取消'
+    cancelled: '已取消',
+    refunded: '已退款',
+    unpaid: '待支付',
   }
   return texts[status] || status
+}
+
+function handleViewAfterSales(record: any) {
+  router.push('/supplier/order/refund')
+}
+
+const verifyPaymentVisible = ref(false)
+const verifyPaymentForm = reactive({
+  result: '',
+  failReason: '',
+  remark: '',
+})
+
+function handleVerifyPayment(record: any) {
+  currentOrder.value = record
+  verifyPaymentForm.result = ''
+  verifyPaymentForm.failReason = ''
+  verifyPaymentForm.remark = ''
+  verifyPaymentVisible.value = true
+}
+
+function handleVerifyPaymentSubmit() {
+  if (!verifyPaymentForm.result) {
+    Message.warning('请选择审核结果')
+    return
+  }
+
+  if (verifyPaymentForm.result === 'fail' && !verifyPaymentForm.failReason) {
+    Message.warning('请填写审核不通过的原因')
+    return
+  }
+
+  const order = orderList.value.find(o => o.id === currentOrder.value.id)
+  if (order) {
+    if (verifyPaymentForm.result === 'success') {
+      order.paymentStatus = 'paid'
+      order.logs?.push({
+        time: new Date().toISOString(),
+        content: `支付审核通过，已确认到账`,
+      })
+      Message.success('支付审核通过，订单已确认到账')
+    } else {
+      order.paymentAuditStatus = 'rejected'
+      order.paymentAuditRemark = verifyPaymentForm.failReason
+      order.logs?.push({
+        time: new Date().toISOString(),
+        content: `支付审核不通过：${verifyPaymentForm.failReason}`,
+      })
+      Message.warning('支付审核不通过')
+    }
+  }
+
+  verifyPaymentVisible.value = false
 }
 
 function getPaymentStatusColor(status: string) {
@@ -686,7 +1100,7 @@ function getPaymentStatusColor(status: string) {
 
 function getPaymentStatusText(status: string) {
   const texts: Record<string, string> = {
-    pending: '待支付',
+    unpaid: '待支付',
     paid: '已支付',
     refunded: '已退款'
   }
@@ -751,6 +1165,30 @@ function getOrderStep(status: string) {
 <style lang="less" scoped>
 .page-container {
   padding: 16px;
+}
+
+:deep(.order-tabs) {
+  margin-bottom: 16px;
+  
+  :deep(.arco-tabs-header) {
+    border-bottom: none;
+  }
+}
+
+.voucher-preview {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f7f8fa;
+  border-radius: 4px;
+  padding: 16px;
+}
+
+.voucher-info {
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
 }
 
 .text-danger {

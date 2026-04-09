@@ -15,7 +15,36 @@
         </a-space>
       </template>
 
-      <div class="table-actions">
+      <div class="product-layout">
+        <div class="category-sidebar">
+          <div class="tree-header">
+            <span class="title">商品分类</span>
+            <a-button type="text" size="small" @click="resetCategory">
+              重置
+            </a-button>
+          </div>
+          <a-input-search
+            v-model="categorySearchKeyword"
+            placeholder="搜索分类"
+            style="margin-bottom: 12px"
+            allow-clear
+          />
+          <a-tree
+            :data="categoryTreeWithCount"
+            :selected-keys="selectedCategoryKeys"
+            :expanded-keys="expandedCategoryKeys"
+            :field-names="{ key: 'categoryId', title: 'categoryName', children: 'children' }"
+            block-node
+            @select="handleCategorySelect"
+          >
+            <template #title="nodeData">
+              <span class="category-name">{{ nodeData.categoryName }}</span>
+              <span class="category-count">({{ nodeData.skuCount || 0 }})</span>
+            </template>
+          </a-tree>
+        </div>
+        <div class="product-content">
+          <div class="table-actions">
         <a-space>
           <a-input-search
             v-model="searchForm.keyword"
@@ -222,6 +251,8 @@
           </a-table-column>
         </template>
       </a-table>
+        </div>
+      </div>
     </a-card>
 
     <a-modal
@@ -610,7 +641,13 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Message } from '@arco-design/web-vue'
-import type { ProductCategory } from '@gongchengcang/types'
+
+interface ProductCategory {
+  categoryId: string
+  categoryName: string
+  children?: ProductCategory[]
+  skuCount?: number
+}
 
 interface SupplierInfo {
   supplierId: string
@@ -685,7 +722,98 @@ const pagination = reactive({
   total: 0,
 })
 
-const categoryTree = ref<ProductCategory[]>([])
+const categorySearchKeyword = ref('')
+const selectedCategoryKeys = ref<string[]>([])
+const expandedCategoryKeys = ref<string[]>(['C01', 'C02', 'C03', 'C04', 'C05'])
+
+const categoryTree = ref<ProductCategory[]>([
+  {
+    categoryId: 'C01',
+    categoryName: '水泥',
+    children: [
+      { categoryId: 'C0101', categoryName: '硅酸盐水泥' },
+      { categoryId: 'C0102', categoryName: '普通硅酸盐水泥' },
+      { categoryId: 'C0103', categoryName: '复合硅酸盐水泥' },
+    ],
+  },
+  {
+    categoryId: 'C02',
+    categoryName: '钢材',
+    children: [
+      { categoryId: 'C0201', categoryName: '螺纹钢' },
+      { categoryId: 'C0202', categoryName: '线材' },
+      { categoryId: 'C0203', categoryName: '盘螺' },
+    ],
+  },
+  {
+    categoryId: 'C03',
+    categoryName: '砂石',
+    children: [
+      { categoryId: 'C0301', categoryName: '黄砂' },
+      { categoryId: 'C0302', categoryName: '碎石' },
+      { categoryId: 'C0303', categoryName: '瓜子片' },
+    ],
+  },
+  {
+    categoryId: 'C04',
+    categoryName: '混凝土',
+    children: [
+      { categoryId: 'C0401', categoryName: '商品混凝土' },
+      { categoryId: 'C0402', categoryName: '预制构件' },
+    ],
+  },
+  {
+    categoryId: 'C05',
+    categoryName: '砌体材料',
+    children: [
+      { categoryId: 'C0501', categoryName: '加气块' },
+      { categoryId: 'C0502', categoryName: '标准砖' },
+    ],
+  },
+])
+
+const categoryTreeWithCount = computed(() => {
+  const countByCategory: Record<string, number> = {}
+  filteredProducts.value.forEach((p) => {
+    const categoryName = p.categoryName
+    countByCategory[categoryName] = (countByCategory[categoryName] || 0) + 1
+  })
+
+  function addCountToTree(nodes: ProductCategory[]): ProductCategory[] {
+    return nodes.map((node) => {
+      let skuCount = 0
+      if (node.children && node.children.length > 0) {
+        const childrenWithCount = addCountToTree(node.children)
+        skuCount = childrenWithCount.reduce((sum, n) => sum + ((n as any).skuCount || 0), 0)
+        return {
+          ...node,
+          children: childrenWithCount,
+          skuCount,
+        }
+      }
+      skuCount = countByCategory[node.categoryName] || 0
+      return {
+        ...node,
+        skuCount,
+      }
+    })
+  }
+
+  return addCountToTree(categoryTree.value)
+})
+
+function handleCategorySelect(keys: string[]) {
+  selectedCategoryKeys.value = keys
+  searchForm.categoryId = keys.length > 0 ? keys : undefined
+  handleSearch()
+}
+
+function resetCategory() {
+  selectedCategoryKeys.value = []
+  searchForm.categoryId = undefined
+  handleSearch()
+}
+
 const supplierList = ref<{ supplierId: string; supplierName: string }[]>([
   { supplierId: 's001', supplierName: '华新水泥供应商' },
   { supplierId: 's002', supplierName: '海螺水泥供应商' },
@@ -1502,6 +1630,49 @@ onMounted(() => {
 
 .un-set {
   color: var(--color-text-3);
+}
+
+.product-layout {
+  display: flex;
+  gap: 16px;
+}
+
+.category-sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border-2);
+  border-radius: 4px;
+  padding: 12px;
+  background: var(--color-bg-2);
+
+  .tree-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border-2);
+
+    .title {
+      font-weight: 500;
+      font-size: 14px;
+    }
+  }
+
+  .category-name {
+    font-size: 13px;
+  }
+
+  .category-count {
+    color: var(--color-text-3);
+    font-size: 12px;
+    margin-left: 4px;
+  }
+}
+
+.product-content {
+  flex: 1;
+  min-width: 0;
 }
 
 .profit-high {
