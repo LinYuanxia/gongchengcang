@@ -74,13 +74,21 @@
             </template>
           </a-table-column>
           <a-table-column title="创建时间" data-index="createdAt" :width="180" />
-          <a-table-column title="操作" :width="220" fixed="right">
+          <a-table-column title="操作" :width="280" fixed="right">
             <template #cell="{ record }">
-              <a-space>
+              <a-space wrap>
                 <a-button type="text" size="small" @click="handleView(record)">查看</a-button>
                 <a-button type="text" size="small" @click="handleEdit(record)">编辑</a-button>
                 <a-button type="text" size="small" @click="handleContract(record)">合同</a-button>
                 <a-button type="text" size="small" @click="handleAccount(record)">账号</a-button>
+                <a-button 
+                  type="text" 
+                  size="small" 
+                  status="success"
+                  @click="handleEnterSystem(record)"
+                >
+                  进入系统
+                </a-button>
                 <a-popconfirm content="确定要删除该商户吗？" @ok="handleDelete(record)">
                   <a-button type="text" size="small" status="danger">删除</a-button>
                 </a-popconfirm>
@@ -200,6 +208,27 @@ function handleContract(record: Merchant) {
 
 function handleAccount(record: Merchant) {
   Message.info(`查看商户「${record.merchantName}」的账号`)
+}
+
+function handleEnterSystem(record: Merchant) {
+  const tenantType = record.tenantType
+  const tenantId = record.tenantId
+  const merchantName = record.merchantName
+  
+  Message.success(`正在进入「${merchantName}」的管理系统...`)
+  
+  localStorage.setItem('mockTenantId', tenantId)
+  localStorage.setItem('mockTenantType', tenantType)
+  localStorage.setItem('mockMerchantName', merchantName)
+  
+  if (tenantType === 'supplier') {
+    router.push({ path: '/supplier/dashboard', query: { tenantId, mock: '1' } })
+  } else if (tenantType === 'warehouse') {
+    router.push({ path: '/warehouse/dashboard', query: { tenantId, mock: '1' } })
+  } else {
+    Message.warning(`商户类型「${tenantType}」暂未配置对应系统，默认进入供应商系统`)
+    router.push({ path: '/supplier/dashboard', query: { tenantId, mock: '1' } })
+  }
 }
 
 async function handleDelete(record: Merchant) {

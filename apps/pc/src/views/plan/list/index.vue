@@ -237,14 +237,14 @@
     <a-modal 
       v-model:visible="skuSelectorVisible" 
       title="选择商品" 
-      :width="900"
+      :width="1000"
       :footer="false"
     >
       <div class="sku-selector">
         <div class="selector-search">
           <a-input-search
             v-model="skuSearchKeyword"
-            placeholder="搜索商品名称或SKU编码"
+            placeholder="搜索商品名称或SPU编码"
             style="width: 300px"
           />
           <a-select v-model="skuCategoryFilter" placeholder="选择分类" allow-clear style="width: 150px; margin-left: 12px">
@@ -254,33 +254,73 @@
             <a-option value="paint">涂料油漆</a-option>
           </a-select>
         </div>
-        <a-table 
-          :data="filteredSkuList" 
-          :pagination="{ pageSize: 5 }"
-          :row-selection="skuRowSelection"
-          row-key="skuId"
-        >
-          <template #columns>
-            <a-table-column title="SKU编码" data-index="skuCode" :width="120" />
-            <a-table-column title="商品名称" :width="200">
-              <template #cell="{ record }">
-                <div>{{ record.productName }}</div>
-                <div class="sub-text">{{ record.specValues }}</div>
+
+        <div class="spu-list">
+          <a-collapse
+            v-model:active-keys="spuActiveKeys"
+            :default-active-key="firstSpuKey"
+            bordered
+          >
+            <a-collapse-item
+              v-for="spu in filteredSpuList"
+              :key="spu.spuId"
+              :name="spu.spuId"
+            >
+              <template #header>
+                <div class="spu-header">
+                  <a-checkbox
+                    :model-value="isSpuAllSelected(spu)"
+                    :indeterminate="isSpuPartialSelected(spu)"
+                    @change="(checked) => handleToggleSpuAll(spu, checked)"
+                    @click.stop
+                  />
+                  <div class="spu-info">
+                    <span class="spu-name">{{ spu.spuName }}</span>
+                    <a-tag color="blue" size="small">{{ spu.categoryName }}</a-tag>
+                    <span class="sku-count">
+                      共 {{ spu.skuList.length }} 个SKU规格
+                    </span>
+                  </div>
+                </div>
               </template>
-            </a-table-column>
-            <a-table-column title="单位" data-index="unit" :width="60" align="center" />
-            <a-table-column title="参考价" :width="100" align="right">
-              <template #cell="{ record }">
-                ¥{{ record.referencePrice }}
-              </template>
-            </a-table-column>
-            <a-table-column title="库存" :width="80" align="center">
-              <template #cell="{ record }">
-                {{ record.stock }}
-              </template>
-            </a-table-column>
-          </template>
-        </a-table>
+
+              <a-table 
+                :data="spu.skuList" 
+                :pagination="false"
+                size="small"
+                row-key="skuId"
+                :row-selection="getSkuRowSelection(spu)"
+                :bordered="false"
+              >
+                <template #columns>
+                  <a-table-column title="SKU编码" data-index="skuCode" :width="120" />
+                  <a-table-column title="规格信息" :width="280">
+                    <template #cell="{ record }">
+                      <div class="spec-values">
+                        <a-tag 
+                          v-for="(spec, idx) in record.specs" 
+                          :key="idx"
+                          size="small"
+                          color="gray"
+                          style="margin-right: 4px; margin-bottom: 4px"
+                        >
+                          {{ spec.name }}: {{ spec.value }}
+                        </a-tag>
+                      </div>
+                    </template>
+                  </a-table-column>
+                  <a-table-column title="单位" data-index="unit" :width="60" align="center" />
+                  <a-table-column title="参考价" :width="100" align="right">
+                     <template #cell="{ record }">
+                       <span class="price">¥{{ record.referencePrice }}</span>
+                     </template>
+                   </a-table-column>
+                 </template>
+               </a-table>
+            </a-collapse-item>
+          </a-collapse>
+        </div>
+
         <div class="selector-footer">
           <span>已选择 <strong>{{ selectedSkuKeys.length }}</strong> 个SKU</span>
           <a-space>
@@ -554,37 +594,250 @@ const skuSelectorVisible = ref(false)
 const skuSearchKeyword = ref('')
 const skuCategoryFilter = ref('')
 const selectedSkuKeys = ref<string[]>([])
+const spuActiveKeys = ref<string[]>([])
 
-const skuList = ref([
-  { skuId: 'SKU001', skuCode: 'SKU001', productName: '普通硅酸盐水泥P.O42.5', specValues: '50kg/袋', unit: '袋', referencePrice: 28, stock: 5000 },
-  { skuId: 'SKU002', skuCode: 'SKU002', productName: '螺纹钢HRB400', specValues: 'Φ12mm', unit: '吨', referencePrice: 4200, stock: 200 },
-  { skuId: 'SKU003', skuCode: 'SKU003', productName: '抛光砖', specValues: '800×800mm', unit: '片', referencePrice: 45, stock: 3000 },
-  { skuId: 'SKU004', skuCode: 'SKU004', productName: '内墙乳胶漆', specValues: '20L/桶', unit: '桶', referencePrice: 380, stock: 150 },
-  { skuId: 'SKU005', skuCode: 'SKU005', productName: '防水涂料', specValues: '18kg/桶', unit: '桶', referencePrice: 260, stock: 80 },
-  { skuId: 'SKU006', skuCode: 'SKU006', productName: '石膏板', specValues: '1200×2400×9.5mm', unit: '张', referencePrice: 35, stock: 500 },
-  { skuId: 'SKU007', skuCode: 'SKU007', productName: 'PVC排水管', specValues: 'Φ110mm', unit: '根', referencePrice: 45, stock: 300 },
-  { skuId: 'SKU008', skuCode: 'SKU008', productName: '电线BV', specValues: '2.5平方', unit: '卷', referencePrice: 180, stock: 200 }
+const spuList = ref([
+  {
+    spuId: 'SPU001',
+    spuCode: 'SPU001',
+    spuName: '普通硅酸盐水泥',
+    categoryName: '水泥建材',
+    skuList: [
+      { 
+        skuId: 'SKU001', 
+        skuCode: 'SKU001', 
+        productName: '普通硅酸盐水泥P.O42.5', 
+        specs: [{ name: '强度等级', value: 'P.O42.5' }, { name: '包装', value: '50kg/袋' }],
+        specValues: '50kg/袋',
+        unit: '袋', 
+        referencePrice: 28, 
+        stock: 5000 
+      },
+      { 
+        skuId: 'SKU001_2', 
+        skuCode: 'SKU001_2', 
+        productName: '普通硅酸盐水泥P.O52.5', 
+        specs: [{ name: '强度等级', value: 'P.O52.5' }, { name: '包装', value: '50kg/袋' }],
+        specValues: '50kg/袋',
+        unit: '袋', 
+        referencePrice: 35, 
+        stock: 3000 
+      },
+      { 
+        skuId: 'SKU001_3', 
+        skuCode: 'SKU001_3', 
+        productName: '普通硅酸盐水泥P.O42.5R', 
+        specs: [{ name: '强度等级', value: 'P.O42.5R' }, { name: '包装', value: '50kg/袋' }],
+        specValues: '50kg/袋',
+        unit: '袋', 
+        referencePrice: 30, 
+        stock: 2000 
+      }
+    ]
+  },
+  {
+    spuId: 'SPU002',
+    spuCode: 'SPU002',
+    spuName: '螺纹钢HRB400',
+    categoryName: '钢材钢筋',
+    skuList: [
+      { 
+        skuId: 'SKU002', 
+        skuCode: 'SKU002', 
+        productName: '螺纹钢HRB400', 
+        specs: [{ name: '规格', value: 'Φ12mm' }, { name: '材质', value: 'HRB400' }],
+        specValues: 'Φ12mm',
+        unit: '吨', 
+        referencePrice: 4200, 
+        stock: 200 
+      },
+      { 
+        skuId: 'SKU002_2', 
+        skuCode: 'SKU002_2', 
+        productName: '螺纹钢HRB400', 
+        specs: [{ name: '规格', value: 'Φ16mm' }, { name: '材质', value: 'HRB400' }],
+        specValues: 'Φ16mm',
+        unit: '吨', 
+        referencePrice: 4150, 
+        stock: 150 
+      },
+      { 
+        skuId: 'SKU002_3', 
+        skuCode: 'SKU002_3', 
+        productName: '螺纹钢HRB400', 
+        specs: [{ name: '规格', value: 'Φ20mm' }, { name: '材质', value: 'HRB400' }],
+        specValues: 'Φ20mm',
+        unit: '吨', 
+        referencePrice: 4100, 
+        stock: 180 
+      },
+      { 
+        skuId: 'SKU002_4', 
+        skuCode: 'SKU002_4', 
+        productName: '螺纹钢HRB400E', 
+        specs: [{ name: '规格', value: 'Φ25mm' }, { name: '材质', value: 'HRB400E' }],
+        specValues: 'Φ25mm',
+        unit: '吨', 
+        referencePrice: 4300, 
+        stock: 80 
+      }
+    ]
+  },
+  {
+    spuId: 'SPU003',
+    spuCode: 'SPU003',
+    spuName: '陶瓷抛光砖',
+    categoryName: '陶瓷瓷砖',
+    skuList: [
+      { 
+        skuId: 'SKU003', 
+        skuCode: 'SKU003', 
+        productName: '抛光砖', 
+        specs: [{ name: '尺寸', value: '800×800mm' }, { name: '纹理', value: '米黄' }],
+        specValues: '800×800mm',
+        unit: '片', 
+        referencePrice: 45, 
+        stock: 3000 
+      },
+      { 
+        skuId: 'SKU003_2', 
+        skuCode: 'SKU003_2', 
+        productName: '抛光砖', 
+        specs: [{ name: '尺寸', value: '600×600mm' }, { name: '纹理', value: '米黄' }],
+        specValues: '600×600mm',
+        unit: '片', 
+        referencePrice: 28, 
+        stock: 5000 
+      },
+      { 
+        skuId: 'SKU003_3', 
+        skuCode: 'SKU003_3', 
+        productName: '抛光砖', 
+        specs: [{ name: '尺寸', value: '800×800mm' }, { name: '纹理', value: '白麻' }],
+        specValues: '800×800mm',
+        unit: '片', 
+        referencePrice: 52, 
+        stock: 2500 
+      }
+    ]
+  },
+  {
+    spuId: 'SPU004',
+    spuCode: 'SPU004',
+    spuName: '建筑涂料',
+    categoryName: '涂料油漆',
+    skuList: [
+      { 
+        skuId: 'SKU004', 
+        skuCode: 'SKU004', 
+        productName: '内墙乳胶漆', 
+        specs: [{ name: '容量', value: '20L/桶' }, { name: '系列', value: '净味' }],
+        specValues: '20L/桶',
+        unit: '桶', 
+        referencePrice: 380, 
+        stock: 150 
+      },
+      { 
+        skuId: 'SKU004_2', 
+        skuCode: 'SKU004_2', 
+        productName: '内墙乳胶漆', 
+        specs: [{ name: '容量', value: '5L/桶' }, { name: '系列', value: '竹炭' }],
+        specValues: '5L/桶',
+        unit: '桶', 
+        referencePrice: 120, 
+        stock: 300 
+      },
+      { 
+        skuId: 'SKU005', 
+        skuCode: 'SKU005', 
+        productName: '防水涂料', 
+        specs: [{ name: '容量', value: '18kg/桶' }, { name: '类型', value: 'JS聚合物' }],
+        specValues: '18kg/桶',
+        unit: '桶', 
+        referencePrice: 260, 
+        stock: 80 
+      }
+    ]
+  },
+  {
+    spuId: 'SPU005',
+    spuCode: 'SPU005',
+    spuName: '装饰板材',
+    categoryName: '建材',
+    skuList: [
+      { 
+        skuId: 'SKU006', 
+        skuCode: 'SKU006', 
+        productName: '石膏板', 
+        specs: [{ name: '尺寸', value: '1200×2400×9.5mm' }, { name: '类型', value: '普通' }],
+        specValues: '1200×2400×9.5mm',
+        unit: '张', 
+        referencePrice: 35, 
+        stock: 500 
+      },
+      { 
+        skuId: 'SKU006_2', 
+        skuCode: 'SKU006_2', 
+        productName: '石膏板', 
+        specs: [{ name: '尺寸', value: '1200×2400×12mm' }, { name: '类型', value: '耐火' }],
+        specValues: '1200×2400×12mm',
+        unit: '张', 
+        referencePrice: 48, 
+        stock: 200 
+      }
+    ]
+  }
 ])
 
-const filteredSkuList = computed(() => {
-  let result = skuList.value
+const filteredSpuList = computed(() => {
+  let result = spuList.value
   if (skuSearchKeyword.value) {
-    result = result.filter(s => 
-      s.productName.includes(skuSearchKeyword.value) ||
-      s.skuCode.includes(skuSearchKeyword.value)
+    result = result.filter(spu => 
+      spu.spuName.includes(skuSearchKeyword.value) ||
+      spu.spuCode.includes(skuSearchKeyword.value) ||
+      spu.skuList.some(sku => sku.productName.includes(skuSearchKeyword.value))
     )
+  }
+  if (skuCategoryFilter.value) {
+    result = result.filter(spu => spu.categoryName === skuCategoryFilter.value)
   }
   return result
 })
 
-const skuRowSelection = computed(() => ({
-  type: 'checkbox' as const,
-  selectedRowKeys: selectedSkuKeys.value,
-  onlyCurrent: false,
-  onChange: (keys: string[]) => {
-    selectedSkuKeys.value = keys
+const firstSpuKey = computed(() => {
+  return filteredSpuList.value[0]?.spuId || ''
+})
+
+function isSpuAllSelected(spu: any) {
+  return spu.skuList.every((sku: any) => selectedSkuKeys.value.includes(sku.skuId))
+}
+
+function isSpuPartialSelected(spu: any) {
+  const selectedCount = spu.skuList.filter((sku: any) => selectedSkuKeys.value.includes(sku.skuId)).length
+  return selectedCount > 0 && selectedCount < spu.skuList.length
+}
+
+function handleToggleSpuAll(spu: any, checked: boolean) {
+  const skuIds = spu.skuList.map((sku: any) => sku.skuId)
+  if (checked) {
+    const newKeys = [...new Set([...selectedSkuKeys.value, ...skuIds])]
+    selectedSkuKeys.value = newKeys
+  } else {
+    selectedSkuKeys.value = selectedSkuKeys.value.filter(id => !skuIds.includes(id))
   }
-}))
+}
+
+function getSkuRowSelection(spu: any) {
+  return {
+    type: 'checkbox' as const,
+    selectedRowKeys: selectedSkuKeys.value,
+    onlyCurrent: false,
+    onChange: (keys: string[]) => {
+      const allSkuIds = spuList.value.flatMap(spu => spu.skuList.map((sku: any) => sku.skuId))
+      selectedSkuKeys.value = keys.filter(key => allSkuIds.includes(key))
+    }
+  }
+}
 
 const totalEstimatedAmount = computed(() => {
   return planForm.skuList.reduce((sum, item) => sum + item.quantity * item.referencePrice, 0).toFixed(2)
@@ -748,7 +1001,8 @@ function handleAddSku() {
 }
 
 function handleConfirmSku() {
-  const newSkus = filteredSkuList.value
+  const allSkuList = spuList.value.flatMap(spu => spu.skuList)
+  const newSkus = allSkuList
     .filter(s => selectedSkuKeys.value.includes(s.skuId))
     .filter(s => !planForm.skuList.some(p => p.skuId === s.skuId))
     .map(s => ({
@@ -758,6 +1012,7 @@ function handleConfirmSku() {
     }))
   
   planForm.skuList.push(...newSkus)
+  selectedSkuKeys.value = []
   skuSelectorVisible.value = false
   Message.success(`已添加 ${newSkus.length} 个SKU`)
 }
@@ -991,5 +1246,59 @@ function getPushStatusText(status: string) {
 .sub-text {
   font-size: 12px;
   color: var(--color-text-3);
+}
+
+.spu-list {
+  margin-top: 16px;
+  max-height: 500px;
+  overflow-y: auto;
+
+  :deep(.arco-collapse-item-header) {
+    padding: 12px 16px;
+  }
+
+  :deep(.arco-collapse-item-content-box) {
+    padding: 0 16px 16px;
+  }
+}
+
+.spu-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+
+  .spu-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .spu-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--color-text-1);
+    }
+
+    .sku-count {
+      font-size: 12px;
+      color: var(--color-text-3);
+    }
+  }
+}
+
+.spec-values {
+  .arco-tag {
+    display: inline-flex;
+  }
+}
+
+.price {
+  font-weight: 500;
+  color: rgb(var(--danger-6));
+}
+
+.stock-low {
+  color: rgb(var(--warning-6));
 }
 </style>

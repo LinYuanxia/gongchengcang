@@ -188,16 +188,16 @@ const routes: RouteRecordRaw[] = [
             meta: { title: 'BOM包详情', hideInMenu: true },
           },
           {
-            path: 'category',
-            name: 'MarketCategory',
-            component: () => import('@/views/market/category/index.vue'),
-            meta: { title: '分类展示', icon: 'icon-folder' },
-          },
-          {
             path: 'price',
             name: 'MarketPrice',
             component: () => import('@/views/market/price/index.vue'),
             meta: { title: '价格管理', icon: 'icon-price-tag' },
+          },
+          {
+            path: 'plan',
+            name: 'MarketPlan',
+            component: () => import('@/views/plan/list/index.vue'),
+            meta: { title: '采购计划' },
           },
         ],
       },
@@ -230,20 +230,6 @@ const routes: RouteRecordRaw[] = [
             name: 'SaleOrder',
             component: () => import('@/views/order/sale/index.vue'),
             meta: { title: '销售订单' },
-          },
-        ],
-      },
-      {
-        path: 'plan',
-        name: 'Plan',
-        redirect: '/plan/list',
-        meta: { title: '采购计划', icon: 'icon-calendar' },
-        children: [
-          {
-            path: 'list',
-            name: 'PlanList',
-            component: () => import('@/views/plan/list/index.vue'),
-            meta: { title: '计划列表' },
           },
         ],
       },
@@ -301,9 +287,29 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'finance',
         name: 'Finance',
-        redirect: '/finance/custody/list',
+        redirect: '/finance/wallet/list',
         meta: { title: '财务中心', icon: 'icon-money-collect' },
         children: [
+          {
+            path: 'wallet',
+            name: 'FinanceWallet',
+            redirect: '/finance/wallet/list',
+            meta: { title: '账户钱包' },
+            children: [
+              {
+                path: 'list',
+                name: 'FinanceWalletList',
+                component: () => import('@/views/finance/wallet/index.vue'),
+                meta: { title: '账户列表' },
+              },
+              {
+                path: 'transactions',
+                name: 'FinanceWalletTransactions',
+                component: () => import('@/views/finance/wallet/transactions.vue'),
+                meta: { title: '交易流水' },
+              },
+            ],
+          },
           {
             path: 'custody',
             name: 'FundCustody',
@@ -311,17 +317,17 @@ const routes: RouteRecordRaw[] = [
             meta: { title: '资金托管' },
             children: [
               {
-            path: 'list',
-            name: 'CustodyAccountList',
-            component: () => import('@/views/finance/custody/index.vue'),
-            meta: { title: '账户列表' },
-          },
-          {
-            path: 'detail/:accountId',
-            name: 'CustodyAccountDetail',
-            component: () => import('@/views/finance/custody/detail.vue'),
-            meta: { title: '账户详情', hideInMenu: true },
-          },
+                path: 'list',
+                name: 'CustodyAccountList',
+                component: () => import('@/views/finance/custody/index.vue'),
+                meta: { title: '账户列表' },
+              },
+              {
+                path: 'detail/:accountId',
+                name: 'CustodyAccountDetail',
+                component: () => import('@/views/finance/custody/detail.vue'),
+                meta: { title: '账户详情', hideInMenu: true },
+              },
               {
                 path: 'open-record',
                 name: 'CustodyOpenRecord',
@@ -419,6 +425,18 @@ const routes: RouteRecordRaw[] = [
             name: 'FinanceServiceBill',
             component: () => import('@/views/finance/service-bill/index.vue'),
             meta: { title: '服务费账单' },
+          },
+          {
+            path: 'deduction',
+            name: 'FinanceDeduction',
+            component: () => import('@/views/finance/deduction/index.vue'),
+            meta: { title: '应扣记录' },
+          },
+          {
+            path: 'receivable',
+            name: 'FinanceReceivable',
+            component: () => import('@/views/finance/receivable/index.vue'),
+            meta: { title: '应收记录' },
           },
           {
             path: 'report',
