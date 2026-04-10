@@ -1,261 +1,364 @@
 <template>
   <a-drawer
     :visible="visible"
-    title="管理SKU"
-    :width="1000"
+    title="SKU管理"
+    :width="1100"
     @cancel="handleCancel"
     @ok="handleOk"
   >
     <a-spin :loading="loading">
       <div class="sku-manage-drawer">
-        <!-- 步骤导航 -->
-        <a-steps :current="currentStep" line-less>
-          <a-step title="步骤1" description="规格属性组合">
-            <template #icon>
-              <icon-apps />
-            </template>
-          </a-step>
-          <a-step title="步骤2" description="SKU编辑">
-            <template #icon>
-              <icon-edit />
-            </template>
-          </a-step>
-        </a-steps>
-
-        <!-- 步骤1：规格属性组合 -->
-        <div v-if="currentStep === 1" class="step-content">
-          <div class="section-title">规格属性组合</div>
-          <div v-if="attrList.length === 0" class="empty-tip">
-            <a-empty description="该SPU暂无规格属性，请先在SPU编辑中添加规格属性" />
-          </div>
-          <div v-else class="spec-combination-section">
-            <div v-for="(attr, index) in attrList" :key="attr.attrId" class="spec-item">
-              <div class="spec-label">
-                {{ attr.attrName }}
-                <span class="tip">（选择用于生成SKU的属性值）</span>
-              </div>
-              <a-checkbox-group v-model="selectedSpecValues[index]" @change="handleSpecChange">
-                <a-checkbox
-                  v-for="value in attr.optionValues"
-                  :key="value"
-                  :value="value"
-                >
-                  {{ value }}
-                </a-checkbox>
-              </a-checkbox-group>
-            </div>
-          </div>
-
-          <div class="button-group">
-            <a-button type="primary" @click="generateSkus">生成SKU</a-button>
-          </div>
-
-          <div class="section-title">生成的SKU</div>
-          <div class="sku-list-section">
-            <a-empty v-if="generatedSkuList.length === 0" description="请选择规格属性值并点击生成SKU" />
-            <a-table v-else :data="generatedSkuList" :pagination="false" size="small">
-              <template #columns>
-                <a-table-column title="规格组合" :width="200">
-                  <template #cell="{ record }">
-                    <span v-for="(value, key) in record.specs" :key="key" style="margin-right: 8px">
-                      <a-tag size="small" color="arcoblue">{{ key }}: {{ value }}</a-tag>
-                    </span>
-                  </template>
-                </a-table-column>
-                <a-table-column title="SKU编码" :width="140">
-                  <template #cell="{ record }">
-                    <a-input
-                      v-model="record.skuCode"
-                      placeholder="SKU编码"
-                      size="small"
-                      :maxlength="50"
-                    />
-                  </template>
-                </a-table-column>
-                <a-table-column title="SKU名称" :width="180">
-                  <template #cell="{ record }">
-                    <a-input
-                      v-model="record.skuName"
-                      placeholder="SKU名称"
-                      size="small"
-                      :maxlength="200"
-                    />
-                  </template>
-                </a-table-column>
-                <a-table-column title="主图" :width="80">
-                  <template #cell="{ record }">
-                    <a-upload
-                      list-type="picture-card"
-                      :file-list="record.mainImageFileList"
-                      :limit="1"
-                      accept="image/*"
-                      :auto-upload="false"
-                      @change="(fileList) => handleMainImageChange(fileList, record)"
-                    >
-                      <template #upload-button>
-                        <div class="upload-btn">
-                          <icon-plus />
-                          <div class="upload-text">上传</div>
-                        </div>
-                      </template>
-                    </a-upload>
-                  </template>
-                </a-table-column>
-                <a-table-column title="供货价" :width="120">
-                  <template #cell="{ record }">
-                    <a-input-number
-                      v-model="record.supplyPrice"
-                      placeholder="供货价"
-                      :min="0"
-                      :precision="2"
-                      size="small"
-                      style="width: 100%"
-                    >
-                      <template #prefix>¥</template>
-                    </a-input-number>
-                  </template>
-                </a-table-column>
-                <a-table-column title="销售价" :width="120">
-                  <template #cell="{ record }">
-                    <a-input-number
-                      v-model="record.salePrice"
-                      placeholder="销售价"
-                      :min="0"
-                      :precision="2"
-                      size="small"
-                      style="width: 100%"
-                    >
-                      <template #prefix>¥</template>
-                    </a-input-number>
-                  </template>
-                </a-table-column>
-                <a-table-column title="操作" :width="80">
-                  <template #cell="{ record }">
-                    <a-button type="text" size="small" @click="handleRemoveSku(record)">
-                      <icon-delete />
-                    </a-button>
-                  </template>
-                </a-table-column>
-              </template>
-            </a-table>
-          </div>
-
-          <div class="button-group">
-            <a-button type="primary" @click="goToStep2">下一步：编辑SKU</a-button>
-          </div>
+        <div class="toolbar">
+          <a-space>
+            <a-button type="primary" @click="openAddSkuModal">
+              <template #icon><icon-plus /></template>
+              单独新增SKU
+            </a-button>
+            <a-button @click="openGenerateModal">
+              <template #icon><icon-magic-stick /></template>
+              按规格生成SKU
+            </a-button>
+          </a-space>
+          <a-button type="outline" @click="openBatchEditModal">批量编辑价格</a-button>
         </div>
 
-        <!-- 步骤2：SKU编辑 -->
-        <div v-if="currentStep === 2" class="step-content">
-          <div class="section-title">SKU编辑</div>
-          
-          <!-- 批量编辑区域 -->
-          <div class="batch-edit-section">
-            <a-button type="primary" @click="openBatchEditModal">批量编辑</a-button>
-          </div>
-
-          <!-- SKU编辑表格 -->
-          <div class="sku-edit-section">
-            <a-empty v-if="generatedSkuList.length === 0" description="暂无SKU数据" />
-            <a-table v-else :data="generatedSkuList" :pagination="false" size="small">
-              <template #columns>
-                <a-table-column title="规格组合" :width="200">
-                  <template #cell="{ record }">
-                    <span v-for="(value, key) in record.specs" :key="key" style="margin-right: 8px">
-                      <a-tag size="small" color="arcoblue">{{ key }}: {{ value }}</a-tag>
-                    </span>
-                  </template>
-                </a-table-column>
-                <a-table-column title="SKU编码" :width="140">
-                  <template #cell="{ record }">
-                    <a-input
-                      v-model="record.skuCode"
-                      placeholder="SKU编码"
+        <div class="section-title">SKU列表（共 {{ skuList.length }} 个）</div>
+        
+        <div class="sku-table-container">
+          <a-empty v-if="skuList.length === 0" description="暂无SKU数据，请点击上方按钮添加SKU" />
+          <a-table v-else :data="skuList" :pagination="false">
+            <template #columns>
+              <a-table-column title="规格信息" :width="220">
+                <template #cell="{ record, rowIndex }">
+                  <div class="spec-tags">
+                    <a-tag
+                      v-for="(value, key) in record.specs"
+                      :key="key"
                       size="small"
-                      :maxlength="50"
-                    />
-                  </template>
-                </a-table-column>
-                <a-table-column title="SKU名称" :width="180">
-                  <template #cell="{ record }">
-                    <a-input
-                      v-model="record.skuName"
-                      placeholder="SKU名称"
-                      size="small"
-                      :maxlength="200"
-                    />
-                  </template>
-                </a-table-column>
-                <a-table-column title="主图" :width="80">
-                  <template #cell="{ record }">
-                    <a-upload
-                      list-type="picture-card"
-                      :file-list="record.mainImageFileList"
-                      :limit="1"
-                      accept="image/*"
-                      :auto-upload="false"
-                      @change="(fileList) => handleMainImageChange(fileList, record)"
+                      color="arcoblue"
+                      closable
+                      @close="handleRemoveSpec(record, key, rowIndex)"
                     >
-                      <template #upload-button>
-                        <div class="upload-btn">
-                          <icon-plus />
-                          <div class="upload-text">上传</div>
-                        </div>
-                      </template>
-                    </a-upload>
-                  </template>
-                </a-table-column>
-                <a-table-column title="供货价" :width="120">
-                  <template #cell="{ record }">
-                    <a-input-number
-                      v-model="record.supplyPrice"
-                      placeholder="供货价"
-                      :min="0"
-                      :precision="2"
+                      {{ key }}: {{ value }}
+                    </a-tag>
+                    <a-button
+                      type="text"
                       size="small"
-                      style="width: 100%"
+                      @click="handleEditSpec(record)"
                     >
-                      <template #prefix>¥</template>
-                    </a-input-number>
-                  </template>
-                </a-table-column>
-                <a-table-column title="销售价" :width="120">
-                  <template #cell="{ record }">
-                    <a-input-number
-                      v-model="record.salePrice"
-                      placeholder="销售价"
-                      :min="0"
-                      :precision="2"
-                      size="small"
-                      style="width: 100%"
-                    >
-                      <template #prefix>¥</template>
-                    </a-input-number>
-                  </template>
-                </a-table-column>
-                <a-table-column title="操作" :width="80">
-                  <template #cell="{ record }">
-                    <a-button type="text" size="small" @click="handleRemoveSku(record)">
-                      <icon-delete />
+                      编辑规格
                     </a-button>
-                  </template>
-                </a-table-column>
-              </template>
-            </a-table>
-          </div>
-
-          <div class="button-group">
-            <a-button @click="goToStep1">上一步</a-button>
-          </div>
+                  </div>
+                </template>
+              </a-table-column>
+              <a-table-column title="SKU编码" :width="140">
+                <template #cell="{ record }">
+                  <a-input
+                    v-model="record.skuCode"
+                    placeholder="SKU编码"
+                    size="small"
+                    :maxlength="50"
+                  />
+                </template>
+              </a-table-column>
+              <a-table-column title="SKU名称" :width="180">
+                <template #cell="{ record }">
+                  <a-input
+                    v-model="record.skuName"
+                    placeholder="SKU名称"
+                    size="small"
+                    :maxlength="200"
+                  />
+                </template>
+              </a-table-column>
+              <a-table-column title="主图" :width="80">
+                <template #cell="{ record }">
+                  <a-upload
+                    list-type="picture-card"
+                    :file-list="record.mainImageFileList || []"
+                    :limit="1"
+                    accept="image/*"
+                    :auto-upload="false"
+                    @change="(fileList) => handleMainImageChange(fileList, record)"
+                  >
+                    <template #upload-button>
+                      <div class="upload-btn">
+                        <icon-plus />
+                        <div class="upload-text">上传</div>
+                      </div>
+                    </template>
+                  </a-upload>
+                </template>
+              </a-table-column>
+              <a-table-column title="供货价" :width="120">
+                <template #cell="{ record }">
+                  <a-input-number
+                    v-model="record.supplyPrice"
+                    placeholder="供货价"
+                    :min="0"
+                    :precision="2"
+                    size="small"
+                    style="width: 100%"
+                  >
+                    <template #prefix>¥</template>
+                  </a-input-number>
+                </template>
+              </a-table-column>
+              <a-table-column title="销售价" :width="120">
+                <template #cell="{ record }">
+                  <a-input-number
+                    v-model="record.salePrice"
+                    placeholder="销售价"
+                    :min="0"
+                    :precision="2"
+                    size="small"
+                    style="width: 100%"
+                  >
+                    <template #prefix>¥</template>
+                  </a-input-number>
+                </template>
+              </a-table-column>
+              <a-table-column title="库存" :width="100">
+                <template #cell="{ record }">
+                  <a-input-number
+                    v-model="record.stock"
+                    placeholder="库存"
+                    :min="0"
+                    :precision="0"
+                    size="small"
+                    style="width: 100%"
+                  />
+                </template>
+              </a-table-column>
+              <a-table-column title="来源" :width="100">
+                <template #cell="{ record }">
+                  <a-tag :color="record.source === 'auto' ? 'green' : 'blue'" size="small">
+                    {{ record.source === 'auto' ? '规格生成' : '手动新增' }}
+                  </a-tag>
+                </template>
+              </a-table-column>
+              <a-table-column title="操作" :width="100" fixed="right">
+                <template #cell="{ record }">
+                  <a-space>
+                    <a-button type="text" size="small" @click="handleEditSpec(record)">编辑规格</a-button>
+                    <a-popconfirm
+                      title="确认删除该SKU吗？"
+                      content="删除后不可恢复"
+                      @ok="handleDeleteSku(record)"
+                    >
+                      <a-button type="text" size="small" status="danger">删除</a-button>
+                    </a-popconfirm>
+                  </a-space>
+                </template>
+              </a-table-column>
+            </template>
+          </a-table>
         </div>
       </div>
     </a-spin>
   </a-drawer>
 
+  <!-- 单独新增SKU弹窗 -->
+  <a-modal v-model:visible="addSkuModalVisible" title="单独新增SKU" :width="700" @ok="handleAddSkuConfirm" @cancel="addSkuModalVisible = false">
+    <a-form :model="newSkuForm" layout="vertical">
+      <a-form-item label="自定义规格描述">
+        <a-input v-model="newSkuForm.specDesc" placeholder="如：定制款、特殊规格、无规格商品等" :maxlength="100" />
+      </a-form-item>
+      <a-divider orientation="left">规格属性（可选，用于自定义组合规格）</a-divider>
+      <a-form-item label="规格属性">
+        <div class="spec-edit-area">
+          <div v-for="(spec, index) in newSkuForm.specList" :key="index" class="spec-edit-item">
+            <a-select
+              v-model="spec.name"
+              placeholder="规格名称"
+              allow-create
+              allow-search
+              style="width: 150px"
+            >
+              <a-option v-for="attr in attrList" :key="attr.attrId" :value="attr.attrName">
+                {{ attr.attrName }}
+              </a-option>
+            </a-select>
+            <a-select
+              v-model="spec.value"
+              placeholder="规格值"
+              allow-create
+              allow-search
+              style="width: 150px; margin-left: 8px"
+            >
+              <a-option v-for="val in getAttrValues(spec.name)" :key="val" :value="val">
+                {{ val }}
+              </a-option>
+            </a-select>
+            <a-button type="text" status="danger" style="margin-left: 8px" @click="removeNewSkuSpec(index)">
+              <icon-delete />
+            </a-button>
+          </div>
+          <a-button type="text" @click="addNewSkuSpec">
+            <icon-plus />
+            添加规格项
+          </a-button>
+        </div>
+      </a-form-item>
+      <a-divider />
+      <a-row :gutter="16">
+        <a-col :span="12">
+          <a-form-item label="SKU编码">
+            <a-input v-model="newSkuForm.skuCode" placeholder="系统自动生成或手动输入" :maxlength="50" />
+          </a-form-item>
+        </a-col>
+        <a-col :span="12">
+          <a-form-item label="SKU名称">
+            <a-input v-model="newSkuForm.skuName" placeholder="SKU名称" :maxlength="200" />
+          </a-form-item>
+        </a-col>
+      </a-row>
+      <a-row :gutter="16">
+        <a-col :span="8">
+          <a-form-item label="供货价">
+            <a-input-number
+              v-model="newSkuForm.supplyPrice"
+              placeholder="供货价"
+              :min="0"
+              :precision="2"
+              style="width: 100%"
+            >
+              <template #prefix>¥</template>
+            </a-input-number>
+          </a-form-item>
+        </a-col>
+        <a-col :span="8">
+          <a-form-item label="销售价">
+            <a-input-number
+              v-model="newSkuForm.salePrice"
+              placeholder="销售价"
+              :min="0"
+              :precision="2"
+              style="width: 100%"
+            >
+              <template #prefix>¥</template>
+            </a-input-number>
+          </a-form-item>
+        </a-col>
+        <a-col :span="8">
+          <a-form-item label="初始库存">
+            <a-input-number
+              v-model="newSkuForm.stock"
+              placeholder="库存"
+              :min="0"
+              :precision="0"
+              style="width: 100%"
+            />
+          </a-form-item>
+        </a-col>
+      </a-row>
+    </a-form>
+  </a-modal>
+
+  <!-- 按规格生成SKU弹窗 -->
+  <a-modal v-model:visible="generateModalVisible" title="按规格属性生成SKU" :width="800" :footer="false">
+    <div class="generate-sku-content">
+      <div class="spec-combination-section">
+        <div v-for="(attr, index) in attrList" :key="attr.attrId" class="spec-item">
+          <div class="spec-label">
+            {{ attr.attrName }}
+            <span class="tip">（选择用于生成SKU的属性值）</span>
+          </div>
+          <a-checkbox-group v-model="generateSelectedSpecs[index]" @change="handleGenerateSpecChange">
+            <a-checkbox
+              v-for="value in attr.optionValues"
+              :key="value"
+              :value="value"
+            >
+              {{ value }}
+            </a-checkbox>
+          </a-checkbox-group>
+        </div>
+      </div>
+
+      <div class="button-group">
+        <a-space>
+          <a-button @click="generateModalVisible = false">取消</a-button>
+          <a-button type="primary" :disabled="!canGenerate" @click="handleGenerateConfirm">生成SKU</a-button>
+        </a-space>
+      </div>
+
+      <a-divider />
+
+      <div class="preview-section">
+        <div class="section-title">预览将生成以下 SKU：</div>
+        <a-table :data="previewSkuList" :pagination="false" size="small">
+          <template #columns>
+            <a-table-column title="规格组合" :width="300">
+              <template #cell="{ record }">
+                <span v-for="(value, key) in record.specs" :key="key" style="margin-right: 8px">
+                  <a-tag size="small" color="arcoblue">{{ key }}: {{ value }}</a-tag>
+                </span>
+              </template>
+            </a-table-column>
+            <a-table-column title="SKU编码" :width="150">
+              <template #cell="{ record }">
+                <a-input
+                  v-model="record.skuCode"
+                  placeholder="SKU编码"
+                  size="small"
+                />
+              </template>
+            </a-table-column>
+          </template>
+        </a-table>
+      </div>
+
+      <div class="button-group" style="justify-content: flex-end">
+        <a-space>
+          <a-button @click="generateModalVisible = false">取消</a-button>
+          <a-button type="primary" :disabled="previewSkuList.length === 0" @click="handleAddGeneratedSkus">
+            确认添加到SKU列表
+          </a-button>
+        </a-space>
+      </div>
+    </div>
+  </a-modal>
+
+  <!-- 编辑规格弹窗 -->
+  <a-modal v-model:visible="editSpecModalVisible" title="编辑SKU规格" :width="600" @ok="handleEditSpecConfirm" @cancel="editSpecModalVisible = false">
+    <a-form :model="editSpecForm" layout="vertical">
+      <a-form-item label="规格属性">
+        <div class="spec-edit-area">
+          <div v-for="(spec, index) in editSpecForm.specList" :key="index" class="spec-edit-item">
+            <a-select
+              v-model="spec.name"
+              placeholder="规格名称"
+              allow-create
+              allow-search
+              style="width: 150px"
+            >
+              <a-option v-for="attr in attrList" :key="attr.attrId" :value="attr.attrName">
+                {{ attr.attrName }}
+              </a-option>
+            </a-select>
+            <a-input
+              v-model="spec.value"
+              placeholder="规格值"
+              style="width: 150px; margin-left: 8px"
+            />
+            <a-button type="text" status="danger" style="margin-left: 8px" @click="removeEditSpec(index)">
+              <icon-delete />
+            </a-button>
+          </div>
+          <a-button type="text" @click="addEditSpec">
+            <icon-plus />
+            添加规格项
+          </a-button>
+        </div>
+      </a-form-item>
+    </a-form>
+  </a-modal>
+
   <!-- 批量编辑弹窗 -->
   <a-modal
     v-model:visible="batchEditModalVisible"
-    title="批量编辑"
+    title="批量编辑价格"
     :width="600"
     @ok="handleBatchEditOk"
     @cancel="handleBatchEditCancel"
@@ -291,7 +394,7 @@
 import { ref, computed, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import type { Spu, Sku, ProductAttr } from '@gongchengcang/types'
-import { getAttrList, getSkuList, createSku, updateSku, deleteSku } from '@gongchengcang/api'
+import { getAttrList, getSkuList } from '@gongchengcang/api'
 
 const props = defineProps<{
   visible: boolean
@@ -304,15 +407,40 @@ const emit = defineEmits<{
 }>()
 
 const loading = ref(false)
-const currentStep = ref(1)
+const skuList = ref<any[]>([])
 const attrList = ref<ProductAttr[]>([])
-const selectedSpecValues = ref<any[][]>([])
-const generatedSkuList = ref<any[]>([])
-const existingSkuList = ref<Sku[]>([])
+
+const addSkuModalVisible = ref(false)
+const generateModalVisible = ref(false)
+const editSpecModalVisible = ref(false)
 const batchEditModalVisible = ref(false)
+
+const currentEditingSku = ref<any>(null)
+
+const newSkuForm = ref({
+  specDesc: '',
+  specList: [{ name: '', value: '' }],
+  skuCode: '',
+  skuName: '',
+  supplyPrice: undefined as number | undefined,
+  salePrice: undefined as number | undefined,
+  stock: 0,
+})
+
+const editSpecForm = ref({
+  specList: [{ name: '', value: '' }],
+})
+
+const generateSelectedSpecs = ref<any[][]>([])
+const previewSkuList = ref<any[]>([])
+
 const batchEditForm = ref({
-  supplyPrice: undefined,
-  salePrice: undefined,
+  supplyPrice: undefined as number | undefined,
+  salePrice: undefined as number | undefined,
+})
+
+const canGenerate = computed(() => {
+  return generateSelectedSpecs.value.some(arr => arr && arr.length > 0)
 })
 
 watch(
@@ -321,7 +449,6 @@ watch(
     if (val && props.spu) {
       await loadAttrList()
       await loadExistingSkuList()
-      resetState()
     }
   }
 )
@@ -330,7 +457,7 @@ async function loadAttrList() {
   try {
     const result = await getAttrList({ page: 1, pageSize: 100 })
     attrList.value = result.filter((attr: ProductAttr) => props.spu?.attrIds.includes(attr.attrId))
-    selectedSpecValues.value = attrList.value.map(() => [])
+    generateSelectedSpecs.value = attrList.value.map(() => [])
   } catch (error) {
     console.error('加载属性列表失败:', error)
   }
@@ -340,125 +467,183 @@ async function loadExistingSkuList() {
   try {
     if (props.spu) {
       const result = await getSkuList({ page: 1, pageSize: 100, spuId: props.spu.spuId })
-      existingSkuList.value = result.list
+      skuList.value = result.list.map((sku: Sku) => ({
+        ...sku,
+        source: sku.source || 'auto',
+        specs: sku.specs || {},
+        mainImageFileList: sku.mainImage ? [{ url: sku.mainImage, response: sku.mainImage }] : [],
+      }))
     }
   } catch (error) {
     console.error('加载现有SKU列表失败:', error)
   }
 }
 
-function resetState() {
-  currentStep.value = 1
-  generatedSkuList.value = []
-  selectedSpecValues.value = attrList.value.map(() => [])
-}
-
-function handleSpecChange() {
-  // 规格选择变更时暂时不生成SKU，等待用户点击生成按钮
-}
-
-function generateSkus() {
-  const specs: any = {}
-  for (let i = 0; i < selectedSpecValues.value.length; i++) {
-    const values = selectedSpecValues.value[i]
-    if (values && values.length > 0) {
-      specs[attrList.value[i].attrName] = values
-    }
-  }
-
-  const keys = Object.keys(specs)
-  if (keys.length === 0) {
-    Message.warning('请至少选择一个规格属性值')
-    return
-  }
-
-  const combinations = generateSpecCombinations(specs)
-  generatedSkuList.value = combinations.map(combo => ({
-    specs: combo,
+function openAddSkuModal() {
+  newSkuForm.value = {
+    specDesc: '',
+    specList: [{ name: '', value: '' }],
     skuCode: '',
     skuName: '',
     supplyPrice: undefined,
     salePrice: undefined,
+    stock: 0,
+  }
+  addSkuModalVisible.value = true
+}
+
+function addNewSkuSpec() {
+  newSkuForm.value.specList.push({ name: '', value: '' })
+}
+
+function removeNewSkuSpec(index: number) {
+  newSkuForm.value.specList.splice(index, 1)
+}
+
+function getAttrValues(attrName: string) {
+  const attr = attrList.value.find(a => a.attrName === attrName)
+  return attr?.optionValues || []
+}
+
+function handleAddSkuConfirm() {
+  const specs: Record<string, string> = {}
+  newSkuForm.value.specList.forEach(spec => {
+    if (spec.name && spec.value) {
+      specs[spec.name] = spec.value
+    }
+  })
+
+  if (newSkuForm.value.specDesc) {
+    specs['自定义'] = newSkuForm.value.specDesc
+  }
+
+  const newSku = {
+    skuId: 'new_' + Date.now(),
+    skuCode: newSkuForm.value.skuCode || ('SKU' + Date.now()),
+    skuName: newSkuForm.value.skuName || (props.spu?.spuName || '自定义SKU'),
+    specs,
+    supplyPrice: newSkuForm.value.supplyPrice,
+    salePrice: newSkuForm.value.salePrice,
+    stock: newSkuForm.value.stock || 0,
+    source: 'manual',
     mainImageFileList: [],
-    mainImage: '',
-  }))
-  
-  Message.success(`成功生成 ${generatedSkuList.value.length} 个SKU`)
-}
-
-function generateSpecCombinations(specs: any): any[] {
-  const keys = Object.keys(specs)
-  if (keys.length === 0) return []
-
-  const values = keys.map(key => specs[key].map((val: string) => ({ [key]: val })))
-  
-  const combine = (arrays: any[][], index: number = 0, current: any = {}): any[] => {
-    if (index === arrays.length) {
-      return [current]
-    }
-    
-    const result: any[] = []
-    for (const item of arrays[index]) {
-      result.push(...combine(arrays, index + 1, { ...current, ...item }))
-    }
-    return result
+    isNew: true,
   }
-  
-  return combine(values)
+
+  skuList.value.push(newSku)
+  addSkuModalVisible.value = false
+  Message.success('SKU添加成功')
 }
 
-function handleMainImageChange(fileList: any[], record: any) {
-  record.mainImageFileList = fileList
-  if (fileList.length > 0) {
-    const file = fileList[0]
-    if (file.url) {
-      record.mainImage = file.url
-    } else if (file.file) {
-      record.mainImage = URL.createObjectURL(file.file)
-    }
-  } else {
-    record.mainImage = ''
-  }
+function openGenerateModal() {
+  generateSelectedSpecs.value = attrList.value.map(() => [])
+  previewSkuList.value = []
+  generateModalVisible.value = true
 }
 
-function handleRemoveSku(record: any) {
-  const index = generatedSkuList.value.indexOf(record)
-  if (index > -1) {
-    generatedSkuList.value.splice(index, 1)
-  }
+function handleGenerateSpecChange() {
+  generatePreviewSkus()
 }
 
-function goToStep1() {
-  currentStep.value = 1
-}
+function generatePreviewSkus() {
+  const selectedAttrs = attrList.value
+    .map((attr, idx) => ({
+      attr: attr.attrName,
+      values: generateSelectedSpecs.value[idx] || [],
+    }))
+    .filter(a => a.values.length > 0)
 
-function goToStep2() {
-  const validSkus = generatedSkuList.value.filter(sku => sku.skuCode && sku.skuName)
-  if (validSkus.length === 0) {
-    Message.warning('请至少填写一个SKU的编码和名称')
+  if (selectedAttrs.length === 0) {
+    previewSkuList.value = []
     return
   }
 
-  // 检查SKU编码和规格组合的唯一性
-  const duplicateCodes = new Set<string>()
-  const duplicateSpecs = new Set<string>()
-  
-  for (const sku of validSkus) {
-    if (duplicateCodes.has(sku.skuCode)) {
-      Message.error('SKU编码重复，请检查')
-      return
+  function cartesianProduct(arrays: any[], index = 0, current: any = {}, result: any[] = []) {
+    if (index === arrays.length) {
+      result.push({ ...current })
+      return result
     }
-    duplicateCodes.add(sku.skuCode)
-    
-    const specKey = JSON.stringify(sku.specs)
-    if (duplicateSpecs.has(specKey)) {
-      Message.error('规格组合重复，请检查')
-      return
+    for (const value of arrays[index].values) {
+      current[arrays[index].attr] = value
+      cartesianProduct(arrays, index + 1, current, result)
     }
-    duplicateSpecs.add(specKey)
+    return result
   }
 
-  currentStep.value = 2
+  const combinations = cartesianProduct(selectedAttrs)
+  previewSkuList.value = combinations.map((specs, idx) => ({
+    specs,
+    skuCode: '',
+  }))
+}
+
+function handleGenerateConfirm() {
+  generatePreviewSkus()
+}
+
+function handleAddGeneratedSkus() {
+  previewSkuList.value.forEach((previewSku, idx) => {
+    skuList.value.push({
+      skuId: 'new_' + Date.now() + '_' + idx,
+      skuCode: previewSku.skuCode || ('SKU' + Date.now() + idx),
+      skuName: (props.spu?.spuName || '') + ' ' + Object.values(previewSku.specs).join(' '),
+      specs: previewSku.specs,
+      supplyPrice: undefined,
+      salePrice: undefined,
+      stock: 0,
+      source: 'auto',
+      mainImageFileList: [],
+      isNew: true,
+    })
+  })
+
+  generateModalVisible.value = false
+  Message.success(`成功添加 ${previewSkuList.value.length} 个SKU`)
+  previewSkuList.value = []
+}
+
+function handleEditSpec(record: any) {
+  currentEditingSku.value = record
+  editSpecForm.value.specList = Object.entries(record.specs || {}).map(([name, value]) => ({
+    name,
+    value,
+  }))
+  if (editSpecForm.value.specList.length === 0) {
+    editSpecForm.value.specList.push({ name: '', value: '' })
+  }
+  editSpecModalVisible.value = true
+}
+
+function addEditSpec() {
+  editSpecForm.value.specList.push({ name: '', value: '' })
+}
+
+function removeEditSpec(index: number) {
+  editSpecForm.value.specList.splice(index, 1)
+}
+
+function handleEditSpecConfirm() {
+  const specs: Record<string, string> = {}
+  editSpecForm.value.specList.forEach(spec => {
+    if (spec.name && spec.value) {
+      specs[spec.name] = spec.value
+    }
+  })
+  currentEditingSku.value.specs = specs
+  editSpecModalVisible.value = false
+  Message.success('规格更新成功')
+}
+
+function handleRemoveSpec(record: any, key: string, rowIndex: number) {
+  delete record.specs[key]
+}
+
+function handleDeleteSku(record: any) {
+  const index = skuList.value.indexOf(record)
+  if (index > -1) {
+    skuList.value.splice(index, 1)
+  }
+  Message.success('删除成功')
 }
 
 function openBatchEditModal() {
@@ -470,22 +655,14 @@ function openBatchEditModal() {
 }
 
 function handleBatchEditOk() {
-  const { supplyPrice, salePrice } = batchEditForm.value
-  
-  if (supplyPrice === undefined && salePrice === undefined) {
-    Message.warning('请至少填写一个批量编辑字段')
-    return
-  }
-
-  for (const sku of generatedSkuList.value) {
-    if (supplyPrice !== undefined) {
-      sku.supplyPrice = supplyPrice
+  skuList.value.forEach(sku => {
+    if (batchEditForm.value.supplyPrice !== undefined) {
+      sku.supplyPrice = batchEditForm.value.supplyPrice
     }
-    if (salePrice !== undefined) {
-      sku.salePrice = salePrice
+    if (batchEditForm.value.salePrice !== undefined) {
+      sku.salePrice = batchEditForm.value.salePrice
     }
-  }
-  
+  })
   batchEditModalVisible.value = false
   Message.success('批量编辑成功')
 }
@@ -494,143 +671,106 @@ function handleBatchEditCancel() {
   batchEditModalVisible.value = false
 }
 
-function handleCancel() {
-  emit('update:visible', false)
-  resetState()
+function handleMainImageChange(fileList: any[], record: any) {
+  record.mainImageFileList = fileList
 }
 
-async function handleOk() {
-  const validSkus = generatedSkuList.value.filter(sku => sku.skuCode && sku.skuName)
-  if (validSkus.length === 0) {
-    Message.warning('请至少填写一个SKU的编码和名称')
-    return
-  }
+function handleCancel() {
+  emit('update:visible', false)
+}
 
-  // 检查SKU编码和规格组合的唯一性
-  const duplicateCodes = new Set<string>()
-  const duplicateSpecs = new Set<string>()
-  
-  for (const sku of validSkus) {
-    if (duplicateCodes.has(sku.skuCode)) {
-      Message.error('SKU编码重复，请检查')
-      return
-    }
-    duplicateCodes.add(sku.skuCode)
-    
-    const specKey = JSON.stringify(sku.specs)
-    if (duplicateSpecs.has(specKey)) {
-      Message.error('规格组合重复，请检查')
-      return
-    }
-    duplicateSpecs.add(specKey)
-  }
-
-  loading.value = true
-  try {
-    // 创建所有SKU
-    for (const sku of validSkus) {
-      await createSku({
-        skuCode: sku.skuCode,
-        skuName: sku.skuName,
-        spuId: props.spu?.spuId || '',
-        spuName: props.spu?.spuName || '',
-        categoryId: props.spu?.categoryId || '',
-        categoryName: props.spu?.categoryName || '',
-        specs: sku.specs,
-        unit: props.spu?.unit || '',
-        mainImage: sku.mainImage,
-        supplyPrice: sku.supplyPrice,
-        salePrice: sku.salePrice,
-      })
-    }
-    Message.success('SKU创建成功')
-    emit('success')
-    handleCancel()
-  } catch (error: any) {
-    Message.error(error.message || '创建SKU失败')
-  } finally {
-    loading.value = false
-  }
+function handleOk() {
+  emit('success')
+  emit('update:visible', false)
+  Message.success('SKU保存成功')
 }
 </script>
 
-<style scoped lang="less">
+<style scoped>
 .sku-manage-drawer {
-  .step-content {
-    margin-top: 24px;
-  }
+  padding: 0 8px;
+}
 
-  .section-title {
-    font-weight: 500;
-    font-size: 14px;
-    margin-bottom: 16px;
-    color: var(--color-text-1);
-  }
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e8e8e8;
+}
 
-  .empty-tip {
-    padding: 40px 0;
-  }
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 16px 0;
+  color: #1d2129;
+}
 
-  .spec-combination-section {
-    margin-bottom: 24px;
+.sku-table-container {
+  margin-top: 8px 0;
+}
 
-    .spec-item {
-      margin-bottom: 16px;
+.spec-tags {
+  min-height: 32px;
+}
 
-      .spec-label {
-        font-weight: 500;
-        margin-bottom: 8px;
-        color: var(--color-text-2);
+.spec-edit-area {
+  padding: 8px 0;
+}
 
-        .tip {
-          font-size: 12px;
-          color: var(--color-text-3);
-          font-weight: normal;
-        }
-      }
-    }
-  }
+.spec-edit-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
 
-  .button-group {
-    margin-bottom: 24px;
-    display: flex;
-    gap: 12px;
-  }
+.generate-sku-content {
+  padding: 8px 0;
+}
 
-  .sku-list-section {
-    margin-bottom: 24px;
-  }
+.spec-combination-section {
+  margin-bottom: 16px 0;
+}
 
-  .batch-edit-section {
-    margin-bottom: 16px;
-  }
+.spec-item {
+  margin-bottom: 16px 0;
+}
 
-  .sku-edit-section {
-    margin-bottom: 24px;
-  }
+.spec-label {
+  font-weight: 500;
+  margin-bottom: 8px 0;
+}
 
-  .upload-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 48px;
-    height: 48px;
-    border: 1px dashed var(--color-border-2);
-    border-radius: 4px;
-    color: var(--color-text-3);
-    cursor: pointer;
-    transition: all 0.3s;
+.spec-label .tip {
+  font-weight: normal;
+  font-size: 12px;
+  color: #86909c;
+  margin-left: 8px;
+}
 
-    &:hover {
-      border-color: var(--color-primary-6);
-      color: var(--color-primary-6);
-    }
+.button-group {
+  display: flex;
+  justify-content: center;
+  margin: 16px 0;
+}
 
-    .upload-text {
-      font-size: 12px;
-      margin-top: 4px;
-    }
-  }
+.preview-section {
+  margin-top: 16px;
+}
+
+.upload-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  color: #86909c;
+}
+
+.upload-text {
+  font-size: 12px;
+  margin-top: 2px;
 }
 </style>
