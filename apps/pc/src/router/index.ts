@@ -291,10 +291,16 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '财务中心', icon: 'icon-money-collect' },
         children: [
           {
+            path: 'wallet-platform',
+            name: 'FinanceWalletPlatform',
+            component: () => import('@/views/finance/wallet/platform.vue'),
+            meta: { title: '平台钱包' },
+          },
+          {
             path: 'wallet',
             name: 'FinanceWallet',
             redirect: '/finance/wallet/list',
-            meta: { title: '账户钱包' },
+            meta: { title: '商户钱包' },
             children: [
               {
                 path: 'list',

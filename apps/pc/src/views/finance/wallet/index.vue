@@ -3,38 +3,37 @@
     <a-row :gutter="16" style="margin-bottom: 16px">
       <a-col :span="6">
         <a-card>
-          <a-statistic title="账户总余额" :value="3268500" :precision="2">
+          <a-statistic title="商户账户总余额" :value="3268500" :precision="2">
             <template #prefix>¥</template>
           </a-statistic>
         </a-card>
       </a-col>
       <a-col :span="6">
         <a-card>
-          <a-statistic title="今日收入" :value="128600" :precision="2" suffix=" ">
-            <template #prefix>¥</template>
-          </a-statistic>
+          <a-statistic title="工程仓账户" :value="5" suffix="个" />
         </a-card>
       </a-col>
       <a-col :span="6">
         <a-card>
-          <a-statistic title="今日支出" :value="45800" :precision="2">
-            <template #prefix>¥</template>
-          </a-statistic>
+          <a-statistic title="供应商账户" :value="12" suffix="个" />
         </a-card>
       </a-col>
       <a-col :span="6">
         <a-card>
-          <a-statistic title="活跃账户" :value="8" suffix="个" />
+          <a-statistic title="活跃商户" :value="15" suffix="个">
+            <template #suffix>
+              <a-tag color="green" size="small" style="margin-left: 8px">正常</a-tag>
+            </template>
+          </a-statistic>
         </a-card>
       </a-col>
     </a-row>
 
     <a-card :bordered="false">
-      <template #title>账户列表</template>
+      <template #title>商户账户列表</template>
 
       <a-tabs v-model:active-tab="activeTab" class="account-tabs">
-        <a-tab-pane key="all" title="全部" />
-        <a-tab-pane key="platform" title="平台账户" />
+        <a-tab-pane key="all" title="全部商户" />
         <a-tab-pane key="warehouse" title="工程仓账户" />
         <a-tab-pane key="supplier" title="供应商账户" />
       </a-tabs>
@@ -259,11 +258,9 @@ const accountList = ref([
 ])
 
 const filteredAccountList = computed(() => {
-  let result = accountList.value
+  let result = accountList.value.filter(r => r.accountType !== 'platform')
 
-  if (activeTab.value === 'platform') {
-    result = result.filter(r => r.accountType === 'platform')
-  } else if (activeTab.value === 'warehouse') {
+  if (activeTab.value === 'warehouse') {
     result = result.filter(r => r.accountType === 'warehouse')
   } else if (activeTab.value === 'supplier') {
     result = result.filter(r => r.accountType === 'supplier')
