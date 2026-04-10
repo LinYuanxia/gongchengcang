@@ -375,32 +375,6 @@ const routes: RouteRecordRaw[] = [
             ],
           },
           {
-            path: 'settlement',
-            name: 'FinanceSettlement',
-            redirect: '/finance/settlement/list',
-            meta: { title: '结算管理' },
-            children: [
-              {
-                path: 'list',
-                name: 'FinanceSettlementList',
-                component: () => import('@/views/finance/settlement/index.vue'),
-                meta: { title: '结算单列表' },
-              },
-              {
-                path: 'audit',
-                name: 'FinanceSettlementAudit',
-                component: () => import('@/views/finance/settlement/audit.vue'),
-                meta: { title: '结算审核' },
-              },
-              {
-                path: 'detail/:id',
-                name: 'FinanceSettlementDetail',
-                component: () => import('@/views/finance/settlement/detail.vue'),
-                meta: { title: '结算详情', hideInMenu: true },
-              },
-            ],
-          },
-          {
             path: 'invoice',
             name: 'FinanceInvoice',
             redirect: '/finance/invoice/output',
@@ -421,48 +395,10 @@ const routes: RouteRecordRaw[] = [
             ],
           },
           {
-            path: 'service-bill',
-            name: 'FinanceServiceBill',
-            component: () => import('@/views/finance/service-bill/index.vue'),
-            meta: { title: '服务费账单' },
-          },
-          {
-            path: 'deduction',
-            name: 'FinanceDeduction',
-            component: () => import('@/views/finance/deduction/index.vue'),
-            meta: { title: '应扣记录' },
-          },
-          {
             path: 'receivable',
             name: 'FinanceReceivable',
             component: () => import('@/views/finance/receivable/index.vue'),
             meta: { title: '应收记录' },
-          },
-          {
-            path: 'report',
-            name: 'FinanceReport',
-            redirect: '/finance/report/income',
-            meta: { title: '财务报表' },
-            children: [
-              {
-                path: 'income',
-                name: 'FinanceReportIncome',
-                component: () => import('@/views/finance/report/income.vue'),
-                meta: { title: '收入统计' },
-              },
-              {
-                path: 'expense',
-                name: 'FinanceReportExpense',
-                component: () => import('@/views/finance/report/expense.vue'),
-                meta: { title: '支出统计' },
-              },
-              {
-                path: 'profit',
-                name: 'FinanceReportProfit',
-                component: () => import('@/views/finance/report/profit.vue'),
-                meta: { title: '利润分析' },
-              },
-            ],
           },
         ],
       },

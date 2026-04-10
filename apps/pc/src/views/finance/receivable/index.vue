@@ -17,10 +17,9 @@
       </a-col>
       <a-col :span="6">
         <a-card>
-          <a-statistic title="待收金额" :value="300000" :precision="2">
-            <template #prefix>¥</template>
+          <a-statistic title="待收笔数" :value="3" suffix="笔">
             <template #suffix>
-              <a-tag color="orange" size="small" style="margin-left: 8px">待确认</a-tag>
+              <a-tag color="orange" size="small" style="margin-left: 8px">待收</a-tag>
             </template>
           </a-statistic>
         </a-card>
@@ -35,8 +34,9 @@
     <a-card :bordered="false">
       <a-tabs v-model:active-tab="activeTab" class="record-tabs">
         <a-tab-pane key="all" title="全部" />
-        <a-tab-pane key="pending" title="待收款" />
-        <a-tab-pane key="received" title="已收款" />
+        <a-tab-pane key="pending" title="待收" />
+        <a-tab-pane key="received" title="已收" />
+        <a-tab-pane key="void" title="已作废" />
         <a-tab-pane key="overdue" title="已逾期" />
       </a-tabs>
 
@@ -48,14 +48,9 @@
             style="width: 280px"
             @search="handleSearch"
           />
-          <a-select v-model="searchForm.payerType" placeholder="付款方类型" style="width: 140px" allow-clear>
-            <a-option value="warehouse">工程仓</a-option>
-            <a-option value="supplier">供应商</a-option>
-          </a-select>
-          <a-select v-model="searchForm.status" placeholder="收款状态" style="width: 140px" allow-clear>
-            <a-option value="pending">待收款</a-option>
-            <a-option value="received">已收款</a-option>
-            <a-option value="overdue">已逾期</a-option>
+          <a-select v-model="searchForm.reconcileStatus" placeholder="对账状态" style="width: 140px" allow-clear>
+            <a-option value="yes">已对账</a-option>
+            <a-option value="no">未对账</a-option>
           </a-select>
           <a-range-picker v-model="searchForm.dateRange" style="width: 260px" allow-clear />
         </a-space>
@@ -77,72 +72,106 @@
               <a-link>{{ record.receivableNo }}</a-link>
             </template>
           </a-table-column>
-          <a-table-column title="关联订单" :width="180">
+          <a-table-column title="关联订单" :width="160">
             <template #cell="{ record }">
               <a-link>{{ record.orderNo }}</a-link>
             </template>
           </a-table-column>
-          <a-table-column title="付款方" data-index="payerName" :width="180" />
-          <a-table-column title="付款方类型" :width="100">
+          <a-table-column title="付款方" data-index="payerName" :width="140" />
+          <a-table-column title="收款方" data-index="receiverName" :width="140" />
+          <a-table-column title="交易金额" :width="120" align="right">
             <template #cell="{ record }">
-              <a-tag color="blue">
-                {{ record.payerType === 'warehouse' ? '工程仓' : '供应商' }}
-              </a-tag>
+              ¥{{ record.orderAmount?.toLocaleString() }}
             </template>
           </a-table-column>
           <a-table-column title="应收金额" :width="120" align="right">
             <template #cell="{ record }">
-              <span class="text-danger text-xl">¥{{ record.amount?.toLocaleString() }}</span>
+              <span class="text-danger">¥{{ record.amount?.toLocaleString() }}</span>
             </template>
           </a-table-column>
-          <a-table-column title="已收金额" :width="120" align="right">
+          <a-table-column title="收款状态" :width="100">
             <template #cell="{ record }">
-              <span class="text-success">¥{{ record.receivedAmount?.toLocaleString() }}</span>
-            </template>
-          </a-table-column>
-          <a-table-column title="待收金额" :width="120" align="right">
-            <template #cell="{ record }">
-              <span v-if="record.pendingAmount > 0" class="text-warning">¥{{ record.pendingAmount?.toLocaleString() }}</span>
-              <span v-else class="text-muted">-</span>
-            </template>
-          </a-table-column>
-          <a-table-column title="状态" :width="100">
-            <template #cell="{ record }">
-              <a-tag :color="getStatusColor(record.status)">
-                {{ getStatusText(record.status) }}
+              <a-tag :color="getReceiveStatusColor(record.status)">
+                {{ getReceiveStatusText(record.status) }}
               </a-tag>
             </template>
           </a-table-column>
-          <a-table-column title="应收原因" data-index="reason" :width="200" />
-          <a-table-column title="到期时间" data-index="dueTime" :width="160" />
-          <a-table-column title="操作" :width="150" fixed="right">
+          <a-table-column title="对账状态" :width="100" align="center">
             <template #cell="{ record }">
-              <a-space wrap>
-                <a-button type="text" size="small" @click="handleViewDetail(record)">详情</a-button>
-                <a-button 
-                  v-if="record.status === 'pending'" 
-                  type="text" 
-                  size="small"
-                  status="success"
-                  @click="handleConfirmReceive(record)"
-                >
-                  确认收款
-                </a-button>
-              </a-space>
+              <a-tag v-if="record.reconcileStatus === 'yes'" color="green">已对账</a-tag>
+              <a-tag v-else color="gray">未对账</a-tag>
+            </template>
+          </a-table-column>
+          <a-table-column title="应收来源" :width="120">
+            <template #cell="{ record }">
+              {{ record.reason }}
+            </template>
+          </a-table-column>
+          <a-table-column title="产生时间" data-index="createTime" :width="160" />
+          <a-table-column title="操作" :width="100" fixed="right">
+            <template #cell="{ record }">
+              <a-button type="text" size="small" @click="handleViewDetail(record)">详情</a-button>
             </template>
           </a-table-column>
         </template>
       </a-table>
     </a-card>
+
+    <a-modal v-model:visible="detailVisible" title="应收详情" :width="800" :footer="false">
+      <a-descriptions :column="2" bordered class="mb-16">
+        <a-descriptions-item label="应收编号">{{ currentRecord?.receivableNo }}</a-descriptions-item>
+        <a-descriptions-item label="关联订单">{{ currentRecord?.orderNo }}</a-descriptions-item>
+        <a-descriptions-item label="付款方（施工方）">{{ currentRecord?.payerName }}</a-descriptions-item>
+        <a-descriptions-item label="收款方（工程仓）">{{ currentRecord?.receiverName }}</a-descriptions-item>
+        <a-descriptions-item label="订单交易金额">¥{{ currentRecord?.orderAmount?.toLocaleString() }}</a-descriptions-item>
+        <a-descriptions-item label="应收金额（平台佣金）">
+          <span class="text-danger text-lg">¥{{ currentRecord?.amount?.toLocaleString() }}</span>
+        </a-descriptions-item>
+        <a-descriptions-item label="收款状态">
+          <a-tag :color="getReceiveStatusColor(currentRecord?.status)">
+            {{ getReceiveStatusText(currentRecord?.status) }}
+          </a-tag>
+        </a-descriptions-item>
+        <a-descriptions-item label="对账状态">
+          <a-tag v-if="currentRecord?.reconcileStatus === 'yes'" color="green">已对账</a-tag>
+          <a-tag v-else color="gray">未对账</a-tag>
+        </a-descriptions-item>
+        <a-descriptions-item label="应收来源" :span="2">{{ currentRecord?.reason }}</a-descriptions-item>
+        <a-descriptions-item label="产生时间" :span="2">{{ currentRecord?.createTime }}</a-descriptions-item>
+      </a-descriptions>
+
+      <a-divider>关联分账信息</a-divider>
+      <a-table :data="splitInfo" :pagination="false" size="small">
+        <template #columns>
+          <a-table-column title="分账单号" data-index="splitNo" :width="160" />
+          <a-table-column title="分账金额" :width="120" align="right">
+            <template #cell="{ record }">
+              ¥{{ record.splitAmount?.toLocaleString() }}
+            </template>
+          </a-table-column>
+          <a-table-column title="分账比例" :width="100" align="center">
+            {{ record.splitRate }}%
+          </a-table-column>
+          <a-table-column title="分账状态" :width="100">
+            <template #cell="{ record }">
+              <a-tag color="green">已分账</a-tag>
+            </template>
+          </a-table-column>
+          <a-table-column title="分账时间" data-index="splitTime" :width="180" />
+        </template>
+      </a-table>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { Message } from '@arco-design/web-vue'
 
 const loading = ref(false)
 const activeTab = ref('all')
+const detailVisible = ref(false)
+const currentRecord = ref<any>(null)
 const pagination = reactive({
   current: 1,
   pageSize: 10,
@@ -151,161 +180,165 @@ const pagination = reactive({
 
 const searchForm = reactive({
   keyword: '',
-  payerType: undefined as string | undefined,
-  status: undefined as string | undefined,
+  reconcileStatus: undefined as string | undefined,
   dateRange: [] as string[],
 })
+
+const splitInfo = ref([
+  {
+    splitNo: 'FZ202401200001',
+    splitAmount: 1286,
+    splitRate: 1,
+    splitTime: '2024-01-20 12:30:00',
+  },
+])
 
 const recordList = ref([
   {
     id: '1',
     receivableNo: 'YS202401200001',
-    orderNo: 'PO202401200001',
-    payerName: '北京朝阳工程仓',
-    payerType: 'warehouse',
-    amount: 128600,
-    receivedAmount: 123600,
-    pendingAmount: 0,
+    orderNo: 'SO202401200001',
+    payerName: '中建三局深圳湾项目部',
+    receiverName: '深圳湾科技园工程仓',
+    orderAmount: 128600,
+    amount: 1286,
     status: 'received',
-    reason: 'C30混凝土、HRB400钢筋采购款',
-    dueTime: '2024-01-25 23:59:59',
+    reconcileStatus: 'yes',
+    reason: '施工方采购订单佣金',
     createTime: '2024-01-20 10:30:00',
   },
   {
     id: '2',
     receivableNo: 'YS202401190002',
-    orderNo: 'PO202401190002',
-    payerName: '上海浦东工程仓',
-    payerType: 'warehouse',
-    amount: 86500,
-    receivedAmount: 86500,
-    pendingAmount: 0,
+    orderNo: 'SO202401190002',
+    payerName: '中建八局上海分公司',
+    receiverName: '上海浦东工程仓',
+    orderAmount: 86500,
+    amount: 865,
     status: 'received',
-    reason: 'PC42.5水泥采购款',
-    dueTime: '2024-01-24 23:59:59',
+    reconcileStatus: 'yes',
+    reason: '施工方采购订单佣金',
     createTime: '2024-01-19 14:20:00',
   },
   {
     id: '3',
     receivableNo: 'YS202401180003',
-    orderNo: 'PO202401180003',
-    payerName: '广州天河工程仓',
-    payerType: 'warehouse',
-    amount: 245000,
-    receivedAmount: 233000,
-    pendingAmount: 0,
+    orderNo: 'SO202401180003',
+    payerName: '广州建筑集团',
+    receiverName: '广州天河工程仓',
+    orderAmount: 245000,
+    amount: 2450,
     status: 'received',
-    reason: '蒸压加气砌块、中砂河沙、碎石骨料采购款',
-    dueTime: '2024-01-23 23:59:59',
+    reconcileStatus: 'yes',
+    reason: '施工方采购订单佣金',
     createTime: '2024-01-18 09:15:00',
   },
   {
     id: '4',
     receivableNo: 'YS202401170004',
-    orderNo: 'PO202401170004',
-    payerName: '北京朝阳工程仓',
-    payerType: 'warehouse',
-    amount: 67800,
-    receivedAmount: 0,
-    pendingAmount: 67800,
+    orderNo: 'SO202401170004',
+    payerName: '碧桂园深圳项目部',
+    receiverName: '深圳宝安工程仓',
+    orderAmount: 156000,
+    amount: 1560,
     status: 'pending',
-    reason: 'SBS改性沥青防水卷材采购款',
-    dueTime: '2024-01-22 23:59:59',
+    reconcileStatus: 'no',
+    reason: '施工方采购订单佣金',
     createTime: '2024-01-17 16:45:00',
   },
   {
     id: '5',
     receivableNo: 'YS202401160005',
-    orderNo: 'PO202401160005',
-    payerName: '上海浦东工程仓',
-    payerType: 'warehouse',
-    amount: 150000,
-    receivedAmount: 0,
-    pendingAmount: 150000,
-    status: 'overdue',
-    reason: '外墙乳胶漆采购款（逾期）',
-    dueTime: '2024-01-21 23:59:59',
-    createTime: '2024-01-16 11:30:00',
+    orderNo: 'SO202401160005',
+    payerName: '万科北京分公司',
+    receiverName: '北京朝阳工程仓',
+    orderAmount: 320000,
+    amount: 3200,
+    status: 'pending',
+    reconcileStatus: 'no',
+    reason: '施工方采购订单佣金',
+    createTime: '2024-01-16 11:20:00',
   },
   {
     id: '6',
     receivableNo: 'YS202401150006',
-    orderNo: 'FW202401150001',
-    payerName: '广东建材集团',
-    payerType: 'supplier',
-    amount: 82200,
-    receivedAmount: 82200,
-    pendingAmount: 0,
-    status: 'received',
-    reason: '平台服务费',
-    dueTime: '2024-01-20 23:59:59',
-    createTime: '2024-01-15 09:00:00',
+    orderNo: 'SO202401150006',
+    payerName: '恒大地产成都公司',
+    receiverName: '成都武侯工程仓',
+    orderAmount: 98000,
+    amount: 980,
+    status: 'overdue',
+    reconcileStatus: 'no',
+    reason: '施工方采购订单佣金',
+    createTime: '2024-01-15 08:30:00',
+  },
+  {
+    id: '7',
+    receivableNo: 'YS202401140007',
+    orderNo: 'SO202401140007',
+    payerName: '融创重庆项目部',
+    receiverName: '重庆渝中工程仓',
+    orderAmount: 142000,
+    amount: 1420,
+    status: 'void',
+    reconcileStatus: 'no',
+    reason: '订单取消-已作废',
+    createTime: '2024-01-14 15:10:00',
   },
 ])
 
 const filteredRecordList = computed(() => {
-  let result = recordList.value
-
-  if (activeTab.value === 'pending') {
-    result = result.filter(r => r.status === 'pending')
-  } else if (activeTab.value === 'received') {
-    result = result.filter(r => r.status === 'received')
-  } else if (activeTab.value === 'overdue') {
-    result = result.filter(r => r.status === 'overdue')
+  let list = [...recordList.value]
+  
+  if (activeTab.value !== 'all') {
+    list = list.filter(item => item.status === activeTab.value)
   }
-
+  
   if (searchForm.keyword) {
-    const keyword = searchForm.keyword.toLowerCase()
-    result = result.filter(r => 
-      r.receivableNo.toLowerCase().includes(keyword) ||
-      r.orderNo.toLowerCase().includes(keyword) ||
-      r.payerName.toLowerCase().includes(keyword)
+    list = list.filter(item => 
+      item.receivableNo.includes(searchForm.keyword) ||
+      item.orderNo.includes(searchForm.keyword) ||
+      item.payerName.includes(searchForm.keyword)
     )
   }
-
-  if (searchForm.payerType) {
-    result = result.filter(r => r.payerType === searchForm.payerType)
+  
+  if (searchForm.reconcileStatus) {
+    list = list.filter(item => item.reconcileStatus === searchForm.reconcileStatus)
   }
-
-  if (searchForm.status) {
-    result = result.filter(r => r.status === searchForm.status)
-  }
-
-  return result
+  
+  pagination.total = list.length
+  return list
 })
 
-function getStatusText(status: string) {
+function getReceiveStatusText(status: string) {
   const map: Record<string, string> = {
-    pending: '待收款',
-    received: '已收款',
+    pending: '待收',
+    received: '已收',
+    void: '已作废',
     overdue: '已逾期',
   }
-  return map[status] || status
+  return map[status] || '-'
 }
 
-function getStatusColor(status: string) {
+function getReceiveStatusColor(status: string) {
   const map: Record<string, string> = {
     pending: 'orange',
     received: 'green',
+    void: 'gray',
     overdue: 'red',
   }
   return map[status] || 'gray'
 }
 
-onMounted(() => {
-  pagination.total = recordList.value.length
-})
-
 function handleSearch() {
-  pagination.current = 1
+  Message.success('搜索完成')
 }
 
 function handleReset() {
   searchForm.keyword = ''
-  searchForm.payerType = undefined
-  searchForm.status = undefined
+  searchForm.reconcileStatus = undefined
   searchForm.dateRange = []
-  activeTab.value = 'all'
+  Message.success('已重置')
 }
 
 function handlePageChange(page: number) {
@@ -313,28 +346,14 @@ function handlePageChange(page: number) {
 }
 
 function handleViewDetail(record: any) {
-  Message.info('查看应收详情：' + record.receivableNo)
-}
-
-function handleConfirmReceive(record: any) {
-  Message.success('已确认收款：' + record.receivableNo)
-  record.status = 'received'
-  record.receivedAmount = record.amount
-  record.pendingAmount = 0
+  currentRecord.value = record
+  detailVisible.value = true
 }
 </script>
 
-<style lang="less" scoped>
-.page-container {
-  padding: 16px;
-}
-
-:deep(.record-tabs) {
+<style scoped>
+.record-tabs {
   margin-bottom: 16px;
-
-  :deep(.arco-tabs-header) {
-    border-bottom: none;
-  }
 }
 
 .table-actions {
@@ -345,23 +364,11 @@ function handleConfirmReceive(record: any) {
 }
 
 .text-danger {
-  color: rgb(var(--danger-6));
+  color: #f53f3f;
+  font-weight: 500;
 }
 
-.text-success {
-  color: rgb(var(--success-6));
-}
-
-.text-warning {
-  color: rgb(var(--warning-6));
-}
-
-.text-muted {
-  color: rgb(var(--gray-6));
-}
-
-.text-xl {
-  font-size: 18px;
-  font-weight: 600;
+.mb-16 {
+  margin-bottom: 16px;
 }
 </style>
