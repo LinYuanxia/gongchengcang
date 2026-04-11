@@ -291,12 +291,6 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '财务中心', icon: 'icon-money-collect' },
         children: [
           {
-            path: 'wallet-platform',
-            name: 'FinanceWalletPlatform',
-            component: () => import('@/views/finance/wallet/platform.vue'),
-            meta: { title: '平台钱包' },
-          },
-          {
             path: 'wallet',
             name: 'FinanceWallet',
             redirect: '/finance/wallet/list',
@@ -363,22 +357,14 @@ const routes: RouteRecordRaw[] = [
           {
             path: 'split',
             name: 'FinanceSplit',
-            redirect: '/finance/split/list',
-            meta: { title: '分账管理' },
-            children: [
-              {
-                path: 'list',
-                name: 'FinanceSplitList',
-                component: () => import('@/views/finance/split/index.vue'),
-                meta: { title: '分账记录' },
-              },
-              {
-                path: 'config',
-                name: 'FinanceSplitConfig',
-                component: () => import('@/views/finance/split/config.vue'),
-                meta: { title: '分账规则' },
-              },
-            ],
+            component: () => import('@/views/finance/split/index.vue'),
+            meta: { title: '分账记录' },
+          },
+          {
+            path: 'split-config',
+            name: 'FinanceSplitConfig',
+            component: () => import('@/views/finance/split/config.vue'),
+            meta: { title: '分账规则' },
           },
           {
             path: 'invoice',

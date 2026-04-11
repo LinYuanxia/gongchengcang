@@ -183,6 +183,10 @@
           <a-card title="SKU列表" class="section-card">
             <template #extra>
               <a-space>
+                <a-button size="small" type="primary" @click="openAddSkuModal">
+                  <template #icon><icon-plus /></template>
+                  单独新增SKU
+                </a-button>
                 <a-button size="small" @click="showBatchPriceModal">批量设置价格</a-button>
                 <span class="sku-count">共 {{ formData.skuList.length }} 个SKU</span>
               </a-space>
@@ -224,11 +228,16 @@
                     <a-input v-model="record.skuName" size="small" placeholder="SKU名称" />
                   </template>
                 </a-table-column>
-                <a-table-column title="规格组合" :width="180">
+                <a-table-column title="规格组合" :width="220">
                   <template #cell="{ record }">
-                    <span v-for="(value, key) in record.specs" :key="key" style="margin-right: 8px">
-                      <a-tag size="small" color="arcoblue">{{ key }}: {{ value }}</a-tag>
-                    </span>
+                    <div class="spec-combo-cell">
+                      <div class="spec-tags">
+                        <span v-for="(value, key) in record.specs" :key="key" style="margin-right: 4px">
+                          <a-tag size="small" color="arcoblue">{{ key }}: {{ value }}</a-tag>
+                        </span>
+                      </div>
+                      <a-button type="text" size="small" @click="handleEditSpecText(record)">编辑规格</a-button>
+                    </div>
                   </template>
                 </a-table-column>
                 <a-table-column title="供货价" :width="120">
@@ -239,6 +248,17 @@
                 <a-table-column title="销售价" :width="120">
                   <template #cell="{ record }">
                     <a-input-number v-model="record.salePrice" size="small" placeholder="销售价" :min="0" :precision="2" />
+                  </template>
+                </a-table-column>
+                <a-table-column title="操作" :width="80" fixed="right">
+                  <template #cell="{ record }">
+                    <a-popconfirm
+                      title="确认删除"
+                      content="确定删除该SKU吗？删除后可通过重新生成规格或单独新增添加"
+                      @ok="handleDeleteSku(record)"
+                    >
+                      <a-button type="text" size="small" status="danger">删除</a-button>
+                    </a-popconfirm>
                   </template>
                 </a-table-column>
               </template>
@@ -263,6 +283,48 @@
           </a-col>
         </a-row>
         <a-alert type="info">填写的价格将应用到所有SKU，留空的价格字段不会被修改</a-alert>
+      </a-form>
+    </a-modal>
+
+    <a-modal v-model:visible="addSkuModalVisible" title="单独新增SKU" :width="700" @ok="handleAddSkuConfirm" @cancel="addSkuModalVisible = false">
+      <a-form :model="addSkuForm" layout="vertical">
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="SKU编码">
+              <a-input v-model="addSkuForm.skuCode" placeholder="系统自动生成或手动输入" :maxlength="50" disabled />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="SKU名称" :rules="[{ required: true, message: '请输入SKU名称' }]">
+              <a-input v-model="addSkuForm.skuName" placeholder="SKU名称" :maxlength="200" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+        <a-form-item label="SKU规格信息">
+          <a-textarea v-model="addSkuForm.specInfo" placeholder="请输入规格信息，如：红色、XL、纯棉 或 颜色:红色、尺寸:XL" :max-length="200" show-word-limit :auto-size="{ minRows: 2, maxRows: 4 }" />
+          <div class="form-tip">提示：多个规格用顿号、逗号、空格或换行分隔，支持键值对格式</div>
+        </a-form-item>
+        <a-row :gutter="16">
+          <a-col :span="8">
+            <a-form-item label="供货价">
+              <a-input-number v-model="addSkuForm.supplyPrice" placeholder="供货价" :min="0" :precision="2" style="width: 100%" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="8">
+            <a-form-item label="销售价">
+              <a-input-number v-model="addSkuForm.salePrice" placeholder="销售价" :min="0" :precision="2" style="width: 100%" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+      </a-form>
+    </a-modal>
+
+    <a-modal v-model:visible="editSpecModalVisible" title="编辑SKU规格" :width="600" @ok="handleEditSpecConfirm" @cancel="editSpecModalVisible = false">
+      <a-form layout="vertical">
+        <a-form-item label="规格信息">
+          <a-textarea v-model="editSpecForm.specInfo" placeholder="请输入规格信息，如：红色、XL、纯棉 或 颜色:红色、尺寸:XL" :max-length="200" show-word-limit :auto-size="{ minRows: 3, maxRows: 6 }" />
+          <div class="form-tip">提示：多个规格用顿号、逗号、空格或换行分隔，支持键值对格式</div>
+        </a-form-item>
       </a-form>
     </a-modal>
   </div>
@@ -298,6 +360,21 @@ const batchPrice = reactive({
   supplyPrice: undefined as number | undefined,
   salePrice: undefined as number | undefined,
 })
+
+const addSkuModalVisible = ref(false)
+const addSkuForm = ref({
+  skuCode: '',
+  skuName: '',
+  specInfo: '',
+  supplyPrice: undefined as number | undefined,
+  salePrice: undefined as number | undefined,
+})
+
+const editSpecModalVisible = ref(false)
+const editSpecForm = ref({
+  specInfo: '',
+})
+const currentEditingSku = ref<any>(null)
 
 interface SpecItem {
   name: string
@@ -494,10 +571,11 @@ function removeSpecValue(specIndex: number, valueIndex: number) {
 }
 
 function generateSkuList() {
+  const manualSkus = formData.skuList.filter((sku: any) => sku.source === 'manual')
   const validSpecs = formData.specList.filter(s => s.name && s.values.length > 0)
   
   if (validSpecs.length === 0) {
-    formData.skuList = []
+    formData.skuList = [...manualSkus]
     return
   }
 
@@ -522,7 +600,7 @@ function generateSkuList() {
     existingSkuMap.set(key, sku)
   })
   
-  formData.skuList = specsList.map((specs, index) => {
+  const autoSkus = specsList.map((specs, index) => {
     const key = JSON.stringify(specs)
     const existing = existingSkuMap.get(key)
     if (existing) {
@@ -538,8 +616,11 @@ function generateSkuList() {
       salePrice: undefined,
       costPrice: undefined,
       marketPrice: undefined,
+      source: 'auto',
     }
   })
+  
+  formData.skuList = [...autoSkus, ...manualSkus] as any
 }
 
 function handleSkuImageChange(skuIndex: number, fileList: any[]) {
@@ -574,6 +655,92 @@ function applyBatchPrice() {
   })
   batchPriceVisible.value = false
   Message.success('批量设置价格成功')
+}
+
+function handleDeleteSku(record: any) {
+  const index = formData.skuList.indexOf(record)
+  if (index > -1) {
+    formData.skuList.splice(index, 1)
+  }
+  Message.success('删除成功')
+}
+
+function openAddSkuModal() {
+  const timestamp = Date.now().toString().slice(-6)
+  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
+  addSkuForm.value = {
+    skuCode: `${formData.spuCode || 'SKU'}-MANUAL-${timestamp}${random}`,
+    skuName: '',
+    specInfo: '',
+    supplyPrice: undefined,
+    salePrice: undefined,
+  }
+  addSkuModalVisible.value = true
+}
+
+function parseSpecInfo(specInfo: string): Record<string, string> {
+  if (!specInfo.trim()) {
+    return { 规格: '标准款' }
+  }
+  
+  const specs: Record<string, string> = {}
+  const items = specInfo.split(/[、，,\s\n]+/).filter(s => s.trim())
+  
+  items.forEach((item, index) => {
+    if (item.includes(':')) {
+      const [key, value] = item.split(':')
+      specs[key.trim()] = value.trim()
+    } else if (item.includes('：')) {
+      const [key, value] = item.split('：')
+      specs[key.trim()] = value.trim()
+    } else {
+      specs[`规格${index + 1}`] = item.trim()
+    }
+  })
+  
+  return specs
+}
+
+function handleAddSkuConfirm() {
+  if (!addSkuForm.value.skuName) {
+    Message.warning('请输入SKU名称')
+    return
+  }
+
+  const specs = parseSpecInfo(addSkuForm.value.specInfo)
+
+  const newSku = {
+    skuId: 'new_' + Date.now(),
+    skuCode: addSkuForm.value.skuCode || (`SKU${Date.now()}`),
+    skuName: addSkuForm.value.skuName,
+    specs,
+    skuImage: formData.mainImage,
+    imageFileList: formData.mainImage ? [{ uid: '1', url: formData.mainImage, name: 'main' }] : [],
+    supplyPrice: addSkuForm.value.supplyPrice,
+    salePrice: addSkuForm.value.salePrice,
+    source: 'manual',
+  }
+
+  formData.skuList.push(newSku)
+  addSkuModalVisible.value = false
+  Message.success('SKU添加成功')
+}
+
+function handleEditSpecText(record: any) {
+  currentEditingSku.value = record
+  const specTexts = Object.entries(record.specs || {}).map(([key, value]) => `${key}:${value}`).join('、')
+  editSpecForm.value.specInfo = specTexts
+  editSpecModalVisible.value = true
+}
+
+function handleEditSpecConfirm() {
+  if (currentEditingSku.value) {
+    const specs = parseSpecInfo(editSpecForm.value.specInfo)
+    currentEditingSku.value.specs = specs
+    currentEditingSku.value.skuName = Object.values(specs).join(' ')
+  }
+  editSpecModalVisible.value = false
+  Message.success('规格更新成功')
 }
 
 async function handleSave() {
@@ -730,6 +897,18 @@ function handleManageSku() {
 .sku-count {
   color: var(--color-text-3);
   font-size: 14px;
+}
+
+.spec-combo-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  
+  .spec-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+  }
 }
 
 .sku-image-upload {

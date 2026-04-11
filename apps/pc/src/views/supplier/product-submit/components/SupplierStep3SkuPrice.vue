@@ -80,7 +80,7 @@ import type { SkuPriceInfo } from '@gongchengcang/types'
 
 const props = defineProps<{
   formData: {
-    skuList: SkuPriceInfo[]
+    skuList: any[]
   }
 }>()
 

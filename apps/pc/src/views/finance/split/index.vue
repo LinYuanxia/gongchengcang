@@ -22,12 +22,12 @@
           </a-statistic>
         </a-col>
         <a-col :span="6">
-          <a-statistic title="待分账金额" :value="42500" :precision="2">
+          <a-statistic title="历史分账金额" :value="1256800" :precision="2">
             <template #prefix>¥</template>
           </a-statistic>
         </a-col>
         <a-col :span="6">
-          <a-statistic title="分账失败" :value="3">
+          <a-statistic title="分账总笔数" :value="156">
             <template #suffix>笔</template>
           </a-statistic>
         </a-col>
@@ -42,14 +42,6 @@
             <a-option value="w1">深圳湾科技园项目仓</a-option>
             <a-option value="w2">广州天河工程仓</a-option>
             <a-option value="s1">华润建材供应商</a-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item label="分账状态">
-          <a-select v-model="searchForm.status" placeholder="全部" allow-clear style="width: 120px">
-            <a-option value="pending">待分账</a-option>
-            <a-option value="processing">处理中</a-option>
-            <a-option value="success">已分账</a-option>
-            <a-option value="failed">分账失败</a-option>
           </a-select>
         </a-form-item>
         <a-form-item label="分账时间">
@@ -92,27 +84,17 @@
               </a-tag>
             </template>
           </a-table-column>
-          <a-table-column title="分账状态" :width="100">
-            <template #cell="{ record }">
-              <a-tag :color="getStatusColor(record.status)">
-                {{ getStatusText(record.status) }}
-              </a-tag>
-            </template>
-          </a-table-column>
           <a-table-column title="分账时间" data-index="splitTime" :width="180" />
-          <a-table-column title="操作" :width="120" fixed="right">
+          <a-table-column title="操作" :width="100" fixed="right">
             <template #cell="{ record }">
-              <a-space>
-                <a-button type="text" size="small" @click="handleViewDetail(record)">详情</a-button>
-                <a-button v-if="record.status === 'failed'" type="text" size="small" status="warning" @click="handleRetry(record)">重试</a-button>
-              </a-space>
+              <a-button type="text" size="small" @click="handleViewDetail(record)">详情</a-button>
             </template>
           </a-table-column>
         </template>
       </a-table>
     </a-card>
 
-    <a-modal v-model:visible="detailVisible" title="分账详情" :width="700" :footer="false">
+    <a-modal v-model:visible="detailVisible" title="分账详情" :width="800" :footer="false">
       <a-descriptions :column="2" bordered>
         <a-descriptions-item label="分账单号">{{ currentSplit?.splitNo }}</a-descriptions-item>
         <a-descriptions-item label="关联订单">{{ currentSplit?.orderNo }}</a-descriptions-item>
@@ -127,15 +109,33 @@
             {{ currentSplit?.merchantType === 'warehouse' ? '工程仓' : '供应商' }}
           </a-tag>
         </a-descriptions-item>
-        <a-descriptions-item label="分账状态">
-          <a-tag :color="getStatusColor(currentSplit?.status)">
-            {{ getStatusText(currentSplit?.status) }}
-          </a-tag>
-        </a-descriptions-item>
         <a-descriptions-item label="分账时间" :span="2">{{ currentSplit?.splitTime }}</a-descriptions-item>
       </a-descriptions>
 
-      <a-divider>分账明细</a-divider>
+      <a-divider>商品分账明细</a-divider>
+
+      <a-table :data="currentSplit?.products || []" :pagination="false" size="small">
+        <template #columns>
+          <a-table-column title="商品名称" data-index="name" :width="200" />
+          <a-table-column title="商品金额" :width="120" align="right">
+            <template #cell="{ record }">
+              ¥{{ record.amount?.toLocaleString() }}
+            </template>
+          </a-table-column>
+          <a-table-column title="分账比例" :width="100" align="center">
+            <template #cell="{ record }">
+              {{ record.rate }}%
+            </template>
+          </a-table-column>
+          <a-table-column title="分账金额" :width="120" align="right">
+            <template #cell="{ record }">
+              <span class="amount">¥{{ ((record.amount || 0) * record.rate / 100).toLocaleString() }}</span>
+            </template>
+          </a-table-column>
+        </template>
+      </a-table>
+
+      <a-divider>分账资金流向</a-divider>
 
       <a-table :data="splitDetail" :pagination="false" size="small">
         <template #columns>
@@ -157,13 +157,6 @@
               <span class="amount">¥{{ record.amount }}</span>
             </template>
           </a-table-column>
-          <a-table-column title="状态" :width="100">
-            <template #cell="{ record }">
-              <a-tag :color="record.status === 'success' ? 'green' : 'red'">
-                {{ record.status === 'success' ? '成功' : '失败' }}
-              </a-tag>
-            </template>
-          </a-table-column>
         </template>
       </a-table>
     </a-modal>
@@ -177,7 +170,6 @@ import { Message } from '@arco-design/web-vue'
 const searchForm = ref({
   splitNo: '',
   merchantId: '',
-  status: '',
   dateRange: [],
 })
 
@@ -196,16 +188,17 @@ interface SplitRecord {
   splitRate: number
   merchantName: string
   merchantType: string
-  status: string
+  productCount: number
+  products: { name: string; amount: number; rate: number }[]
   splitTime: string
 }
 
 const allSplitList = ref<SplitRecord[]>([
-  { id: '1', splitNo: 'SP202401150001', orderNo: 'SO202401150001', transactionAmount: '125,800.00', splitAmount: '6,290.00', splitRate: 5, merchantName: '深圳湾科技园项目仓', merchantType: 'warehouse', status: 'success', splitTime: '2024-01-15 16:30:00' },
-  { id: '2', splitNo: 'SP202401150002', orderNo: 'SO202401140001', transactionAmount: '89,500.00', splitAmount: '4,475.00', splitRate: 5, merchantName: '广州天河工程仓', merchantType: 'warehouse', status: 'success', splitTime: '2024-01-15 14:20:00' },
-  { id: '3', splitNo: 'SP202401140001', orderNo: 'SO202401130001', transactionAmount: '52,300.00', splitAmount: '2,615.00', splitRate: 5, merchantName: '深圳湾科技园项目仓', merchantType: 'warehouse', status: 'pending', splitTime: '2024-01-14 10:00:00' },
-  { id: '4', splitNo: 'SP202401130001', orderNo: 'SO202401120001', transactionAmount: '168,000.00', splitAmount: '8,400.00', splitRate: 5, merchantName: '深圳湾科技园项目仓', merchantType: 'warehouse', status: 'failed', splitTime: '2024-01-13 15:30:00' },
-  { id: '5', splitNo: 'SP202401120001', orderNo: 'SO202401110001', transactionAmount: '91,200.00', splitAmount: '4,560.00', splitRate: 5, merchantName: '广州天河工程仓', merchantType: 'warehouse', status: 'success', splitTime: '2024-01-12 09:00:00' },
+  { id: '1', splitNo: 'SP202401150001', orderNo: 'SO202401150001', transactionAmount: '125,800.00', splitAmount: '6,290.00', splitRate: 5, merchantName: '深圳湾科技园项目仓', merchantType: 'warehouse', productCount: 3, products: [{ name: '钢筋 HRB400', amount: 50000, rate: 5 }, { name: '水泥 P.O 42.5', amount: 40800, rate: 5 }, { name: '沙子', amount: 35000, rate: 5 }], splitTime: '2024-01-15 16:30:00' },
+  { id: '2', splitNo: 'SP202401150002', orderNo: 'SO202401140001', transactionAmount: '89,500.00', splitAmount: '4,475.00', splitRate: 5, merchantName: '广州天河工程仓', merchantType: 'warehouse', productCount: 2, products: [{ name: '模板', amount: 49500, rate: 5 }, { name: '木方', amount: 40000, rate: 5 }], splitTime: '2024-01-15 14:20:00' },
+  { id: '3', splitNo: 'SP202401140001', orderNo: 'SO202401130001', transactionAmount: '52,300.00', splitAmount: '2,615.00', splitRate: 5, merchantName: '深圳湾科技园项目仓', merchantType: 'warehouse', productCount: 4, products: [{ name: '防水涂料', amount: 12300, rate: 5 }, { name: '防水卷材', amount: 20000, rate: 5 }, { name: '密封胶', amount: 10000, rate: 5 }, { name: '保温材料', amount: 10000, rate: 5 }], splitTime: '2024-01-14 10:00:00' },
+  { id: '4', splitNo: 'SP202401130001', orderNo: 'SO202401120001', transactionAmount: '168,000.00', splitAmount: '8,400.00', splitRate: 5, merchantName: '深圳湾科技园项目仓', merchantType: 'warehouse', productCount: 5, products: [{ name: '电线电缆 BV', amount: 50000, rate: 5 }, { name: '开关插座', amount: 18000, rate: 5 }, { name: '配电箱', amount: 30000, rate: 5 }, { name: '灯具', amount: 40000, rate: 5 }, { name: '弱电设备', amount: 30000, rate: 5 }], splitTime: '2024-01-13 15:30:00' },
+  { id: '5', splitNo: 'SP202401120001', orderNo: 'SO202401110001', transactionAmount: '91,200.00', splitAmount: '4,560.00', splitRate: 5, merchantName: '广州天河工程仓', merchantType: 'warehouse', productCount: 2, products: [{ name: 'PPR水管', amount: 51200, rate: 5 }, { name: 'PVC排水管', amount: 40000, rate: 5 }], splitTime: '2024-01-12 09:00:00' },
 ])
 
 const splitList = ref<SplitRecord[]>([...allSplitList.value])
@@ -214,31 +207,9 @@ const detailVisible = ref(false)
 const currentSplit = ref<SplitRecord | null>(null)
 
 const splitDetail = ref([
-  { receiverName: '平台服务费', receiverType: 'platform', rate: 5, amount: '6,290.00', status: 'success' },
-  { receiverName: '深圳湾科技园项目仓', receiverType: 'merchant', rate: 95, amount: '119,510.00', status: 'success' },
+  { receiverName: '平台服务费', receiverType: 'platform', rate: 5, amount: '6,290.00' },
+  { receiverName: '深圳湾科技园项目仓', receiverType: 'merchant', rate: 95, amount: '119,510.00' },
 ])
-
-function getStatusColor(status: string | undefined) {
-  if (!status) return 'gray'
-  const colorMap: Record<string, string> = {
-    pending: 'orange',
-    processing: 'blue',
-    success: 'green',
-    failed: 'red',
-  }
-  return colorMap[status] || 'gray'
-}
-
-function getStatusText(status: string | undefined) {
-  if (!status) return '-'
-  const textMap: Record<string, string> = {
-    pending: '待分账',
-    processing: '处理中',
-    success: '已分账',
-    failed: '分账失败',
-  }
-  return textMap[status] || status
-}
 
 function handleSearch() {
   let filtered = [...allSplitList.value]
@@ -254,10 +225,6 @@ function handleSearch() {
     filtered = filtered.filter(item => 
       item.merchantName.includes(searchForm.value.merchantId)
     )
-  }
-  
-  if (searchForm.value.status) {
-    filtered = filtered.filter(item => item.status === searchForm.value.status)
   }
   
   if (searchForm.value.dateRange && searchForm.value.dateRange.length === 2) {
@@ -277,7 +244,6 @@ function handleReset() {
   searchForm.value = {
     splitNo: '',
     merchantId: '',
-    status: '',
     dateRange: [],
   }
 }
@@ -293,10 +259,6 @@ function handleViewOrder(record: SplitRecord) {
 function handleViewDetail(record: SplitRecord) {
   currentSplit.value = record
   detailVisible.value = true
-}
-
-function handleRetry(record: SplitRecord) {
-  Message.success(`分账单 ${record.splitNo} 已重新提交`)
 }
 
 function handleExport() {
@@ -336,5 +298,17 @@ function handleExport() {
   color: #165dff;
   font-weight: 600;
   font-size: 16px;
+}
+
+.product-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.product-count {
+  color: var(--color-text-2);
+  font-size: 13px;
 }
 </style>

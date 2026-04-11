@@ -183,8 +183,10 @@ function removeValue(attrIndex: number, valueIndex: number) {
 }
 
 function generateSkuList() {
+  const manualSkus = props.formData.skuList.filter((sku: any) => sku.source === 'manual')
+
   if (props.formData.selectedAttrs.length === 0) {
-    props.formData.skuList = []
+    props.formData.skuList = [...manualSkus]
     return
   }
 
@@ -207,11 +209,14 @@ function generateSkuList() {
   
   generate(props.formData.selectedAttrs, {}, 0)
   
-  props.formData.skuList = specsList.map((specs, index) => ({
+  const autoSkus = specsList.map((specs, index) => ({
     skuCode: `SKU-${String(index + 1).padStart(4, '0')}`,
     skuName: Object.values(specs).join(' '),
     specs,
+    source: 'auto',
   }))
+  
+  props.formData.skuList = [...autoSkus, ...manualSkus] as any
 }
 
 defineExpose({
