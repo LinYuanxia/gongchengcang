@@ -1,5 +1,6 @@
 <template>
   <div class="page-container">
+    <PrdPanel :items="prdItems" />
     <a-row :gutter="16" class="stat-row">
       <a-col :span="6">
         <a-card>
