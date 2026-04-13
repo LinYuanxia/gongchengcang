@@ -300,9 +300,73 @@
             </a-form-item>
           </a-col>
         </a-row>
-        <a-form-item label="SKU规格信息">
-          <a-textarea v-model="addSkuForm.specInfo" placeholder="请输入规格信息，如：红色、XL、纯棉 或 颜色:红色、尺寸:XL" :max-length="200" show-word-limit :auto-size="{ minRows: 2, maxRows: 4 }" />
-          <div class="form-tip">提示：多个规格用顿号、逗号、空格或换行分隔，支持键值对格式</div>
+        <a-form-item label="SKU规格属性">
+          <template #extra>
+            <a-button type="text" size="small" @click="handleAddSkuCustomSpec">
+              <icon-plus /> 新增规格属性
+            </a-button>
+          </template>
+          
+          <div v-if="addSkuSpecList.length === 0" class="empty-spec-tip">
+            <a-empty description="该SPU暂无规格属性，可点击上方按钮新增" :image-size="80" />
+          </div>
+          <div v-else class="spec-form">
+            <div v-for="spec in addSkuSpecList" :key="spec.key" class="spec-item">
+              <a-form-item :label="spec.name">
+                <template #label>
+                  <span class="spec-label">{{ spec.name }}</span>
+                  <a-button
+                    type="text"
+                    size="small"
+                    class="delete-btn"
+                    @click="handleRemoveSkuSpec(spec)"
+                  >
+                    <icon-close />
+                  </a-button>
+                </template>
+                <a-input-group>
+                  <a-select
+                    v-if="spec.isCustom"
+                    v-model="spec.name"
+                    placeholder="选择规格属性"
+                    style="width: 140px"
+                    allow-clear
+                    allow-search
+                  >
+                    <a-option
+                      v-for="attr in getAvailableAttrsForSku(spec)"
+                      :key="attr.attrId"
+                      :value="attr.attrName"
+                    >
+                      {{ attr.attrName }}
+                    </a-option>
+                  </a-select>
+                  <a-select
+                    v-if="spec.optionValues && spec.optionValues.length > 0"
+                    v-model="spec.selectedValue"
+                    placeholder="请选择规格值"
+                    style="width: 100%"
+                    allow-clear
+                  >
+                    <a-option
+                      v-for="value in spec.optionValues"
+                      :key="value"
+                      :value="value"
+                    >
+                      {{ value }}
+                    </a-option>
+                  </a-select>
+                  <a-input
+                    v-else
+                    v-model="spec.selectedValue"
+                    placeholder="请输入规格值"
+                    style="width: 100%"
+                    allow-clear
+                  />
+                </a-input-group>
+              </a-form-item>
+            </div>
+          </div>
         </a-form-item>
         <a-row :gutter="16">
           <a-col :span="8">
@@ -319,11 +383,72 @@
       </a-form>
     </a-modal>
 
-    <a-modal v-model:visible="editSpecModalVisible" title="编辑SKU规格" :width="600" @ok="handleEditSpecConfirm" @cancel="editSpecModalVisible = false">
+    <a-modal v-model:visible="editSpecModalVisible" title="编辑SKU规格" :width="700" @ok="handleEditSpecConfirm" @cancel="editSpecModalVisible = false">
       <a-form layout="vertical">
-        <a-form-item label="规格信息">
-          <a-textarea v-model="editSpecForm.specInfo" placeholder="请输入规格信息，如：红色、XL、纯棉 或 颜色:红色、尺寸:XL" :max-length="200" show-word-limit :auto-size="{ minRows: 3, maxRows: 6 }" />
-          <div class="form-tip">提示：多个规格用顿号、逗号、空格或换行分隔，支持键值对格式</div>
+        <a-form-item label="规格属性">
+          <template #extra>
+            <a-button type="text" size="small" @click="handleAddEditSpec">
+              <icon-plus /> 新增规格属性
+            </a-button>
+          </template>
+          
+          <div class="spec-form">
+            <div v-for="spec in editSpecList" :key="spec.key" class="spec-item">
+              <a-form-item :label="spec.name">
+                <template #label>
+                  <span class="spec-label">{{ spec.name }}</span>
+                  <a-button
+                    type="text"
+                    size="small"
+                    class="delete-btn"
+                    @click="handleRemoveEditSpec(spec)"
+                  >
+                    <icon-close />
+                  </a-button>
+                </template>
+                <a-input-group>
+                  <a-select
+                    v-if="spec.isCustom"
+                    v-model="spec.name"
+                    placeholder="选择规格属性"
+                    style="width: 140px"
+                    allow-clear
+                    allow-search
+                  >
+                    <a-option
+                      v-for="attr in getAvailableAttrsForEdit(spec)"
+                      :key="attr.attrId"
+                      :value="attr.attrName"
+                    >
+                      {{ attr.attrName }}
+                    </a-option>
+                  </a-select>
+                  <a-select
+                    v-if="spec.optionValues && spec.optionValues.length > 0"
+                    v-model="spec.selectedValue"
+                    placeholder="请选择规格值"
+                    style="width: 100%"
+                    allow-clear
+                  >
+                    <a-option
+                      v-for="value in spec.optionValues"
+                      :key="value"
+                      :value="value"
+                    >
+                      {{ value }}
+                    </a-option>
+                  </a-select>
+                  <a-input
+                    v-else
+                    v-model="spec.selectedValue"
+                    placeholder="请输入规格值"
+                    style="width: 100%"
+                    allow-clear
+                  />
+                </a-input-group>
+              </a-form-item>
+            </div>
+          </div>
         </a-form-item>
       </a-form>
     </a-modal>
@@ -331,7 +456,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import type { ProductCategory, ProductAttr, SkuPriceInfo } from '@gongchengcang/types'
@@ -369,12 +494,16 @@ const addSkuForm = ref({
   supplyPrice: undefined as number | undefined,
   salePrice: undefined as number | undefined,
 })
+const addSkuSpecList = ref<any[]>([])
+const addSkuSpecCounter = ref(0)
 
 const editSpecModalVisible = ref(false)
 const editSpecForm = ref({
   specInfo: '',
 })
 const currentEditingSku = ref<any>(null)
+const editSpecList = ref<any[]>([])
+const editSpecCounter = ref(0)
 
 interface SpecItem {
   name: string
@@ -675,7 +804,43 @@ function openAddSkuModal() {
     supplyPrice: undefined,
     salePrice: undefined,
   }
+  
+  addSkuSpecList.value = formData.specList.map((spec, index) => ({
+    key: `spec_${index}`,
+    name: spec.name,
+    optionValues: spec.values || [],
+    selectedValue: '',
+    isCustom: false,
+  }))
+  addSkuSpecCounter.value = formData.specList.length
+  
   addSkuModalVisible.value = true
+}
+
+function getAvailableAttrsForSku(spec: any) {
+  const usedNames = addSkuSpecList.value
+    .filter(s => s.key !== spec.key && s.name)
+    .map(s => s.name)
+  return attrList.value.filter(attr => !usedNames.includes(attr.attrName))
+}
+
+function handleAddSkuCustomSpec() {
+  addSkuSpecCounter.value++
+  const key = `custom_${addSkuSpecCounter.value}`
+  addSkuSpecList.value.push({
+    key,
+    name: '',
+    optionValues: [],
+    selectedValue: '',
+    isCustom: true,
+  })
+}
+
+function handleRemoveSkuSpec(spec: any) {
+  const index = addSkuSpecList.value.findIndex(item => item.key === spec.key)
+  if (index > -1) {
+    addSkuSpecList.value.splice(index, 1)
+  }
 }
 
 function parseSpecInfo(specInfo: string): Record<string, string> {
@@ -706,12 +871,33 @@ function handleAddSkuConfirm() {
     Message.warning('请输入SKU名称')
     return
   }
-
-  const specs = parseSpecInfo(addSkuForm.value.specInfo)
-
-  const newSku = {
-    skuId: 'new_' + Date.now(),
-    skuCode: addSkuForm.value.skuCode || (`SKU${Date.now()}`),
+  
+  const specs: Record<string, string> = {}
+  addSkuSpecList.value.forEach(spec => {
+    const specKey = spec.name || spec.key
+    if (specKey && spec.selectedValue) {
+      specs[specKey] = spec.selectedValue
+    }
+  })
+  
+  if (Object.keys(specs).length === 0) {
+    specs['规格'] = '标准款'
+  }
+  
+  const existSku = formData.skuList.find(sku => {
+    const currentSpecs = Object.entries(specs).sort().join(',')
+    const existSpecs = Object.entries(sku.specs || {}).sort().join(',')
+    return currentSpecs === existSpecs
+  })
+  
+  if (existSku) {
+    Message.warning('该规格组合的SKU已存在')
+    return
+  }
+  
+  const newSku: any = {
+    skuId: 'sku_' + Date.now(),
+    skuCode: addSkuForm.value.skuCode,
     skuName: addSkuForm.value.skuName,
     specs,
     skuImage: formData.mainImage,
@@ -728,16 +914,87 @@ function handleAddSkuConfirm() {
 
 function handleEditSpecText(record: any) {
   currentEditingSku.value = record
-  const specTexts = Object.entries(record.specs || {}).map(([key, value]) => `${key}:${value}`).join('、')
-  editSpecForm.value.specInfo = specTexts
+  
+  editSpecList.value = []
+  editSpecCounter.value = 0
+  
+  Object.entries(record.specs || {}).forEach(([key, value]) => {
+    const specInfo = formData.specList.find(s => s.name === key)
+    editSpecCounter.value++
+    
+    editSpecList.value.push({
+      key: `spec_${editSpecCounter.value}`,
+      name: key,
+      optionValues: specInfo?.values || [],
+      selectedValue: value,
+      isCustom: !specInfo,
+    })
+  })
+  
   editSpecModalVisible.value = true
 }
 
+function handleAddEditSpec() {
+  editSpecCounter.value++
+  const key = `custom_${editSpecCounter.value}`
+  editSpecList.value.push({
+    key,
+    name: '',
+    optionValues: [],
+    selectedValue: '',
+    isCustom: true,
+  })
+}
+
+function handleRemoveEditSpec(spec: any) {
+  const index = editSpecList.value.findIndex(item => item.key === spec.key)
+  if (index > -1) {
+    editSpecList.value.splice(index, 1)
+  }
+}
+
+function getAvailableAttrsForEdit(spec: any) {
+  const usedNames = editSpecList.value
+    .filter(s => s.key !== spec.key && s.name)
+    .map(s => s.name)
+  return attrList.value.filter(attr => !usedNames.includes(attr.attrName))
+}
+
+watchEffect(() => {
+  addSkuSpecList.value.forEach(spec => {
+    if (spec.isCustom && spec.name) {
+      const attr = attrList.value.find(a => a.attrName === spec.name)
+      if (attr) {
+        spec.optionValues = attr.optionValues || []
+      }
+    }
+  })
+  
+  editSpecList.value.forEach(spec => {
+    if (spec.isCustom && spec.name) {
+      const attr = attrList.value.find(a => a.attrName === spec.name)
+      if (attr) {
+        spec.optionValues = attr.optionValues || []
+      }
+    }
+  })
+})
+
 function handleEditSpecConfirm() {
   if (currentEditingSku.value) {
-    const specs = parseSpecInfo(editSpecForm.value.specInfo)
+    const specs: Record<string, string> = {}
+    editSpecList.value.forEach(spec => {
+      const specKey = spec.name || spec.key
+      if (specKey && spec.selectedValue) {
+        specs[specKey] = spec.selectedValue
+      }
+    })
+    
+    if (Object.keys(specs).length === 0) {
+      specs['规格'] = '标准款'
+    }
+    
     currentEditingSku.value.specs = specs
-    currentEditingSku.value.skuName = Object.values(specs).join(' ')
   }
   editSpecModalVisible.value = false
   Message.success('规格更新成功')
@@ -941,5 +1198,37 @@ function handleManageSku() {
 
 :deep(.arco-input-number) {
   width: 100%;
+}
+
+.empty-spec-tip {
+  padding: 20px 0;
+}
+
+.spec-form {
+  .spec-item {
+    position: relative;
+
+    :deep(.arco-form-item-label) {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+  }
+}
+
+.spec-label {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.delete-btn {
+  margin-left: 8px;
+  padding: 0 4px;
+  color: var(--color-text-3);
+  
+  &:hover {
+    color: #f53f3f;
+  }
 }
 </style>

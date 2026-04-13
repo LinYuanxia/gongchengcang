@@ -6,6 +6,14 @@
       </template>
       <template #extra>
         <a-space>
+          <a-select v-model="currentWarehouse" placeholder="选择仓库" style="width: 200px" allow-clear>
+            <a-option value="WH001-S01">西乡主仓</a-option>
+            <a-option value="WH001-S02">福永分仓</a-option>
+            <a-option value="WH001-S03">沙井应急仓</a-option>
+            <a-option value="WH002-S01">天河智慧城仓</a-option>
+            <a-option value="WH002-S02">黄埔分仓</a-option>
+            <a-option value="WH003-S01">南城中心仓</a-option>
+          </a-select>
           <a-button type="primary" @click="handleCreatePlan">
             <template #icon><icon-plus /></template>
             新建采购计划
@@ -28,6 +36,11 @@
         <template #columns>
           <a-table-column title="计划编号" data-index="planNo" :width="150" />
           <a-table-column title="计划名称" data-index="planName" :width="200" />
+          <a-table-column title="所属仓库" data-index="warehouseName" :width="140">
+            <template #cell="{ record }">
+              <a-tag color="arcoblue" size="small">{{ record.warehouseName || '全部仓库' }}</a-tag>
+            </template>
+          </a-table-column>
           <a-table-column title="SKU数量" :width="100" align="center">
             <template #cell="{ record }">
               {{ record.skuCount }} 个
@@ -94,6 +107,7 @@
       <a-descriptions :column="3" bordered>
         <a-descriptions-item label="计划编号">{{ currentPlan.planNo }}</a-descriptions-item>
         <a-descriptions-item label="计划名称">{{ currentPlan.planName }}</a-descriptions-item>
+        <a-descriptions-item label="所属仓库">{{ currentPlan.warehouseName || '全部仓库' }}</a-descriptions-item>
         <a-descriptions-item label="预计金额">¥{{ currentPlan.estimatedAmount?.toLocaleString() }}</a-descriptions-item>
         <a-descriptions-item label="推送时间">{{ currentPlan.pushTime }}</a-descriptions-item>
         <a-descriptions-item label="截止时间">{{ currentPlan.deadline || '-' }}</a-descriptions-item>
@@ -258,6 +272,8 @@ const planList = ref([
     planId: 'PLAN001',
     planNo: 'PO202401001',
     planName: '2024年1月建材采购计划',
+    warehouseId: 'WH001-S01',
+    warehouseName: '西乡主仓',
     skuCount: 15,
     estimatedAmount: 125800,
     status: 'pending',
@@ -270,19 +286,28 @@ const planList = ref([
     planId: 'PLAN002',
     planNo: 'PO202401002',
     planName: '春节前备货计划',
+    warehouseId: 'WH001-S02',
+    warehouseName: '福永分仓',
     skuCount: 28,
     estimatedAmount: 356000,
     status: 'confirmed',
     pushTime: '2024-01-18 11:00:00',
     deadline: '2024-01-25 18:00:00',
     confirmTime: '2024-01-19 15:30:00',
-    orderNo: 'SO202401001'
+    orderNo: 'SO202401001',
+    confirmedItems: [
+      { skuCode: 'SKU001', productName: '32.5级普通硅酸盐水泥', specValues: '强度:32.5级', unit: '吨', planQuantity: 100, confirmedQuantity: 95 },
+      { skuCode: 'SKU002', productName: '河沙（中粗）', specValues: '颗粒:中粗砂', unit: '方', planQuantity: 200, confirmedQuantity: 200 },
+    ],
+    totalConfirmedQuantity: 295
   },
   {
     id: '3',
     planId: 'PLAN003',
     planNo: 'PO202401003',
     planName: '新项目启动采购',
+    warehouseId: 'WH001-S03',
+    warehouseName: '沙井应急仓',
     skuCount: 42,
     estimatedAmount: 528000,
     status: 'ordered',
@@ -293,6 +318,8 @@ const planList = ref([
   {
     id: '4',
     planId: 'PLAN004',
+    warehouseId: 'WH002-S01',
+    warehouseName: '天河智慧城仓',
     planNo: 'PO202401004',
     planName: '瓷砖补货计划',
     skuCount: 8,
@@ -303,11 +330,18 @@ const planList = ref([
   }
 ])
 
+const currentWarehouse = ref<string | undefined>(undefined)
+
 const filteredPlans = computed(() => {
-  if (viewMode.value === 'all') return planList.value
-  if (viewMode.value === 'pending') return planList.value.filter(p => p.status === 'pending')
-  if (viewMode.value === 'confirmed') return planList.value.filter(p => ['confirmed', 'ordered'].includes(p.status))
-  return planList.value
+  let result = planList.value
+  
+  if (currentWarehouse.value) {
+    result = result.filter(p => !p.warehouseId || p.warehouseId === currentWarehouse.value)
+  }
+  
+  if (viewMode.value === 'pending') return result.filter(p => p.status === 'pending')
+  if (viewMode.value === 'confirmed') return result.filter(p => ['confirmed', 'ordered'].includes(p.status))
+  return result
 })
 
 const detailVisible = ref(false)

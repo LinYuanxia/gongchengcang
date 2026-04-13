@@ -147,9 +147,73 @@
             </a-form-item>
           </a-col>
         </a-row>
-        <a-form-item label="SKU规格信息">
-          <a-textarea v-model="addSkuForm.specInfo" placeholder="请输入规格信息，如：红色、XL、纯棉 等" :max-length="200" show-word-limit :auto-size="{ minRows: 2, maxRows: 4 }" />
-          <div class="form-tip">提示：多个规格用顿号、空格或换行分隔，系统会自动解析为规格键值</div>
+        <a-form-item label="SKU规格属性">
+          <template #extra>
+            <a-button type="text" size="small" @click="handleAddSkuCustomSpec">
+              <icon-plus /> 新增规格属性
+            </a-button>
+          </template>
+          
+          <div v-if="addSkuSpecList.length === 0" class="empty-spec-tip">
+            <a-empty description="请先选择SPU或点击上方按钮新增规格属性" :image-size="80" />
+          </div>
+          <div v-else class="spec-form">
+            <div v-for="spec in addSkuSpecList" :key="spec.key" class="spec-item">
+              <a-form-item :label="spec.name || '自定义规格'">
+                <template #label>
+                  <span class="spec-label">{{ spec.name || '自定义规格' }}</span>
+                  <a-button
+                    type="text"
+                    size="small"
+                    class="delete-btn"
+                    @click="handleRemoveSkuSpec(spec)"
+                  >
+                    <icon-close />
+                  </a-button>
+                </template>
+                <a-input-group>
+                  <a-select
+                    v-if="spec.isCustom"
+                    v-model="spec.name"
+                    placeholder="选择规格属性"
+                    style="width: 140px"
+                    allow-clear
+                    allow-search
+                  >
+                    <a-option
+                      v-for="attr in getAvailableAttrsForSku(spec)"
+                      :key="attr.attrId"
+                      :value="attr.attrName"
+                    >
+                      {{ attr.attrName }}
+                    </a-option>
+                  </a-select>
+                  <a-select
+                    v-if="spec.optionValues && spec.optionValues.length > 0"
+                    v-model="spec.selectedValue"
+                    placeholder="请选择规格值"
+                    style="width: 100%"
+                    allow-clear
+                  >
+                    <a-option
+                      v-for="value in spec.optionValues"
+                      :key="value"
+                      :value="value"
+                    >
+                      {{ value }}
+                    </a-option>
+                  </a-select>
+                  <a-input
+                    v-else
+                    v-model="spec.selectedValue"
+                    placeholder="请输入规格值"
+                    style="width: 100%"
+                    allow-clear
+                  />
+                </a-input-group>
+              </a-form-item>
+            </div>
+          </div>
         </a-form-item>
         <a-row :gutter="16">
           <a-col :span="12">
@@ -185,11 +249,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch, computed } from 'vue'
+import { ref, reactive, onMounted, watch, computed, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Message, Modal } from '@arco-design/web-vue'
-import type { Sku, ProductCategory, Spu } from '@gongchengcang/types'
-import { getSkuList, getCategoryTree, getSpuList, updateSku, deleteSku } from '@gongchengcang/api'
+import type { Sku, ProductCategory, Spu, ProductAttr } from '@gongchengcang/types'
+import { getSkuList, getCategoryTree, getSpuList, updateSku, deleteSku, getAttrList } from '@gongchengcang/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -197,6 +261,7 @@ const loading = ref(false)
 const tableData = ref<Sku[]>([])
 const categoryTree = ref<ProductCategory[]>([])
 const spuList = ref<Spu[]>([])
+const attrList = ref<ProductAttr[]>([])
 const spuFilter = ref<{ spuId: string; spuName: string } | null>(null)
 
 const spuSelectOptions = computed(() => {
@@ -243,6 +308,7 @@ watch(
 onMounted(() => {
   loadCategoryTree()
   loadSpuList()
+  loadAttrList()
   if (!route.query.spuId && !route.query.categoryId) {
     loadData()
   }
@@ -262,6 +328,15 @@ async function loadSpuList() {
     spuList.value = result.list
   } catch (error) {
     console.error('加载SPU列表失败:', error)
+  }
+}
+
+async function loadAttrList() {
+  try {
+    const result = await getAttrList({ page: 1, pageSize: 100, status: 1 })
+    attrList.value = result.list
+  } catch (error) {
+    console.error('加载属性列表失败:', error)
   }
 }
 
@@ -321,6 +396,8 @@ function handleStatusChange(record: Sku) {
 
 const addSkuModalVisible = ref(false)
 const addSkuMainImageList = ref<any[]>([])
+const addSkuSpecList = ref<any[]>([])
+const addSkuSpecCounter = ref(0)
 const addSkuForm = ref({
   spuId: '',
   skuCode: '',
@@ -330,17 +407,101 @@ const addSkuForm = ref({
   salePrice: undefined as number | undefined,
 })
 
+watchEffect(() => {
+  addSkuSpecList.value.forEach(spec => {
+    if (spec.isCustom && spec.name) {
+      const attr = attrList.value.find(a => a.attrName === spec.name)
+      if (attr) {
+        spec.optionValues = attr.optionValues || []
+      }
+    }
+  })
+})
+
+watch(
+  () => addSkuForm.value.spuId,
+  (spuId) => {
+    if (spuId) {
+      const spu = spuList.value.find(s => s.spuId === spuId)
+      if (spu && spu.specList) {
+        addSkuSpecList.value = (spu.specList as any[]).map((spec: any, index: number) => ({
+          key: `spec_${index}`,
+          name: spec.name,
+          optionValues: spec.values || [],
+          selectedValue: '',
+          isCustom: false,
+        }))
+        addSkuSpecCounter.value = (spu.specList as any[]).length
+      }
+    } else {
+      addSkuSpecList.value = []
+      addSkuSpecCounter.value = 0
+    }
+  }
+)
+
 function openAddSkuModal() {
+  const timestamp = Date.now().toString().slice(-6)
+  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
+  const spuId = spuFilter?.value?.spuId || ''
+  
   addSkuForm.value = {
-    spuId: spuFilter?.value?.spuId || '',
-    skuCode: '',
+    spuId,
+    skuCode: `SKU-MANUAL-${timestamp}${random}`,
     skuName: '',
     specInfo: '',
     supplyPrice: undefined,
     salePrice: undefined,
   }
   addSkuMainImageList.value = []
+  
+  if (spuId) {
+    const spu = spuList.value.find(s => s.spuId === spuId)
+    if (spu && spu.specList) {
+      addSkuSpecList.value = (spu.specList as any[]).map((spec: any, index: number) => ({
+        key: `spec_${index}`,
+        name: spec.name,
+        optionValues: spec.values || [],
+        selectedValue: '',
+        isCustom: false,
+      }))
+      addSkuSpecCounter.value = (spu.specList as any[]).length
+    } else {
+      addSkuSpecList.value = []
+      addSkuSpecCounter.value = 0
+    }
+  } else {
+    addSkuSpecList.value = []
+    addSkuSpecCounter.value = 0
+  }
+  
   addSkuModalVisible.value = true
+}
+
+function getAvailableAttrsForSku(spec: any) {
+  const usedNames = addSkuSpecList.value
+    .filter((s: any) => s.key !== spec.key && s.name)
+    .map((s: any) => s.name)
+  return attrList.value.filter((attr: any) => !usedNames.includes(attr.attrName))
+}
+
+function handleAddSkuCustomSpec() {
+  addSkuSpecCounter.value++
+  const key = `custom_${addSkuSpecCounter.value}`
+  addSkuSpecList.value.push({
+    key,
+    name: '',
+    optionValues: [],
+    selectedValue: '',
+    isCustom: true,
+  })
+}
+
+function handleRemoveSkuSpec(spec: any) {
+  const index = addSkuSpecList.value.findIndex(item => item.key === spec.key)
+  if (index > -1) {
+    addSkuSpecList.value.splice(index, 1)
+  }
 }
 
 function handleAddSkuMainImageChange(fileList: any[]) {
@@ -371,10 +532,6 @@ function parseSpecInfo(specInfo: string): Record<string, string> {
 }
 
 async function handleAddSkuConfirm() {
-  if (!addSkuForm.value.spuId) {
-    Message.warning('请选择所属SPU')
-    return
-  }
   if (!addSkuForm.value.skuName) {
     Message.warning('请输入SKU名称')
     return
@@ -388,8 +545,19 @@ async function handleAddSkuConfirm() {
     return
   }
 
-  const selectedSpu = spuList.value.find(s => s.spuId === addSkuForm.value.spuId)
-  const specs = parseSpecInfo(addSkuForm.value.specInfo)
+  const selectedSpu = addSkuForm.value.spuId ? (spuList.value as any[]).find((s: any) => s.spuId === addSkuForm.value.spuId) : null
+  
+  const specs: Record<string, string> = {}
+  addSkuSpecList.value.forEach(spec => {
+    const specKey = spec.name || spec.key
+    if (specKey && spec.selectedValue) {
+      specs[specKey] = spec.selectedValue
+    }
+  })
+  
+  if (Object.keys(specs).length === 0) {
+    specs['规格'] = '标准款'
+  }
   
   const mainImage = addSkuMainImageList.value[0]?.url || addSkuMainImageList.value[0]?.response || selectedSpu?.mainImage || ''
 
@@ -442,7 +610,7 @@ function clearSpuFilter() {
 }
 </script>
 
-<style scoped>
+<style scoped lang="less">
 .upload-btn {
   display: flex;
   flex-direction: column;
@@ -458,9 +626,35 @@ function clearSpuFilter() {
   margin-top: 4px;
 }
 
-.form-tip {
-  font-size: 12px;
-  color: #86909c;
-  margin-top: 4px;
+.empty-spec-tip {
+  padding: 20px 0;
+}
+
+.spec-form {
+  .spec-item {
+    position: relative;
+
+    :deep(.arco-form-item-label) {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+  }
+}
+
+.spec-label {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.delete-btn {
+  margin-left: 8px;
+  padding: 0 4px;
+  color: var(--color-text-3);
+  
+  &:hover {
+    color: #f53f3f;
+  }
 }
 </style>

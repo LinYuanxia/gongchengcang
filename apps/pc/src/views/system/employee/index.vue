@@ -75,8 +75,6 @@
               </a-space>
             </template>
           </a-table-column>
-          <a-table-column title="部门" data-index="department" :width="120" />
-          <a-table-column title="职位" data-index="position" :width="100" />
           <a-table-column title="状态" :width="90">
             <template #cell="{ record }">
               <a-tag :color="record.status === 1 ? 'green' : 'red'">
@@ -121,8 +119,6 @@
             <a-tag v-for="role in currentEmployee.roles" :key="role" color="arcoblue">{{ role }}</a-tag>
           </a-space>
         </a-descriptions-item>
-        <a-descriptions-item label="部门">{{ currentEmployee.department || '-' }}</a-descriptions-item>
-        <a-descriptions-item label="职位">{{ currentEmployee.position || '-' }}</a-descriptions-item>
         <a-descriptions-item label="状态">
           <a-tag :color="currentEmployee.status === 1 ? 'green' : 'red'">
             {{ currentEmployee.status === 1 ? '启用' : '禁用' }}
@@ -187,8 +183,6 @@ const allTableData = ref([
     tenantId: 't001',
     tenantName: '华东工程仓',
     roles: ['管理员'],
-    department: '管理部',
-    position: '仓库主管',
     status: 1,
     lastLoginTime: '2024-03-26 09:30:00',
     createdAt: '2024-01-01 10:00:00',
@@ -203,8 +197,6 @@ const allTableData = ref([
     tenantId: 't001',
     tenantName: '华东工程仓',
     roles: ['仓管员'],
-    department: '仓储部',
-    position: '仓管员',
     status: 1,
     lastLoginTime: '2024-03-26 08:00:00',
     createdAt: '2024-01-02 10:00:00',
@@ -219,8 +211,6 @@ const allTableData = ref([
     tenantId: 't001',
     tenantName: '华东工程仓',
     roles: ['采购员'],
-    department: '采购部',
-    position: '采购专员',
     status: 1,
     lastLoginTime: '2024-03-25 17:30:00',
     createdAt: '2024-01-03 10:00:00',
@@ -235,8 +225,6 @@ const allTableData = ref([
     tenantId: 't002',
     tenantName: '南京工程仓',
     roles: ['销售员'],
-    department: '销售部',
-    position: '销售专员',
     status: 1,
     lastLoginTime: '2024-03-26 10:00:00',
     createdAt: '2024-01-04 10:00:00',
@@ -251,8 +239,6 @@ const allTableData = ref([
     tenantId: 't002',
     tenantName: '南京工程仓',
     roles: ['财务员'],
-    department: '财务部',
-    position: '财务专员',
     status: 0,
     lastLoginTime: '2024-03-10 14:00:00',
     createdAt: '2024-01-05 10:00:00',
@@ -267,8 +253,6 @@ const allTableData = ref([
     tenantId: 't004',
     tenantName: '宝钢集团',
     roles: ['管理员'],
-    department: '管理部',
-    position: '区域经理',
     status: 1,
     lastLoginTime: '2024-03-26 08:30:00',
     createdAt: '2024-01-06 10:00:00',
@@ -283,8 +267,6 @@ const allTableData = ref([
     tenantId: 't004',
     tenantName: '宝钢集团',
     roles: ['销售'],
-    department: '销售部',
-    position: '销售代表',
     status: 1,
     lastLoginTime: '2024-03-25 16:00:00',
     createdAt: '2024-01-07 10:00:00',

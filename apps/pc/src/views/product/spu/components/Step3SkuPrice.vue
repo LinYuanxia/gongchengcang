@@ -115,9 +115,73 @@
             </a-form-item>
           </a-col>
         </a-row>
-        <a-form-item label="SKU规格信息">
-          <a-textarea v-model="addSkuForm.specInfo" placeholder="请输入规格信息，如：红色、XL、纯棉 或 颜色:红色、尺寸:XL" :max-length="200" show-word-limit :auto-size="{ minRows: 2, maxRows: 4 }" />
-          <div class="form-tip">提示：多个规格用顿号、逗号、空格或换行分隔，支持键值对格式</div>
+        <a-form-item label="SKU规格属性">
+          <template #extra>
+            <a-button type="text" size="small" @click="handleAddSkuCustomSpec">
+              <icon-plus /> 新增规格属性
+            </a-button>
+          </template>
+          
+          <div v-if="addSkuSpecList.length === 0" class="empty-spec-tip">
+            <a-empty description="该SPU暂无规格属性，可点击上方按钮新增" :image-size="80" />
+          </div>
+          <div v-else class="spec-form">
+            <div v-for="spec in addSkuSpecList" :key="spec.key" class="spec-item">
+              <a-form-item :label="spec.name">
+                <template #label>
+                  <span class="spec-label">{{ spec.name || '自定义规格' }}</span>
+                  <a-button
+                    type="text"
+                    size="small"
+                    class="delete-btn"
+                    @click="handleRemoveSkuSpec(spec)"
+                  >
+                    <icon-close />
+                  </a-button>
+                </template>
+                <a-input-group>
+                  <a-select
+                    v-if="spec.isCustom"
+                    v-model="spec.name"
+                    placeholder="选择规格属性"
+                    style="width: 140px"
+                    allow-clear
+                    allow-search
+                  >
+                    <a-option
+                      v-for="attr in getAvailableAttrsForSku(spec)"
+                      :key="attr.attrId"
+                      :value="attr.attrName"
+                    >
+                      {{ attr.attrName }}
+                    </a-option>
+                  </a-select>
+                  <a-select
+                    v-if="spec.optionValues && spec.optionValues.length > 0"
+                    v-model="spec.selectedValue"
+                    placeholder="请选择规格值"
+                    style="width: 100%"
+                    allow-clear
+                  >
+                    <a-option
+                      v-for="value in spec.optionValues"
+                      :key="value"
+                      :value="value"
+                    >
+                      {{ value }}
+                    </a-option>
+                  </a-select>
+                  <a-input
+                    v-else
+                    v-model="spec.selectedValue"
+                    placeholder="请输入规格值"
+                    style="width: 100%"
+                    allow-clear
+                  />
+                </a-input-group>
+              </a-form-item>
+            </div>
+          </div>
         </a-form-item>
         <a-row :gutter="16">
           <a-col :span="8">
@@ -139,29 +203,71 @@
       </a-form>
     </a-modal>
 
-    <a-modal v-model:visible="editSpecModalVisible" title="编辑SKU规格" :width="600" @ok="handleEditSpecConfirm" @cancel="editSpecModalVisible = false">
-      <a-form :model="editSpecForm" layout="vertical">
+    <a-modal v-model:visible="editSpecModalVisible" title="编辑SKU规格" :width="700" @ok="handleEditSpecConfirm" @cancel="editSpecModalVisible = false">
+      <a-form layout="vertical">
         <a-form-item label="规格属性">
-          <div class="spec-edit-area">
-            <div v-for="(spec, index) in editSpecForm.specList" :key="index" class="spec-edit-item">
-              <a-input
-                v-model="spec.name"
-                placeholder="规格名称"
-                style="width: 150px"
-              />
-              <a-input
-                v-model="spec.value"
-                placeholder="规格值"
-                style="width: 150px; margin-left: 8px"
-              />
-              <a-button type="text" status="danger" style="margin-left: 8px" @click="removeEditSpec(index)">
-                <icon-delete />
-              </a-button>
-            </div>
-            <a-button type="text" @click="addEditSpec">
-              <icon-plus />
-              添加规格项
+          <template #extra>
+            <a-button type="text" size="small" @click="handleAddEditSpec">
+              <icon-plus /> 新增规格属性
             </a-button>
+          </template>
+          
+          <div class="spec-form">
+            <div v-for="spec in editSpecList" :key="spec.key" class="spec-item">
+              <a-form-item :label="spec.name">
+                <template #label>
+                  <span class="spec-label">{{ spec.name || '自定义规格' }}</span>
+                  <a-button
+                    type="text"
+                    size="small"
+                    class="delete-btn"
+                    @click="handleRemoveEditSpec(spec)"
+                  >
+                    <icon-close />
+                  </a-button>
+                </template>
+                <a-input-group>
+                  <a-select
+                    v-if="spec.isCustom"
+                    v-model="spec.name"
+                    placeholder="选择规格属性"
+                    style="width: 140px"
+                    allow-clear
+                    allow-search
+                  >
+                    <a-option
+                      v-for="attr in getAvailableAttrsForEdit(spec)"
+                      :key="attr.attrId"
+                      :value="attr.attrName"
+                    >
+                      {{ attr.attrName }}
+                    </a-option>
+                  </a-select>
+                  <a-select
+                    v-if="spec.optionValues && spec.optionValues.length > 0"
+                    v-model="spec.selectedValue"
+                    placeholder="请选择规格值"
+                    style="width: 100%"
+                    allow-clear
+                  >
+                    <a-option
+                      v-for="value in spec.optionValues"
+                      :key="value"
+                      :value="value"
+                    >
+                      {{ value }}
+                    </a-option>
+                  </a-select>
+                  <a-input
+                    v-else
+                    v-model="spec.selectedValue"
+                    placeholder="请输入规格值"
+                    style="width: 100%"
+                    allow-clear
+                  />
+                </a-input-group>
+              </a-form-item>
+            </div>
           </div>
         </a-form-item>
       </a-form>
@@ -170,20 +276,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, watchEffect, inject } from 'vue'
 import { Message } from '@arco-design/web-vue'
-import type { SkuPriceInfo } from '@gongchengcang/types'
+import type { ProductAttr } from '@gongchengcang/types'
 
 const props = defineProps<{
   formData: {
     skuList: any[]
+    specList: any[]
   }
 }>()
+
+const attrList = inject('attrList', ref<ProductAttr[]>([]))
 
 const showBatchSetPrice = ref(false)
 const addSkuModalVisible = ref(false)
 const editSpecModalVisible = ref(false)
 const currentEditingSku = ref<any>(null)
+const addSkuSpecList = ref<any[]>([])
+const addSkuSpecCounter = ref(0)
+const editSpecList = ref<any[]>([])
+const editSpecCounter = ref(0)
 
 const batchPrice = reactive({
   suggestPrice: undefined as number | undefined,
@@ -202,6 +315,26 @@ const addSkuForm = ref({
 
 const editSpecForm = ref({
   specList: [{ name: '', value: '' }],
+})
+
+watchEffect(() => {
+  addSkuSpecList.value.forEach(spec => {
+    if (spec.isCustom && spec.name) {
+      const attr = attrList.value.find(a => a.attrName === spec.name)
+      if (attr) {
+        spec.optionValues = attr.optionValues || []
+      }
+    }
+  })
+  
+  editSpecList.value.forEach(spec => {
+    if (spec.isCustom && spec.name) {
+      const attr = attrList.value.find(a => a.attrName === spec.name)
+      if (attr) {
+        spec.optionValues = attr.optionValues || []
+      }
+    }
+  })
 })
 
 function applyBatchPrice() {
@@ -236,69 +369,120 @@ function handleRemoveSpec(record: any, key: string) {
 
 function handleEditSpec(record: any) {
   currentEditingSku.value = record
-  editSpecForm.value.specList = Object.entries(record.specs || {}).map(([name, value]) => ({
-    name,
-    value: value as string,
-  }))
-  if (editSpecForm.value.specList.length === 0) {
-    editSpecForm.value.specList.push({ name: '', value: '' })
-  }
+  
+  editSpecList.value = []
+  editSpecCounter.value = 0
+  
+  Object.entries(record.specs || {}).forEach(([key, value]) => {
+    const specInfo = props.formData.specList.find((s: any) => s.name === key)
+    editSpecCounter.value++
+    
+    editSpecList.value.push({
+      key: `spec_${editSpecCounter.value}`,
+      name: key,
+      optionValues: specInfo?.values || [],
+      selectedValue: value,
+      isCustom: !specInfo,
+    })
+  })
+  
   editSpecModalVisible.value = true
 }
 
-function addEditSpec() {
-  editSpecForm.value.specList.push({ name: '', value: '' })
+function getAvailableAttrsForSku(spec: any) {
+  const usedNames = addSkuSpecList.value
+    .filter((s: any) => s.key !== spec.key && s.name)
+    .map((s: any) => s.name)
+  return attrList.value.filter((attr: any) => !usedNames.includes(attr.attrName))
 }
 
-function removeEditSpec(index: number) {
-  editSpecForm.value.specList.splice(index, 1)
+function getAvailableAttrsForEdit(spec: any) {
+  const usedNames = editSpecList.value
+    .filter((s: any) => s.key !== spec.key && s.name)
+    .map((s: any) => s.name)
+  return attrList.value.filter((attr: any) => !usedNames.includes(attr.attrName))
+}
+
+function handleAddSkuCustomSpec() {
+  addSkuSpecCounter.value++
+  const key = `custom_${addSkuSpecCounter.value}`
+  addSkuSpecList.value.push({
+    key,
+    name: '',
+    optionValues: [],
+    selectedValue: '',
+    isCustom: true,
+  })
+}
+
+function handleRemoveSkuSpec(spec: any) {
+  const index = addSkuSpecList.value.findIndex(item => item.key === spec.key)
+  if (index > -1) {
+    addSkuSpecList.value.splice(index, 1)
+  }
+}
+
+function handleAddEditSpec() {
+  editSpecCounter.value++
+  const key = `custom_${editSpecCounter.value}`
+  editSpecList.value.push({
+    key,
+    name: '',
+    optionValues: [],
+    selectedValue: '',
+    isCustom: true,
+  })
+}
+
+function handleRemoveEditSpec(spec: any) {
+  const index = editSpecList.value.findIndex(item => item.key === spec.key)
+  if (index > -1) {
+    editSpecList.value.splice(index, 1)
+  }
 }
 
 function handleEditSpecConfirm() {
-  const specs: Record<string, string> = {}
-  editSpecForm.value.specList.forEach(spec => {
-    if (spec.name && spec.value) {
-      specs[spec.name] = spec.value
+  if (currentEditingSku.value) {
+    const specs: Record<string, string> = {}
+    editSpecList.value.forEach(spec => {
+      const specKey = spec.name || spec.key
+      if (specKey && spec.selectedValue) {
+        specs[specKey] = spec.selectedValue
+      }
+    })
+    
+    if (Object.keys(specs).length === 0) {
+      specs['规格'] = '标准款'
     }
-  })
-  currentEditingSku.value.specs = specs
+    
+    currentEditingSku.value.specs = specs
+  }
   editSpecModalVisible.value = false
   Message.success('规格更新成功')
 }
 
 function openAddSkuModal() {
+  const timestamp = Date.now().toString().slice(-6)
+  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
   addSkuForm.value = {
-    skuCode: '',
+    skuCode: `SKU-MANUAL-${timestamp}${random}`,
     skuName: '',
     specInfo: '',
     suggestPrice: undefined,
     supplyPrice: undefined,
     salePrice: undefined,
   }
+  
+  addSkuSpecList.value = props.formData.specList.map((spec: any, index: number) => ({
+    key: `spec_${index}`,
+    name: spec.name,
+    optionValues: spec.values || [],
+    selectedValue: '',
+    isCustom: false,
+  }))
+  addSkuSpecCounter.value = props.formData.specList.length
+  
   addSkuModalVisible.value = true
-}
-
-function parseSpecInfo(specInfo: string): Record<string, string> {
-  if (!specInfo.trim()) {
-    return { 规格: '标准款' }
-  }
-  
-  const specs: Record<string, string> = {}
-  const items = specInfo.split(/[、，,\s\n]+/).filter(s => s.trim())
-  
-  items.forEach((item, index) => {
-    if (item.includes(':')) {
-      const [key, value] = item.split(':')
-      specs[key.trim()] = value.trim()
-    } else if (item.includes('：')) {
-      const [key, value] = item.split('：')
-      specs[key.trim()] = value.trim()
-    } else {
-      specs[`规格${index + 1}`] = item.trim()
-    }
-  })
-  
-  return specs
 }
 
 function handleAddSkuConfirm() {
@@ -306,12 +490,33 @@ function handleAddSkuConfirm() {
     Message.warning('请输入SKU名称')
     return
   }
-
-  const specs = parseSpecInfo(addSkuForm.value.specInfo)
+  
+  const specs: Record<string, string> = {}
+  addSkuSpecList.value.forEach(spec => {
+    const specKey = spec.name || spec.key
+    if (specKey && spec.selectedValue) {
+      specs[specKey] = spec.selectedValue
+    }
+  })
+  
+  if (Object.keys(specs).length === 0) {
+    specs['规格'] = '标准款'
+  }
+  
+  const existSku = props.formData.skuList.find((sku: any) => {
+    const currentSpecs = Object.entries(specs).sort().join(',')
+    const existSpecs = Object.entries(sku.specs || {}).sort().join(',')
+    return currentSpecs === existSpecs
+  })
+  
+  if (existSku) {
+    Message.warning('该规格组合的SKU已存在')
+    return
+  }
 
   const newSku = {
     skuId: 'new_' + Date.now(),
-    skuCode: addSkuForm.value.skuCode || ('SKU' + Date.now()),
+    skuCode: addSkuForm.value.skuCode,
     skuName: addSkuForm.value.skuName,
     specs,
     suggestPrice: addSkuForm.value.suggestPrice,
@@ -350,18 +555,40 @@ defineExpose({
     padding: 40px 0;
   }
 
+  .empty-spec-tip {
+    padding: 20px 0;
+  }
+
   :deep(.arco-input-number) {
     width: 100%;
   }
 
-  .form-tip {
-    font-size: 12px;
-    color: #86909c;
-    margin-top: 4px;
+  .spec-form {
+    .spec-item {
+      position: relative;
+
+      :deep(.arco-form-item-label) {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+      }
+    }
   }
 
-  .spec-edit-area {
-    padding: 8px 0;
+  .spec-label {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .delete-btn {
+    margin-left: 8px;
+    padding: 0 4px;
+    color: var(--color-text-3);
+    
+    &:hover {
+      color: #f53f3f;
+    }
   }
 
   .spec-edit-item {

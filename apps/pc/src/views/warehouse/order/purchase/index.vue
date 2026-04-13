@@ -65,7 +65,7 @@
             <template #cell="{ record }">
               <a-space>
                 <a-link @click="handleView(record)">详情</a-link>
-                <a-link v-if="record.status === 'pending'" @click="handleConfirm(record)">确认</a-link>
+                <a-link v-if="record.status === 'pending'" @click="handleOpenConfirm(record)">确认</a-link>
                 <a-link v-if="record.status === 'confirmed'" @click="handleStockIn(record)">入库</a-link>
                 <a-link v-if="record.paymentStatus === 'unpaid'" @click="handlePay(record)">付款</a-link>
               </a-space>
@@ -74,6 +74,72 @@
         </template>
       </a-table>
     </a-card>
+
+    <a-modal
+      v-model:visible="confirmModalVisible"
+      title="采购订单确认"
+      :width="900"
+      @ok="handleConfirm"
+      @cancel="cancelConfirm"
+    >
+      <a-alert type="warning" style="margin-bottom: 16px">
+        <template #message>
+          <div>请确认每个商品的可供应数量，确认后将同步到采购计划中</div>
+        </template>
+      </a-alert>
+
+      <a-form layout="vertical">
+        <a-form-item label="确认明细" required>
+          <a-table :data="confirmForm.items" :pagination="false">
+            <template #columns>
+              <a-table-column title="商品名称" data-index="productName" :width="180" />
+              <a-table-column title="规格" data-index="spec" :width="120" />
+              <a-table-column title="单位" data-index="unit" :width="80" />
+              <a-table-column title="采购数量" :width="100" align="right">
+                <template #cell="{ record }">
+                  {{ record.purchaseQuantity }}
+                </template>
+              </a-table-column>
+              <a-table-column title="可确认数量" :width="160" align="right">
+                <template #cell="{ record }">
+                  <a-input-number
+                    v-model="record.confirmedQuantity"
+                    :min="0"
+                    :max="record.purchaseQuantity"
+                    :precision="0"
+                    style="width: 130px"
+                  />
+                </template>
+              </a-table-column>
+              <a-table-column title="差异数量" :width="120" align="right">
+                <template #cell="{ record }">
+                  <span :class="record.purchaseQuantity - record.confirmedQuantity !== 0 ? 'text-danger' : 'text-success'">
+                    {{ record.purchaseQuantity - record.confirmedQuantity }}
+                  </span>
+                </template>
+              </a-table-column>
+              <a-table-column title="备注" :width="150">
+                <template #cell="{ record }">
+                  <a-input
+                    v-model="record.remark"
+                    placeholder="缺货原因"
+                    :max-length="50"
+                  />
+                </template>
+              </a-table-column>
+            </template>
+          </a-table>
+        </a-form-item>
+
+        <a-form-item label="确认备注">
+          <a-textarea
+            v-model="confirmForm.remark"
+            placeholder="请输入确认备注（选填）"
+            :max-length="200"
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
@@ -171,9 +237,38 @@ function handleView(record: any) {
   router.push(`/warehouse/order/purchase/detail/${record.id}`)
 }
 
-function handleConfirm(record: any) {
-  Message.success(`订单 ${record.orderNo} 已确认`)
-  record.status = 'confirmed'
+const confirmModalVisible = ref(false)
+const currentConfirmOrder = ref<any>(null)
+const confirmForm = ref({
+  items: [] as any[],
+  remark: '',
+})
+
+function handleOpenConfirm(record: any) {
+  currentConfirmOrder.value = record
+  confirmForm.value = {
+    items: [
+      { id: '1', productName: '32.5级水泥', spec: '32.5级', unit: '吨', purchaseQuantity: 100, confirmedQuantity: 95, remark: '库存不足' },
+      { id: '2', productName: '河沙', spec: '中粗', unit: '方', purchaseQuantity: 200, confirmedQuantity: 200, remark: '' },
+      { id: '3', productName: '碎石', spec: '5-20mm', unit: '方', purchaseQuantity: 150, confirmedQuantity: 140, remark: '缺货' },
+    ],
+    remark: '',
+  }
+  confirmModalVisible.value = true
+}
+
+function handleConfirm() {
+  if (currentConfirmOrder.value) {
+    currentConfirmOrder.value.status = 'confirmed'
+    currentConfirmOrder.value.confirmedCount = confirmForm.value.items.reduce((sum: number, item: any) => sum + item.confirmedQuantity, 0)
+    currentConfirmOrder.value.purchaseCount = confirmForm.value.items.reduce((sum: number, item: any) => sum + item.purchaseQuantity, 0)
+    Message.success(`订单 ${currentConfirmOrder.value.orderNo} 已确认`)
+    confirmModalVisible.value = false
+  }
+}
+
+function cancelConfirm() {
+  confirmModalVisible.value = false
 }
 
 function handleStockIn(record: any) {

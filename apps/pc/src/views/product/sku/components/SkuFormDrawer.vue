@@ -163,30 +163,73 @@
           </a-upload>
         </a-form-item>
 
-        <a-divider orientation="left">规格属性</a-divider>
+        <a-divider orientation="left">
+          <template #extra>
+            <a-button type="text" size="small" @click="handleAddCustomSpec">
+              <icon-plus /> 新增规格属性
+            </a-button>
+          </template>
+          规格属性
+        </a-divider>
 
         <div v-if="!formData.spuId" class="empty-tip">
-          <a-empty description="请先选择SPU" />
-        </div>
-        <div v-else-if="attrList.length === 0" class="empty-tip">
-          <a-empty description="该SPU暂无规格属性" />
+          <a-empty description="请先选择SPU，自动加载规格属性" />
         </div>
         <div v-else class="spec-form">
-          <div v-for="attr in attrList" :key="attr.attrId" class="spec-item">
+          <div v-for="attr in displayAttrList" :key="attr.attrId || attr.key" class="spec-item">
             <a-form-item :label="attr.attrName">
-              <a-select
-                v-model="formData.specs[attr.attrName]"
-                placeholder="请选择规格值"
-                style="width: 100%"
-              >
-                <a-option
-                  v-for="value in attr.optionValues"
-                  :key="value"
-                  :value="value"
+              <template #label>
+                <span class="spec-label">{{ attr.attrName }}</span>
+                <a-button
+                  type="text"
+                  size="small"
+                  class="delete-btn"
+                  @click="handleRemoveSpec(attr)"
                 >
-                  {{ value }}
-                </a-option>
-              </a-select>
+                  <icon-close />
+                </a-button>
+              </template>
+              <a-input-group>
+                <a-select
+                  v-if="attr.isCustom"
+                  v-model="attr.attrName"
+                  placeholder="选择规格属性"
+                  style="width: 140px"
+                  allow-clear
+                  allow-search
+                  @change="handleCustomAttrChange(attr)"
+                >
+                  <a-option
+                    v-for="a in getAvailableAttrs(attr)"
+                    :key="a.attrId"
+                    :value="a.attrName"
+                  >
+                    {{ a.attrName }}
+                  </a-option>
+                </a-select>
+                <a-select
+                  v-if="!attr.isCustom || (attr.isCustom && attr.optionValues && attr.optionValues.length > 0)"
+                  v-model="formData.specs[attr.attrName || attr.key]"
+                  placeholder="请选择规格值"
+                  style="width: 100%"
+                  allow-clear
+                >
+                  <a-option
+                    v-for="value in attr.optionValues"
+                    :key="value"
+                    :value="value"
+                  >
+                    {{ value }}
+                  </a-option>
+                </a-select>
+                <a-input
+                  v-if="attr.isCustom && (!attr.optionValues || attr.optionValues.length === 0)"
+                  v-model="formData.specs[attr.key]"
+                  placeholder="请输入规格值"
+                  style="width: 100%"
+                  allow-clear
+                />
+              </a-input-group>
             </a-form-item>
           </div>
         </div>
@@ -237,7 +280,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, computed, nextTick } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import type { FormInstance } from '@arco-design/web-vue'
 import type { Spu, Sku, ProductAttr } from '@gongchengcang/types'
@@ -263,6 +306,12 @@ const spuList = ref<Spu[]>([])
 const spuPagination = ref({ current: 1, pageSize: 10, total: 0 })
 const selectedSpu = ref<Spu | null>(null)
 const attrList = ref<ProductAttr[]>([])
+const customSpecs = ref<any[]>([])
+const customSpecKeyCounter = ref(0)
+
+const displayAttrList = computed(() => {
+  return [...attrList.value, ...customSpecs.value].filter(attr => !attr.deleted)
+})
 
 const formData = reactive({
   spuId: '',
@@ -325,6 +374,7 @@ function resetForm() {
   imagesFileList.value = []
   selectedSpu.value = null
   attrList.value = []
+  customSpecs.value = []
 }
 
 async function loadSkuDetail() {
@@ -363,6 +413,10 @@ async function loadSkuDetail() {
   }
   
   await loadAttrList(props.sku.spuId)
+  
+  nextTick(() => {
+    processEditModeSpecs()
+  })
 }
 
 async function loadSpuList() {
@@ -416,10 +470,105 @@ async function confirmSelectSpu() {
 async function loadAttrList(spuId: string) {
   try {
     const result = await getAttrList({ page: 1, pageSize: 100 })
-    attrList.value = result.filter((attr: ProductAttr) => selectedSpu.value?.attrIds.includes(attr.attrId))
+    attrList.value = (result.list || result).filter((attr: ProductAttr) => selectedSpu.value?.attrIds.includes(attr.attrId))
   } catch (error) {
     console.error('加载属性列表失败:', error)
   }
+}
+
+function handleAddCustomSpec() {
+  customSpecKeyCounter.value++
+  const key = `custom_${customSpecKeyCounter.value}`
+  customSpecs.value.push({
+    key,
+    attrId: '',
+    attrName: '',
+    isCustom: true,
+    optionValues: [],
+    deleted: false,
+  })
+  formData.specs[key] = ''
+}
+
+function handleRemoveSpec(attr: any) {
+  if (attr.isCustom) {
+    const index = customSpecs.value.findIndex(item => item.key === attr.key)
+    if (index > -1) {
+      customSpecs.value.splice(index, 1)
+    }
+    delete formData.specs[attr.key]
+    delete formData.specs[attr.attrName]
+  } else {
+    attr.deleted = true
+    delete formData.specs[attr.attrName]
+  }
+}
+
+function getAvailableAttrs(attr: any) {
+  const usedNames = displayAttrList.value
+    .filter(a => a.key !== attr.key && (a.attrName || a.name))
+    .map(a => a.attrName || a.name)
+  return attrList.value.filter(a => !usedNames.includes(a.attrName))
+}
+
+function handleCustomAttrChange(attr: any) {
+  const selectedAttr = attrList.value.find(a => a.attrName === attr.attrName)
+  if (selectedAttr) {
+    attr.optionValues = selectedAttr.optionValues || []
+  } else {
+    attr.optionValues = []
+  }
+  updateCustomSpecKey(attr)
+}
+
+function updateCustomSpecKey(attr: any) {
+  if (attr.attrName && attr.key) {
+    const oldValue = formData.specs[attr.key]
+    delete formData.specs[attr.key]
+    formData.specs[attr.attrName] = oldValue
+  }
+}
+
+function processEditModeSpecs() {
+  if (!props.sku || !props.sku.specs) return
+  
+  const inheritedAttrNames = attrList.value.map(attr => attr.attrName)
+  
+  Object.entries(props.sku.specs).forEach(([key, value]) => {
+    if (!inheritedAttrNames.includes(key)) {
+      customSpecKeyCounter.value++
+      const internalKey = `custom_${customSpecKeyCounter.value}`
+      customSpecs.value.push({
+        key: internalKey,
+        attrId: '',
+        attrName: key,
+        isCustom: true,
+        optionValues: [],
+        deleted: false,
+      })
+      delete formData.specs[key]
+      formData.specs[internalKey] = value as string
+    }
+  })
+}
+
+function prepareFinalSpecs() {
+  const finalSpecs: Record<string, string> = {}
+  
+  displayAttrList.value.forEach(attr => {
+    if (attr.isCustom) {
+      const specKey = attr.attrName || attr.key
+      if (specKey && formData.specs[attr.key]) {
+        finalSpecs[specKey] = formData.specs[attr.key]
+      }
+    } else {
+      if (formData.specs[attr.attrName]) {
+        finalSpecs[attr.attrName] = formData.specs[attr.attrName]
+      }
+    }
+  })
+  
+  return finalSpecs
 }
 
 function handleMainImageChange(fileList: any[]) {
@@ -458,11 +607,13 @@ async function handleOk() {
   
   loading.value = true
   try {
+    const finalSpecs = prepareFinalSpecs()
+    
     if (isEdit.value && props.sku) {
       await updateSku(props.sku.skuId, {
         skuCode: formData.skuCode,
         skuName: formData.skuName,
-        specs: formData.specs,
+        specs: finalSpecs,
         barcode: formData.barcode,
         unit: formData.unit,
         mainImage: formData.mainImage,
@@ -478,8 +629,7 @@ async function handleOk() {
         skuCode: formData.skuCode,
         skuName: formData.skuName,
         spuId: formData.spuId,
-        spuName: formData.spuName,
-        specs: formData.specs,
+        specs: finalSpecs,
         barcode: formData.barcode,
         unit: formData.unit,
         mainImage: formData.mainImage,
@@ -512,10 +662,36 @@ async function handleOk() {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 0 24px;
+
+  .spec-item {
+    position: relative;
+
+    :deep(.arco-form-item-label) {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+  }
 }
 
 .empty-tip {
   padding: 40px 0;
+}
+
+.spec-label {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.delete-btn {
+  margin-left: 8px;
+  padding: 0 4px;
+  color: var(--color-text-3);
+  
+  &:hover {
+    color: #f53f3f;
+  }
 }
 
 .upload-btn {

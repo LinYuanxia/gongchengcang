@@ -61,21 +61,34 @@
               ¥{{ record.estimatedAmount?.toLocaleString() || '0' }}
             </template>
           </a-table-column>
-          <a-table-column title="推送工程仓" :width="150">
+          <a-table-column title="推送仓库" :width="180">
             <template #cell="{ record }">
               <template v-if="record.pushList && record.pushList.length > 0">
                 <a-popover trigger="hover">
                   <span class="push-count">
-                    {{ record.pushList.length }} 个工程仓
+                    {{ record.pushList.length }} 个仓库
                     <icon-right />
                   </span>
                   <template #content>
                     <div class="push-list">
                       <div v-for="item in record.pushList" :key="item.warehouseId" class="push-item">
-                        <span>{{ item.warehouseName }}</span>
-                        <a-tag :color="getPushStatusColor(item.status)" size="small">
-                          {{ getPushStatusText(item.status) }}
-                        </a-tag>
+                        <div class="push-item-header">
+                          <div>
+                            <span class="parent-warehouse">{{ item.warehouseParentName }}</span>
+                            <span class="sub-warehouse">{{ item.warehouseName }}</span>
+                          </div>
+                          <a-tag :color="getPushStatusColor(item.status)" size="small">
+                            {{ getPushStatusText(item.status) }}
+                          </a-tag>
+                        </div>
+                        <template v-if="item.status === 'confirmed' && item.totalConfirmedQuantity > 0">
+                          <div class="push-summary">
+                            确认数量: <strong>{{ item.totalConfirmedQuantity }}</strong> 件
+                            <a-link size="small" @click.stop="handleViewConfirmDetail(record, item)">
+                              查看明细
+                            </a-link>
+                          </div>
+                        </template>
                       </div>
                     </div>
                   </template>
@@ -351,7 +364,7 @@
         <a-descriptions-item label="预计金额">¥{{ currentPlan.estimatedAmount?.toLocaleString() }}</a-descriptions-item>
       </a-descriptions>
 
-      <a-divider>选择工程仓</a-divider>
+      <a-divider>选择工程仓仓库</a-divider>
 
       <div class="warehouse-selector">
         <div class="selector-header">
@@ -364,28 +377,40 @@
           </a-checkbox>
           <a-input-search
             v-model="warehouseSearchKeyword"
-            placeholder="搜索工程仓"
+            placeholder="搜索工程仓/仓库"
             style="width: 200px"
           />
         </div>
         <div class="warehouse-list">
           <div 
-            v-for="w in filteredWarehouseList" 
-            :key="w.id" 
-            class="warehouse-item"
-            :class="{ 'is-selected': selectedWarehouseIds.includes(w.id), 'is-pushed': isAlreadyPushed(w.id) }"
-            @click="handleToggleWarehouse(w.id)"
+            v-for="warehouseGroup in filteredWarehouseList" 
+            :key="warehouseGroup.warehouseId" 
+            class="warehouse-group"
           >
-            <a-checkbox 
-              :model-value="selectedWarehouseIds.includes(w.id)"
-              :disabled="isAlreadyPushed(w.id)"
-              @click.stop
-            />
-            <div class="warehouse-info">
-              <span class="name">{{ w.name }}</span>
-              <span class="contact">{{ w.contactPerson }} {{ w.contactPhone }}</span>
+            <div class="warehouse-header">
+              <span class="warehouse-name">{{ warehouseGroup.warehouseName }}</span>
+              <span class="warehouse-desc">{{ warehouseGroup.warehouseDesc }}</span>
             </div>
-            <a-tag v-if="isAlreadyPushed(w.id)" color="arcoblue" size="small">已推送</a-tag>
+            <div class="sub-warehouse-list">
+              <div 
+                v-for="sub in warehouseGroup.subWarehouses" 
+                :key="sub.id" 
+                class="warehouse-item"
+                :class="{ 'is-selected': selectedWarehouseIds.includes(sub.id), 'is-pushed': isAlreadyPushed(sub.id) }"
+                @click="handleToggleWarehouse(sub.id)"
+              >
+                <a-checkbox 
+                  :model-value="selectedWarehouseIds.includes(sub.id)"
+                  :disabled="isAlreadyPushed(sub.id)"
+                  @click.stop
+                />
+                <div class="warehouse-info">
+                  <span class="name">📦 {{ sub.name }}</span>
+                  <span class="contact">{{ sub.address }}</span>
+                </div>
+                <a-tag v-if="isAlreadyPushed(sub.id)" color="arcoblue" size="small">已推送</a-tag>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -427,12 +452,36 @@
 
       <a-table :data="currentPlan.pushList || []" :pagination="false" style="margin-bottom: 16px">
         <template #columns>
-          <a-table-column title="工程仓" data-index="warehouseName" :width="150" />
+          <a-table-column title="工程仓" :width="180">
+            <template #cell="{ record }">
+              <div>
+                <div class="text-muted" style="font-size: 12px">{{ record.warehouseParentName }}</div>
+                <div>{{ record.warehouseName }}</div>
+              </div>
+            </template>
+          </a-table-column>
           <a-table-column title="状态" :width="100">
             <template #cell="{ record }">
               <a-tag :color="getPushStatusColor(record.status)">
                 {{ getPushStatusText(record.status) }}
               </a-tag>
+            </template>
+          </a-table-column>
+          <a-table-column title="确认汇总" :width="200">
+            <template #cell="{ record }">
+              <template v-if="record.status === 'confirmed'">
+                <div style="font-size: 12px">
+                  <span>SKU: </span>
+                  <strong class="text-success">{{ record.confirmedItems?.length || 0 }}</strong>
+                  <span style="margin: 0 8px">/</span>
+                  <span>{{ currentPlan.skuList?.length || 0 }}</span>
+                </div>
+                <div style="font-size: 12px; margin-top: 4px">
+                  <span>数量: </span>
+                  <strong class="highlight">{{ record.totalConfirmedQuantity || 0 }}</strong>
+                </div>
+              </template>
+              <span v-else class="text-muted">-</span>
             </template>
           </a-table-column>
           <a-table-column title="推送时间" data-index="pushTime" :width="160" />
@@ -441,14 +490,17 @@
               {{ record.confirmTime || '-' }}
             </template>
           </a-table-column>
-          <a-table-column title="订单编号" :width="150">
+          <a-table-column title="操作" :width="120" fixed="right">
             <template #cell="{ record }">
-              {{ record.orderNo || '-' }}
-            </template>
-          </a-table-column>
-          <a-table-column title="实际金额" :width="120" align="right">
-            <template #cell="{ record }">
-              {{ record.actualAmount ? '¥' + record.actualAmount.toLocaleString() : '-' }}
+              <a-button 
+                v-if="record.status === 'confirmed'"
+                type="text" 
+                size="small" 
+                @click="handleViewConfirmDetail(currentPlan, record)"
+              >
+                查看明细
+              </a-button>
+              <span v-else class="text-muted">-</span>
             </template>
           </a-table-column>
         </template>
@@ -481,6 +533,75 @@
         </template>
       </a-table>
     </a-modal>
+
+    <a-modal 
+      v-model:visible="confirmDetailVisible" 
+      :title="`${currentConfirmWarehouse.warehouseParentName} - ${currentConfirmWarehouse.warehouseName} 确认明细`" 
+      :width="1000"
+      :footer="false"
+    >
+      <a-descriptions :column="3" bordered size="small">
+        <a-descriptions-item label="所属工程仓">
+          {{ currentConfirmWarehouse.warehouseParentName }}
+        </a-descriptions-item>
+        <a-descriptions-item label="确认仓库">
+          {{ currentConfirmWarehouse.warehouseName }}
+        </a-descriptions-item>
+        <a-descriptions-item label="确认状态">
+          <a-tag :color="getPushStatusColor(currentConfirmWarehouse.status)">
+            {{ getPushStatusText(currentConfirmWarehouse.status) }}
+          </a-tag>
+        </a-descriptions-item>
+        <a-descriptions-item label="推送时间">
+          {{ currentConfirmWarehouse.pushTime }}
+        </a-descriptions-item>
+        <a-descriptions-item label="确认时间">
+          {{ currentConfirmWarehouse.confirmTime || '-' }}
+        </a-descriptions-item>
+        <a-descriptions-item label="确认总数量">
+          <strong class="highlight">{{ currentConfirmWarehouse.totalConfirmedQuantity || 0 }}</strong> 件
+        </a-descriptions-item>
+      </a-descriptions>
+
+      <a-divider>确认商品明细</a-divider>
+
+      <a-table :data="currentConfirmWarehouse.confirmedItems || []" :pagination="false">
+        <template #columns>
+          <a-table-column title="SKU编码" data-index="skuCode" :width="120" />
+          <a-table-column title="商品名称" :width="200">
+            <template #cell="{ record }">
+              <div>{{ record.productName }}</div>
+              <div class="sub-text">{{ record.specValues }}</div>
+            </template>
+          </a-table-column>
+          <a-table-column title="单位" data-index="unit" :width="60" align="center" />
+          <a-table-column title="计划采购量" :width="100" align="right">
+            <template #cell="{ record }">
+              {{ record.planQuantity }}
+            </template>
+          </a-table-column>
+          <a-table-column title="实际确认量" :width="100" align="right">
+            <template #cell="{ record }">
+              <span :class="record.confirmedQuantity < record.planQuantity ? 'text-warning' : 'text-success'">
+                {{ record.confirmedQuantity }}
+              </span>
+            </template>
+          </a-table-column>
+          <a-table-column title="差异数量" :width="100" align="right">
+            <template #cell="{ record }">
+              <span class="text-danger">
+                {{ record.planQuantity - record.confirmedQuantity }}
+              </span>
+            </template>
+          </a-table-column>
+
+        </template>
+      </a-table>
+
+      <div style="margin-top: 24px; text-align: right">
+        <a-button @click="confirmDetailVisible = false">关闭</a-button>
+      </div>
+    </a-modal>
   </div>
 </template>
 
@@ -503,11 +624,33 @@ const pagination = reactive({
 })
 
 const warehouseList = ref([
-  { id: 'WH001', name: '深圳宝安工程仓', contactPerson: '张经理', contactPhone: '13800138001' },
-  { id: 'WH002', name: '广州天河工程仓', contactPerson: '李经理', contactPhone: '13800138002' },
-  { id: 'WH003', name: '东莞南城工程仓', contactPerson: '王经理', contactPhone: '13800138003' },
-  { id: 'WH004', name: '佛山禅城工程仓', contactPerson: '赵经理', contactPhone: '13800138004' },
-  { id: 'WH005', name: '惠州惠城工程仓', contactPerson: '陈经理', contactPhone: '13800138005' }
+  { 
+    warehouseId: 'WH001', 
+    warehouseName: '深圳宝安工程仓', 
+    warehouseDesc: '主营水泥、砂石料',
+    subWarehouses: [
+      { id: 'WH001-S01', name: '西乡主仓', address: '宝安区西乡街道1号' },
+      { id: 'WH001-S02', name: '福永分仓', address: '宝安区福永街道2号' },
+      { id: 'WH001-S03', name: '沙井应急仓', address: '宝安区沙井街道3号' },
+    ]
+  },
+  { 
+    warehouseId: 'WH002', 
+    warehouseName: '广州天河工程仓', 
+    warehouseDesc: '主营钢材、混凝土',
+    subWarehouses: [
+      { id: 'WH002-S01', name: '天河智慧城仓', address: '天河区智慧城园区A区' },
+      { id: 'WH002-S02', name: '黄埔分仓', address: '黄埔区开发区B区' },
+    ]
+  },
+  { 
+    warehouseId: 'WH003', 
+    warehouseName: '东莞南城工程仓', 
+    warehouseDesc: '综合建材仓',
+    subWarehouses: [
+      { id: 'WH003-S01', name: '南城中心仓', address: '南城区CBD商圈旁' },
+    ]
+  },
 ])
 
 const planList = ref([
@@ -520,9 +663,35 @@ const planList = ref([
     status: 'published',
     createTime: '2024-01-15 10:30:00',
     description: '本月常规建材补货计划',
+    skuList: [
+      { skuCode: 'SKU001', productName: '32.5级普通硅酸盐水泥', specValues: '强度:32.5级', unit: '吨', quantity: 100, referencePrice: 450 },
+      { skuCode: 'SKU002', productName: '河沙（中粗）', specValues: '颗粒:中粗砂', unit: '方', quantity: 200, referencePrice: 180 },
+      { skuCode: 'SKU003', productName: '碎石(5-20mm)', specValues: '粒径:5-20mm', unit: '方', quantity: 150, referencePrice: 120 },
+    ],
     pushList: [
-      { warehouseId: 'WH001', warehouseName: '深圳宝安工程仓', status: 'pending', pushTime: '2024-01-15 14:00:00' },
-      { warehouseId: 'WH002', warehouseName: '广州天河工程仓', status: 'confirmed', pushTime: '2024-01-15 14:00:00', confirmTime: '2024-01-16 10:00:00', orderNo: 'SO202401001', actualAmount: 128500 }
+      { 
+        warehouseId: 'WH001-S01', 
+        warehouseParentName: '深圳宝安工程仓',
+        warehouseName: '西乡主仓', 
+        status: 'pending', 
+        pushTime: '2024-01-15 14:00:00' 
+      },
+      { 
+        warehouseId: 'WH002-S01', 
+        warehouseParentName: '广州天河工程仓',
+        warehouseName: '天河智慧城仓', 
+        status: 'confirmed', 
+        pushTime: '2024-01-15 14:00:00', 
+        confirmTime: '2024-01-16 10:00:00', 
+        orderNo: 'SO202401001', 
+        actualAmount: 128500,
+        totalConfirmedQuantity: 435,
+        confirmedItems: [
+          { skuCode: 'SKU001', productName: '32.5级普通硅酸盐水泥', specValues: '强度:32.5级', unit: '吨', planQuantity: 100, confirmedQuantity: 95, remark: '库存不足' },
+          { skuCode: 'SKU002', productName: '河沙（中粗）', specValues: '颗粒:中粗砂', unit: '方', planQuantity: 200, confirmedQuantity: 200, remark: '' },
+          { skuCode: 'SKU003', productName: '碎石(5-20mm)', specValues: '粒径:5-20mm', unit: '方', planQuantity: 150, confirmedQuantity: 140, remark: '缺货，下周补货' },
+        ]
+      }
     ]
   },
   {
@@ -534,10 +703,27 @@ const planList = ref([
     status: 'partial',
     createTime: '2024-01-18 09:00:00',
     description: '',
+    skuList: [
+      { skuCode: 'SKU001', productName: '32.5级普通硅酸盐水泥', specValues: '强度:32.5级', unit: '吨', quantity: 100, referencePrice: 450 },
+      { skuCode: 'SKU002', productName: '河沙（中粗）', specValues: '颗粒:中粗砂', unit: '方', quantity: 200, referencePrice: 180 },
+    ],
     pushList: [
-      { warehouseId: 'WH001', warehouseName: '深圳宝安工程仓', status: 'confirmed', pushTime: '2024-01-18 11:00:00', confirmTime: '2024-01-19 15:30:00', orderNo: 'SO202401002', actualAmount: 362000 },
-      { warehouseId: 'WH003', warehouseName: '东莞南城工程仓', status: 'pending', pushTime: '2024-01-18 11:00:00' },
-      { warehouseId: 'WH004', warehouseName: '佛山禅城工程仓', status: 'pending', pushTime: '2024-01-18 11:00:00' }
+      { 
+        warehouseId: 'WH001-S02', 
+        warehouseParentName: '深圳宝安工程仓',
+        warehouseName: '福永分仓', 
+        status: 'confirmed', 
+        pushTime: '2024-01-18 11:00:00', 
+        confirmTime: '2024-01-19 15:30:00', 
+        orderNo: 'SO202401002', 
+        actualAmount: 362000,
+        totalConfirmedQuantity: 290,
+        confirmedItems: [
+          { skuCode: 'SKU001', productName: '32.5级普通硅酸盐水泥', specValues: '强度:32.5级', unit: '吨', planQuantity: 100, confirmedQuantity: 95, remark: '缺货5吨' },
+          { skuCode: 'SKU002', productName: '河沙（中粗）', specValues: '颗粒:中粗砂', unit: '方', planQuantity: 200, confirmedQuantity: 195, remark: '运输延迟' },
+        ]
+      },
+      { warehouseId: 'WH003-S01', warehouseParentName: '东莞南城工程仓', warehouseName: '南城中心仓', status: 'pending', pushTime: '2024-01-18 11:00:00' },
     ]
   },
   {
@@ -549,8 +735,24 @@ const planList = ref([
     status: 'confirmed',
     createTime: '2024-01-20 14:00:00',
     description: '',
+    skuList: [
+      { skuCode: 'SKU001', productName: '32.5级普通硅酸盐水泥', specValues: '强度:32.5级', unit: '吨', quantity: 100, referencePrice: 450 },
+    ],
     pushList: [
-      { warehouseId: 'WH002', warehouseName: '广州天河工程仓', status: 'confirmed', pushTime: '2024-01-20 16:00:00', confirmTime: '2024-01-21 10:00:00', orderNo: 'SO202401003', actualAmount: 535000 }
+      { 
+        warehouseId: 'WH002-S02', 
+        warehouseParentName: '广州天河工程仓',
+        warehouseName: '黄埔分仓', 
+        status: 'confirmed', 
+        pushTime: '2024-01-20 16:00:00', 
+        confirmTime: '2024-01-21 10:00:00', 
+        orderNo: 'SO202401003', 
+        actualAmount: 535000,
+        totalConfirmedQuantity: 100,
+        confirmedItems: [
+          { skuCode: 'SKU001', productName: '32.5级普通硅酸盐水泥', specValues: '强度:32.5级', unit: '吨', planQuantity: 100, confirmedQuantity: 100, remark: '' },
+        ]
+      }
     ]
   },
   {
@@ -844,44 +1046,50 @@ const totalEstimatedAmount = computed(() => {
 })
 
 const detailVisible = ref(false)
+const confirmDetailVisible = ref(false)
 const currentPlan = ref<any>({})
+const currentConfirmWarehouse = ref<any>({})
 
 const publishVisible = ref(false)
 const selectedWarehouseIds = ref<string[]>([])
 const warehouseSearchKeyword = ref('')
 
+const allSubWarehouses = computed(() => {
+  return warehouseList.value.flatMap(g => g.subWarehouses)
+})
+
 const filteredWarehouseList = computed(() => {
   if (!warehouseSearchKeyword.value) return warehouseList.value
-  return warehouseList.value.filter(w => 
-    w.name.includes(warehouseSearchKeyword.value)
-  )
+  return warehouseList.value.filter(g => {
+    if (g.warehouseName.includes(warehouseSearchKeyword.value)) return true
+    return g.subWarehouses.some(w => w.name.includes(warehouseSearchKeyword.value))
+  })
 })
 
 const isAllWarehouseSelected = computed(() => {
-  const pushedList = currentPlan.value.pushList?.map((p: any) => p.warehouseId) || []
-  const selectableList = warehouseList.value.filter(w => !pushedList.includes(w.id))
-  return selectableList.length > 0 && selectedWarehouseIds.value.length === selectableList.length
+  const selectable = allSubWarehouses.value.filter(w => !isAlreadyPushed(w.id))
+  if (selectable.length === 0) return false
+  return selectable.every(w => selectedWarehouseIds.value.includes(w.id))
 })
 
 const isPartialWarehouseSelected = computed(() => {
-  const pushedList = currentPlan.value.pushList?.map((p: any) => p.warehouseId) || []
-  const selectableList = warehouseList.value.filter(w => !pushedList.includes(w.id))
-  return selectedWarehouseIds.value.length > 0 && selectedWarehouseIds.value.length < selectableList.length
+  const selectableIds = allSubWarehouses.value.filter(w => !isAlreadyPushed(w.id)).map(w => w.id)
+  const selected = selectedWarehouseIds.value.filter(id => selectableIds.includes(id))
+  return selected.length > 0 && selected.length < selectableIds.length
 })
 
 const selectableWarehouseCount = computed(() => {
-  return selectedWarehouseIds.value.length
+  return selectedWarehouseIds.value.filter(id => !isAlreadyPushed(id)).length
 })
 
 function isAlreadyPushed(warehouseId: string) {
   return currentPlan.value.pushList?.some((p: any) => p.warehouseId === warehouseId)
 }
 
-function handleSelectAllWarehouse(checked: boolean) {
-  const pushedList = currentPlan.value.pushList?.map((p: any) => p.warehouseId) || []
+function handleSelectAllWarehouse(checked: unknown) {
   if (checked) {
-    selectedWarehouseIds.value = warehouseList.value
-      .filter(w => !pushedList.includes(w.id))
+    selectedWarehouseIds.value = allSubWarehouses.value
+      .filter(w => !isAlreadyPushed(w.id))
       .map(w => w.id)
   } else {
     selectedWarehouseIds.value = []
@@ -961,17 +1169,23 @@ function handlePushMore(record: any) {
 
 function handleConfirmPublish() {
   if (selectedWarehouseIds.value.length === 0) {
-    Message.warning('请选择至少一个工程仓')
+    Message.warning('请选择至少一个仓库')
     return
   }
 
   const newPushList = selectedWarehouseIds.value.map(id => {
-    const warehouse = warehouseList.value.find(w => w.id === id)
+    const warehouse = allSubWarehouses.value.find(w => w.id === id)
+    const warehouseGroup = warehouseList.value.find(g => 
+      g.subWarehouses.some(w => w.id === id)
+    )
     return {
       warehouseId: id,
       warehouseName: warehouse?.name || '',
+      warehouseParentName: warehouseGroup?.warehouseName || '',
       status: 'pending',
-      pushTime: new Date().toLocaleString()
+      pushTime: new Date().toLocaleString(),
+      confirmedItems: [],
+      totalConfirmedQuantity: 0,
     }
   })
 
@@ -981,8 +1195,22 @@ function handleConfirmPublish() {
   currentPlan.value.pushList.push(...newPushList)
   currentPlan.value.status = 'published'
 
-  Message.success(`已推送到 ${selectedWarehouseIds.value.length} 个工程仓`)
+  Message.success(`已推送到 ${selectedWarehouseIds.value.length} 个仓库`)
   publishVisible.value = false
+}
+
+function handleViewConfirmDetail(plan: any, warehouse: any) {
+  if (warehouse.confirmedItems && warehouse.confirmedItems.length === 0) {
+    warehouse.confirmedItems = [
+      { skuCode: 'SKU001', productName: '32.5级普通硅酸盐水泥', specValues: '强度:32.5级', unit: '吨', planQuantity: 100, confirmedQuantity: 95, remark: '库存不足' },
+      { skuCode: 'SKU002', productName: '河沙（中粗）', specValues: '颗粒:中粗砂', unit: '方', planQuantity: 200, confirmedQuantity: 200, remark: '' },
+      { skuCode: 'SKU003', productName: '碎石(5-20mm)', specValues: '粒径:5-20mm', unit: '方', planQuantity: 150, confirmedQuantity: 140, remark: '缺货' },
+    ]
+    warehouse.totalConfirmedQuantity = 95 + 200 + 140
+    warehouse.confirmTime = new Date().toLocaleString()
+  }
+  currentConfirmWarehouse.value = warehouse
+  confirmDetailVisible.value = true
 }
 
 function handleDelete(record: any) {
@@ -1122,20 +1350,89 @@ function getPushStatusText(status: string) {
   color: var(--color-text-3);
 }
 
+.text-success {
+  color: #00b42a;
+}
+
+.text-warning {
+  color: #ff7d00;
+}
+
+.text-danger {
+  color: #f53f3f;
+}
+
+.highlight {
+  color: rgb(var(--primary-6));
+  font-weight: 600;
+}
+
 .push-list {
   max-height: 200px;
   overflow-y: auto;
 }
 
 .push-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   padding: 8px 0;
   border-bottom: 1px solid var(--color-border);
 
   &:last-child {
     border-bottom: none;
+  }
+}
+
+.push-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.parent-warehouse {
+  display: block;
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+
+.sub-warehouse {
+  display: block;
+  font-weight: 500;
+}
+
+.push-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--color-text-2);
+}
+
+.warehouse-group {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.warehouse-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--color-fill-1);
+  font-weight: 500;
+
+  .warehouse-name {
+    font-weight: 500;
+  }
+
+  .warehouse-desc {
+    font-size: 12px;
+    color: var(--color-text-3);
+  }
+}
+
+.sub-warehouse-list {
+  .warehouse-item {
+    padding-left: 40px;
   }
 }
 

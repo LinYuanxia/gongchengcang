@@ -56,6 +56,11 @@
       <a-table :data="splitList" :pagination="pagination" class="mt-16" @page-change="handlePageChange">
         <template #columns>
           <a-table-column title="分账单号" data-index="splitNo" :width="180" />
+          <a-table-column title="应收编号" data-index="receivableNo" :width="160">
+            <template #cell="{ record }">
+              <a-link class="receivable-link" @click="handleViewReceivable(record)">{{ record.receivableNo }}</a-link>
+            </template>
+          </a-table-column>
           <a-table-column title="关联订单" data-index="orderNo" :width="150">
             <template #cell="{ record }">
               <a-link @click="handleViewOrder(record)">{{ record.orderNo }}</a-link>
@@ -97,6 +102,9 @@
     <a-modal v-model:visible="detailVisible" title="分账详情" :width="800" :footer="false">
       <a-descriptions :column="2" bordered>
         <a-descriptions-item label="分账单号">{{ currentSplit?.splitNo }}</a-descriptions-item>
+        <a-descriptions-item label="关联应收编号">
+          <a-link class="receivable-link" @click="handleViewReceivable(currentSplit)">{{ currentSplit?.receivableNo }}</a-link>
+        </a-descriptions-item>
         <a-descriptions-item label="关联订单">{{ currentSplit?.orderNo }}</a-descriptions-item>
         <a-descriptions-item label="交易金额">¥{{ currentSplit?.transactionAmount }}</a-descriptions-item>
         <a-descriptions-item label="分账金额">
@@ -182,6 +190,7 @@ const pagination = ref({
 interface SplitRecord {
   id: string
   splitNo: string
+  receivableNo: string
   orderNo: string
   transactionAmount: string
   splitAmount: string
@@ -194,11 +203,11 @@ interface SplitRecord {
 }
 
 const allSplitList = ref<SplitRecord[]>([
-  { id: '1', splitNo: 'SP202401150001', orderNo: 'SO202401150001', transactionAmount: '125,800.00', splitAmount: '6,290.00', splitRate: 5, merchantName: '深圳湾科技园项目仓', merchantType: 'warehouse', productCount: 3, products: [{ name: '钢筋 HRB400', amount: 50000, rate: 5 }, { name: '水泥 P.O 42.5', amount: 40800, rate: 5 }, { name: '沙子', amount: 35000, rate: 5 }], splitTime: '2024-01-15 16:30:00' },
-  { id: '2', splitNo: 'SP202401150002', orderNo: 'SO202401140001', transactionAmount: '89,500.00', splitAmount: '4,475.00', splitRate: 5, merchantName: '广州天河工程仓', merchantType: 'warehouse', productCount: 2, products: [{ name: '模板', amount: 49500, rate: 5 }, { name: '木方', amount: 40000, rate: 5 }], splitTime: '2024-01-15 14:20:00' },
-  { id: '3', splitNo: 'SP202401140001', orderNo: 'SO202401130001', transactionAmount: '52,300.00', splitAmount: '2,615.00', splitRate: 5, merchantName: '深圳湾科技园项目仓', merchantType: 'warehouse', productCount: 4, products: [{ name: '防水涂料', amount: 12300, rate: 5 }, { name: '防水卷材', amount: 20000, rate: 5 }, { name: '密封胶', amount: 10000, rate: 5 }, { name: '保温材料', amount: 10000, rate: 5 }], splitTime: '2024-01-14 10:00:00' },
-  { id: '4', splitNo: 'SP202401130001', orderNo: 'SO202401120001', transactionAmount: '168,000.00', splitAmount: '8,400.00', splitRate: 5, merchantName: '深圳湾科技园项目仓', merchantType: 'warehouse', productCount: 5, products: [{ name: '电线电缆 BV', amount: 50000, rate: 5 }, { name: '开关插座', amount: 18000, rate: 5 }, { name: '配电箱', amount: 30000, rate: 5 }, { name: '灯具', amount: 40000, rate: 5 }, { name: '弱电设备', amount: 30000, rate: 5 }], splitTime: '2024-01-13 15:30:00' },
-  { id: '5', splitNo: 'SP202401120001', orderNo: 'SO202401110001', transactionAmount: '91,200.00', splitAmount: '4,560.00', splitRate: 5, merchantName: '广州天河工程仓', merchantType: 'warehouse', productCount: 2, products: [{ name: 'PPR水管', amount: 51200, rate: 5 }, { name: 'PVC排水管', amount: 40000, rate: 5 }], splitTime: '2024-01-12 09:00:00' },
+  { id: '1', splitNo: 'SP202401150001', receivableNo: 'YS202401150001', orderNo: 'SO202401150001', transactionAmount: '125,800.00', splitAmount: '6,290.00', splitRate: 5, merchantName: '深圳湾科技园项目仓', merchantType: 'warehouse', productCount: 3, products: [{ name: '钢筋 HRB400', amount: 50000, rate: 5 }, { name: '水泥 P.O 42.5', amount: 40800, rate: 5 }, { name: '沙子', amount: 35000, rate: 5 }], splitTime: '2024-01-15 16:30:00' },
+  { id: '2', splitNo: 'SP202401150002', receivableNo: 'YS202401150002', orderNo: 'SO202401140001', transactionAmount: '89,500.00', splitAmount: '4,475.00', splitRate: 5, merchantName: '广州天河工程仓', merchantType: 'warehouse', productCount: 2, products: [{ name: '模板', amount: 49500, rate: 5 }, { name: '木方', amount: 40000, rate: 5 }], splitTime: '2024-01-15 14:20:00' },
+  { id: '3', splitNo: 'SP202401140001', receivableNo: 'YS202401140001', orderNo: 'SO202401130001', transactionAmount: '52,300.00', splitAmount: '2,615.00', splitRate: 5, merchantName: '深圳湾科技园项目仓', merchantType: 'warehouse', productCount: 4, products: [{ name: '防水涂料', amount: 12300, rate: 5 }, { name: '防水卷材', amount: 20000, rate: 5 }, { name: '密封胶', amount: 10000, rate: 5 }, { name: '保温材料', amount: 10000, rate: 5 }], splitTime: '2024-01-14 10:00:00' },
+  { id: '4', splitNo: 'SP202401130001', receivableNo: 'YS202401130001', orderNo: 'SO202401120001', transactionAmount: '168,000.00', splitAmount: '8,400.00', splitRate: 5, merchantName: '深圳湾科技园项目仓', merchantType: 'warehouse', productCount: 5, products: [{ name: '电线电缆 BV', amount: 50000, rate: 5 }, { name: '开关插座', amount: 18000, rate: 5 }, { name: '配电箱', amount: 30000, rate: 5 }, { name: '灯具', amount: 40000, rate: 5 }, { name: '弱电设备', amount: 30000, rate: 5 }], splitTime: '2024-01-13 15:30:00' },
+  { id: '5', splitNo: 'SP202401120001', receivableNo: 'YS202401120001', orderNo: 'SO202401110001', transactionAmount: '91,200.00', splitAmount: '4,560.00', splitRate: 5, merchantName: '广州天河工程仓', merchantType: 'warehouse', productCount: 2, products: [{ name: 'PPR水管', amount: 51200, rate: 5 }, { name: 'PVC排水管', amount: 40000, rate: 5 }], splitTime: '2024-01-12 09:00:00' },
 ])
 
 const splitList = ref<SplitRecord[]>([...allSplitList.value])
@@ -261,6 +270,11 @@ function handleViewDetail(record: SplitRecord) {
   detailVisible.value = true
 }
 
+function handleViewReceivable(record: SplitRecord | null) {
+  if (!record) return
+  Message.info(`跳转到应收记录: ${record.receivableNo}`)
+}
+
 function handleExport() {
   if (splitList.value.length === 0) {
     Message.warning('暂无数据可导出')
@@ -310,5 +324,10 @@ function handleExport() {
 .product-count {
   color: var(--color-text-2);
   font-size: 13px;
+}
+
+.receivable-link {
+  color: #165dff;
+  cursor: pointer;
 }
 </style>
