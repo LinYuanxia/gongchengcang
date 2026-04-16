@@ -374,6 +374,10 @@ function handleViewPlan() {
   router.push('/warehouse/market/plan')
 }
 
+function handleCancel() {
+  router.push('/warehouse/market/plan')
+}
+
 function handleCreateAnother() {
   currentStep.value = 1
   selectedKeys.value = []
