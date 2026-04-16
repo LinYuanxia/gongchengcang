@@ -1,5 +1,6 @@
 <template>
   <div class="page-container">
+    <PrdPanel :items="prdItems" />
     <a-card :bordered="false">
       <a-tabs v-model:active-tab="activeTab" class="order-tabs">
         <a-tab-pane key="all" :title="`全部 (${orderStats.total})`" />
@@ -93,6 +94,82 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import PrdPanel from '@/components/PrdPanel/index.vue'
+
+const prdItems = [
+  {
+    title: '1. Tab 分类统计模块',
+    content: `
+| Tab 标签 | 对应状态 | 统计数据源 |
+|---------|---------|----------|
+| 全部 | - | 所有订单总数 |
+| 待确认 | pending | 待提交供应商确认 |
+| 待接单 | processing | 供应商确认待接单 |
+| 待发货 | undelivered | 已接单待发货 |
+| 待入库 | delivering | 运输中待入库 |
+| 已完成 | completed | 入库完成 |
+| 已取消 | cancelled | 已取消 |
+    `
+  },
+  {
+    title: '2. 搜索筛选模块',
+    content: `
+| 筛选条件 | 组件类型 | 宽度 | 说明 |
+|---------|---------|------|------|
+| 关键词搜索 | InputSearch | 260px | 匹配：订单号/供应商名称/商品名称 |
+| 工程仓 | Select下拉 | 160px | 单选、可清空 |
+| 供应商 | Select下拉 | 160px | 单选、可清空 |
+| 创建时间 | RangePicker | 260px | 起始+结束日期范围 |
+    `
+  },
+  {
+    title: '3. 供应商视角状态机',
+    content: `
+\`\`\`
+平台创建订单 → 供应商确认接单 → 发货 → 仓库收货 → 完成
+        ↓              ↓          ↓
+    拒绝接单        取消       拒收
+\`\`\`
+
+| 状态 | 颜色 | 可执行操作 |
+|------|------|---------|
+| 待确认 | gold | 确认接单 / 拒绝接单 |
+| 待发货 | blue | 发货 / 取消 |
+| 配送中 | cyan | 查看物流 |
+| 已完成 | green | 查看详情 |
+| 已取消 | red | - |
+    `
+  },
+  {
+    title: '4. 权限矩阵',
+    content: `
+| 功能点 | 平台采购 | 供应商 | 仓库管理员 | 财务 |
+|--------|---------|--------|----------|------|
+| 创建采购订单 | ✅ | ❌ | ❌ | ❌ |
+| 确认接单 | ❌ | ✅ | ❌ | ❌ |
+| 拒绝接单 | ❌ | ✅ | ❌ | ❌ |
+| 发货操作 | ❌ | ✅ | ❌ | ❌ |
+| 确认收货 | ❌ | ❌ | ✅ | ❌ |
+| 查看物流 | ✅ | ✅ | ✅ | ✅ |
+| 对账单 | ✅ | ✅ | ❌ | ✅ |
+    `
+  },
+  {
+    title: '5. 表格列定义',
+    content: `
+| 列名 | 宽度 | 特殊处理 |
+|------|------|---------|
+| 订单编号 | 180px | Link 蓝色链接跳转详情 |
+| 供应商名称 | 180px | - |
+| 收货仓库 | 150px | - |
+| 商品数量 | 100px | center 居中 |
+| 订单总额 | 120px | right 右对齐、红字 |
+| 状态 | 120px | Tag 色彩 |
+| 创建时间 | 180px | - |
+| 操作 | 200px | 按状态动态显示按钮 |
+    `
+  }
+]
 
 const router = useRouter()
 const loading = ref(false)

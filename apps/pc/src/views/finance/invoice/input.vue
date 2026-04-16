@@ -1,6 +1,7 @@
 <template>
-  <div class="invoice-input">
-    <a-card>
+  <div class="invoice-input page-container">
+    <PrdPanel :items="prdItems" />
+    <a-card :bordered="false">
       <template #extra>
         <a-space>
           <a-button @click="handleExport">
@@ -9,15 +10,6 @@
           </a-button>
         </a-space>
       </template>
-
-      <a-alert type="info" style="margin-bottom: 16px">
-        <template #message>
-          <div class="alert-content">
-            <icon-info-circle />
-            <span>进项发票：平台收到的发票，包括工程仓开具的服务费发票等</span>
-          </div>
-        </template>
-      </a-alert>
 
       <a-row :gutter="16" class="stat-row">
         <a-col :span="6">
@@ -117,8 +109,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
 import { Message } from '@arco-design/web-vue'
+import PrdPanel from '@/components/PrdPanel/index.vue'
+
+const prdItems = [
+  {
+    title: '1. 模块定位',
+    content: `
+**进项发票管理 - 平台收票流程：**
+
+- **发票来源**：工程仓开具的服务费发票、供应商提供的货物发票
+- **发票类型**：增值税专用发票（可抵扣）/ 普通发票
+- **核心流程**：待核验 → 已核验入账 → 税务抵扣
+- **核心价值**：平台成本进项凭证，增值税抵扣依据
+    `
+  }
+]
 
 const searchForm = ref({
   invoiceNo: '',
@@ -250,18 +257,23 @@ function handleExport() {
 </script>
 
 <style scoped lang="less">
+.invoice-tip {
+  background: #e6f7ff;
+  border: 1px solid #91d5ff;
+  border-radius: 4px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
 .invoice-input {
   padding: 16px;
 }
 
 .mt-16 {
   margin-top: 16px;
-}
-
-.alert-content {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .stat-row {

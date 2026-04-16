@@ -1,5 +1,6 @@
 <template>
   <div class="page-container">
+    <PrdPanel :items="prdItems" />
     <a-card :bordered="false">
       <a-tabs v-model:active-tab="activeTab" class="order-tabs">
         <a-tab-pane key="all" :title="`全部 (${orderStats.total})`" />
@@ -164,6 +165,79 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
+import PrdPanel from '@/components/PrdPanel/index.vue'
+
+const prdItems = [
+  {
+    title: '1. Tab 分类统计模块',
+    content: `
+| Tab 标签 | 对应状态 | 统计数据源 |
+|---------|---------|----------|
+| 全部 | - | 所有订单总数 |
+| 待确认 | pending | 待审核确认订单数 |
+| 待支付 | unpaid | 已确认未支付订单数 |
+| 待发货 | undelivered | 已支付待发货订单数 |
+| 待收货 | delivered | 已发货待签收订单数 |
+| 已完成 | completed | 交易完成订单数 |
+| 已退款 | refunded | 退款订单数 |
+    `
+  },
+  {
+    title: '2. 搜索筛选模块',
+    content: `
+| 筛选条件 | 组件类型 | 宽度 | 说明 |
+|---------|---------|------|------|
+| 关键词搜索 | InputSearch | 260px | 同时匹配：订单号/采购方名称/供应商名称 |
+| 采购工程仓 | Select下拉 | 160px | 单选、可清空 |
+| 供应商 | Select下拉 | 160px | 单选、可清空 |
+| 创建时间 | RangePicker | 260px | 起始+结束日期范围 |
+    `
+  },
+  {
+    title: '3. Tag 色彩与状态机',
+    content: `
+| 状态 | 颜色 | 下一状态 |
+|------|------|---------|
+| 待确认 | gold | 已确认 / 已取消 |
+| 待支付 | blue | 已支付 / 已取消 |
+| 待发货 | cyan | 已发货 |
+| 待收货 | purple | 已收货 |
+| 已完成 | green | - 终态 |
+| 已取消 | gray | - 终态 |
+| 已退款 | red | - 终态 |
+    `
+  },
+  {
+    title: '4. 操作按钮权限矩阵',
+    content: `
+| 操作按钮 | 平台采购 | 供应商 | 仓库 | 财务 | 只读 |
+|---------|---------|--------|------|------|------|
+| 查看详情 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 确认订单 | ✅ | ❌ | ❌ | ❌ | ❌ |
+| 取消订单 | ✅ | ✅ | ❌ | ❌ | ❌ |
+| 支付标记 | ✅ | ❌ | ❌ | ✅ | ❌ |
+| 标记发货 | ❌ | ✅ | ❌ | ❌ | ❌ |
+| 确认收货 | ✅ | ❌ | ✅ | ❌ | ❌ |
+| 申请退款 | ✅ | ✅ | ❌ | ❌ | ❌ |
+| 导出 | ✅ | ✅ | ✅ | ✅ | ❌ |
+    `
+  },
+  {
+    title: '5. 表格列定义',
+    content: `
+| 列名 | 宽度 | 特殊处理 |
+|------|------|---------|
+| 订单编号 | 180px | Link 蓝色链接，点击打开详情抽屉 |
+| 采购工程仓 | 150px | - |
+| 供应商 | 150px | - |
+| SKU数量 | 100px | center 居中 |
+| 订单金额 | 120px | right 右对齐、红字、¥前缀 |
+| 状态 | 120px | Tag 色彩 |
+| 创建时间 | 180px | - |
+| 操作 | 240px | 最多显示 4 个按钮，超出折叠 |
+    `
+  }
+]
 
 const router = useRouter()
 const loading = ref(false)

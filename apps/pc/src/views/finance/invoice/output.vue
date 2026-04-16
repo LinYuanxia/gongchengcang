@@ -1,5 +1,6 @@
 <template>
-  <div class="invoice-output">
+  <div class="invoice-output page-container">
+    <PrdPanel :items="prdItems" />
     <a-card>
       <template #extra>
         <a-space>
@@ -13,15 +14,6 @@
           </a-button>
         </a-space>
       </template>
-
-      <a-alert type="info" style="margin-bottom: 16px">
-        <template #message>
-          <div class="alert-content">
-            <icon-info-circle />
-            <span>销项发票：平台向工程仓开具的服务费发票，来源包括「工程仓业务申请开票」和「平台手动开票」</span>
-          </div>
-        </template>
-      </a-alert>
 
       <a-row :gutter="16" class="stat-row">
         <a-col :span="6">
@@ -217,7 +209,18 @@
       </div>
     </a-modal>
 
-    <a-modal v-model:visible="infoModalVisible" title="填写发票信息" :width="600" @ok="handleIssueConfirm" @cancel="infoModalVisible = false">
+    <a-modal v-model:visible="infoModalVisible" title="填写发票信息" :width="700" @ok="handleIssueConfirm" @cancel="infoModalVisible = false">
+      <a-card title="📋 工程仓发票抬头信息" class="invoice-header-card" size="small" :bordered="true">
+        <a-descriptions :column="2" size="small" bordered>
+          <a-descriptions-item label="单位名称" :span="2">深圳宝安工程仓有限公司</a-descriptions-item>
+          <a-descriptions-item label="纳税人识别号">91440300MA5HABC123</a-descriptions-item>
+          <a-descriptions-item label="地址电话">深圳市宝安区创业一路1000号 0755-88888888</a-descriptions-item>
+          <a-descriptions-item label="开户行及账号">中国建设银行深圳宝安支行 4400166666666666666</a-descriptions-item>
+        </a-descriptions>
+      </a-card>
+
+      <a-divider style="margin: 16px 0" />
+
       <a-descriptions :column="2" size="small" class="mb-16">
         <a-descriptions-item label="开票工程仓">{{ currentInvoiceWarehouse }}</a-descriptions-item>
         <a-descriptions-item label="包含分账笔数">{{ selectedSplits.length }} 笔</a-descriptions-item>
@@ -241,12 +244,86 @@
         </a-form-item>
       </a-form>
     </a-modal>
+
+    <a-modal v-model:visible="viewModalVisible" title="发票详情" :width="800" :footer="false">
+      <div class="invoice-detail">
+        <div class="invoice-title">
+          <h2>增值税电子普通发票</h2>
+          <p class="invoice-code">发票代码：44002215678 &nbsp;&nbsp; 发票号码：{{ viewInvoiceData?.invoiceNo || '00123456' }}</p>
+        </div>
+
+        <div class="invoice-section">
+          <div class="section-label">购买方</div>
+          <a-descriptions :column="2" size="small" bordered class="invoice-desc">
+            <a-descriptions-item label="名称" :span="2">深圳宝安工程仓有限公司</a-descriptions-item>
+            <a-descriptions-item label="纳税人识别号">91440300MA5HABC123</a-descriptions-item>
+            <a-descriptions-item label="地址、电话">深圳市宝安区创业一路1000号 0755-88888888</a-descriptions-item>
+            <a-descriptions-item label="开户行及账号" :span="2">中国建设银行深圳宝安支行 4400166666666666666</a-descriptions-item>
+          </a-descriptions>
+        </div>
+
+        <div class="invoice-section">
+          <div class="section-label">货物或应税劳务、服务名称</div>
+          <a-table :data="invoiceItems" :pagination="false" bordered size="small">
+            <template #columns>
+              <a-table-column title="项目名称" data-index="name" />
+              <a-table-column title="规格型号" data-index="spec" />
+              <a-table-column title="单位" data-index="unit" />
+              <a-table-column title="数量" data-index="qty" align="center" />
+              <a-table-column title="单价" data-index="price" align="right" />
+              <a-table-column title="金额" data-index="amount" align="right" />
+              <a-table-column title="税率" data-index="rate" align="center" />
+              <a-table-column title="税额" data-index="tax" align="right" />
+            </template>
+          </a-table>
+        </div>
+
+        <div class="invoice-section">
+          <div class="section-label">销售方</div>
+          <a-descriptions :column="2" size="small" bordered class="invoice-desc">
+            <a-descriptions-item label="名称" :span="2">工合仓数字科技（深圳）有限公司</a-descriptions-item>
+            <a-descriptions-item label="纳税人识别号">91440300MA5KXYZ789</a-descriptions-item>
+            <a-descriptions-item label="地址、电话">深圳市南山区科技园南区 0755-99999999</a-descriptions-item>
+            <a-descriptions-item label="开户行及账号" :span="2">招商银行深圳科技园支行 6214830000000000</a-descriptions-item>
+          </a-descriptions>
+        </div>
+
+        <div class="invoice-summary">
+          <div class="summary-row">
+            <span>价税合计（大写）：</span>
+            <strong>壹万壹仟叁佰元整</strong>
+            <span class="summary-amount">（小写）：¥{{ viewInvoiceData?.amount || 11300.00 }}</span>
+          </div>
+        </div>
+
+        <div class="invoice-footer">
+          <p>开票人：系统管理员 &nbsp;&nbsp; 收款人：财务中心 &nbsp;&nbsp; 复核：张会计</p>
+          <p>开票日期：{{ viewInvoiceData?.issueTime || '2024-01-15' }}</p>
+        </div>
+      </div>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive } from 'vue'
-import { Message } from '@arco-design/web-vue'
+import { ref, reactive, computed } from 'vue'
+import { Message, Modal } from '@arco-design/web-vue'
+import { IconPlus, IconDelete, IconInfoCircle } from '@arco-design/web-vue/es/icon'
+import PrdPanel from '@/components/PrdPanel/index.vue'
+
+const prdItems = [
+  {
+    title: '1. 模块定位',
+    content: `
+**销项发票管理 - 平台开票流程：**
+
+- **开票申请来源**：工程仓在结算时申请开票 + 平台运营手动开票
+- **发票类型**：增值税普通发票 / 增值税专用发票
+- **核心流程**：待开票 → 已开具 → 交付工程仓
+- **核心价值**：平台收入销项凭证，税务申报依据
+    `
+  }
+]
 
 const activeTab = ref('all')
 const pagination = ref({
@@ -309,8 +386,14 @@ const filteredInvoiceList = computed(() => {
 
 const createModalVisible = ref(false)
 const infoModalVisible = ref(false)
+const viewModalVisible = ref(false)
 const selectedSplits = ref<string[]>([])
 const currentInvoiceWarehouse = ref('')
+const viewInvoiceData = ref<any>(null)
+
+const invoiceItems = ref([
+  { name: '服务费-平台技术服务费', spec: '6%', unit: '项', qty: 1, price: 10000, amount: 10000, rate: '13%', tax: 1300 },
+])
 
 const completedSplitList = ref([
   { id: 's1', splitNo: 'FZ202401200001', merchantName: '深圳湾科技园项目仓', orderNo: 'SO202401200001', splitAmount: 1286, splitTime: '2024-01-20 12:30:00', invoiced: false },
@@ -411,7 +494,8 @@ function handlePageChange(page: number) {
 }
 
 function handleView(record: InvoiceRecord) {
-  Message.info(`查看发票：${record.invoiceNo}`)
+  viewInvoiceData.value = record
+  viewModalVisible.value = true
 }
 
 function handleDownload(record: InvoiceRecord) {
@@ -424,6 +508,17 @@ function handleExport() {
 </script>
 
 <style scoped>
+.invoice-tip {
+  background: #e6f7ff;
+  border: 1px solid #91d5ff;
+  border-radius: 4px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
 .stat-row {
   margin-bottom: 16px;
 }
@@ -483,5 +578,87 @@ function handleExport() {
 .text-danger {
   color: #f53f3f;
   font-weight: 600;
+}
+
+.invoice-header-card {
+  background: #f7f8fa;
+  border: 1px solid #e8e8e8;
+  
+  :deep(.arco-card-header) {
+    background: #e6f7ff;
+    border-bottom: 1px solid #91d5ff;
+    font-weight: 600;
+  }
+}
+
+.invoice-detail {
+  padding: 20px;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+}
+
+.invoice-title {
+  text-align: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #165dff;
+  
+  h2 {
+    margin: 0 0 8px 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #165dff;
+  }
+  
+  .invoice-code {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+  }
+}
+
+.invoice-section {
+  margin-bottom: 20px;
+  
+  .section-label {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #333;
+  }
+}
+
+.invoice-summary {
+  background: #f7f8fa;
+  padding: 16px;
+  border-radius: 4px;
+  margin: 20px 0;
+  
+  .summary-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    
+    strong {
+      color: #f53f3f;
+      font-size: 16px;
+    }
+    
+    .summary-amount {
+      margin-left: auto;
+    }
+  }
+}
+
+.invoice-footer {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px dashed #ccc;
+  text-align: right;
+  color: #666;
+  
+  p {
+    margin: 4px 0;
+  }
 }
 </style>

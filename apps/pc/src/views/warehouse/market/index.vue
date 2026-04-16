@@ -59,10 +59,6 @@
             >
               <div class="product-image">
                 <img :src="item.mainImage" alt="" />
-                <div class="product-tags">
-                  <a-tag v-if="item.isHot" color="red">热销</a-tag>
-                  <a-tag v-if="item.isRecommend" color="blue">推荐</a-tag>
-                </div>
               </div>
               <div class="product-info">
                 <div class="product-name">{{ item.skuName }}</div>

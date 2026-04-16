@@ -103,7 +103,7 @@
                   确认接单
                 </a-button>
                 <a-button 
-                  v-if="record.status === 'confirmed' && record.paymentStatus === 'unpaid'" 
+                  v-if="record.status === 'confirmed'" 
                   type="text" 
                   size="small"
                   status="danger"
@@ -112,16 +112,7 @@
                   取消接单
                 </a-button>
                 <a-button 
-                  v-if="record.status === 'confirmed' && record.paymentStatus === 'unpaid'" 
-                  type="text" 
-                  size="small"
-                  status="warning"
-                  @click="handleVerifyPayment(record)"
-                >
-                  审核支付
-                </a-button>
-                <a-button 
-                  v-if="record.status === 'confirmed' && record.paymentStatus === 'paid'" 
+                  v-if="record.status === 'confirmed'" 
                   type="text" 
                   size="small"
                   status="warning"
@@ -136,15 +127,6 @@
                   @click="handleTrackLogistics(record)"
                 >
                   物流跟踪
-                </a-button>
-                <a-button 
-                  v-if="record.status !== 'refunded' && record.status !== 'cancelled'" 
-                  type="text" 
-                  size="small"
-                  status="danger"
-                  @click="handleApplyRefund(record)"
-                >
-                  申请退款
                 </a-button>
                 <a-button 
                   v-if="record.hasAfterSales || record.afterSalesStatus" 
@@ -347,9 +329,29 @@
 
       <a-table :data="confirmItems" :pagination="false">
         <template #columns>
-          <a-table-column title="商品名称" data-index="productName" :width="200" />
+          <a-table-column title="商品名称" data-index="productName" :width="180" />
           <a-table-column title="规格" data-index="specValues" :width="120" />
           <a-table-column title="采购数量" data-index="quantity" :width="100" align="center" />
+          <a-table-column title="可供应数量" :width="140" align="center">
+            <template #cell="{ record }">
+              <a-input-number
+                v-model="record.supplyQuantity"
+                :min="0"
+                :max="record.quantity"
+                :precision="0"
+                size="small"
+                :disabled="record.status === 'reject'"
+                style="width: 100px"
+              />
+            </template>
+          </a-table-column>
+          <a-table-column title="差异数量" :width="100" align="center">
+            <template #cell="{ record }">
+              <span :class="record.quantity - record.supplyQuantity > 0 ? 'text-danger' : 'text-success'">
+                {{ record.quantity - record.supplyQuantity }}
+              </span>
+            </template>
+          </a-table-column>
           <a-table-column title="接单状态" :width="130">
             <template #cell="{ record }">
               <a-radio-group v-model="record.status" size="small">
@@ -851,9 +853,9 @@ function handleConfirm(record: any) {
   detailVisible.value = false
   
   confirmItems.value = [
-    { id: '1', productName: '普通硅酸盐水泥P.O42.5', specValues: '50kg/袋', quantity: 200, status: 'accept', estimatedShipDate: '', rejectReason: '', remark: '' },
-    { id: '2', productName: '抛光砖', specValues: '800×800mm', quantity: 300, status: 'accept', estimatedShipDate: '', rejectReason: '', remark: '' },
-    { id: '3', productName: '内墙乳胶漆', specValues: '20L/桶', quantity: 15, status: '', estimatedShipDate: '', rejectReason: '', remark: '' },
+    { id: '1', productName: '普通硅酸盐水泥P.O42.5', specValues: '50kg/袋', quantity: 200, supplyQuantity: 180, status: 'accept', estimatedShipDate: '', rejectReason: '', remark: '库存紧张，少发20包' },
+    { id: '2', productName: '抛光砖', specValues: '800×800mm', quantity: 300, supplyQuantity: 300, status: 'accept', estimatedShipDate: '', rejectReason: '', remark: '' },
+    { id: '3', productName: '内墙乳胶漆', specValues: '20L/桶', quantity: 15, supplyQuantity: 0, status: '', estimatedShipDate: '', rejectReason: '', remark: '' },
   ]
   
   confirmVisible.value = true
@@ -879,6 +881,15 @@ function handleConfirmSubmit() {
     return
   }
   
+  const partialItems = acceptItems.filter(i => i.supplyQuantity < i.quantity)
+  const fullItems = acceptItems.filter(i => i.supplyQuantity === i.quantity)
+  
+  const acceptItemsWithSupplyIssue = acceptItems.filter(i => i.supplyQuantity === 0)
+  if (acceptItemsWithSupplyIssue.length > 0) {
+    Message.warning('确认接单的商品可供应数量不能为0，请选择「无法供货」')
+    return
+  }
+  
   const rejectItemsWithoutReason = rejectItems.filter(i => !i.rejectReason)
   if (rejectItemsWithoutReason.length > 0) {
     Message.warning('请为无法供货的商品选择原因')
@@ -899,17 +910,26 @@ function handleConfirmSubmit() {
   
   const acceptCount = acceptItems.length
   const rejectCount = rejectItems.length
+  const partialCount = partialItems.length
   
-  if (rejectCount > 0) {
-    Message.success(`接单成功：确认 ${acceptCount} 种，无法供货 ${rejectCount} 种`)
-  } else {
-    Message.success('接单成功，请按约定时间发货')
-  }
+  let message = `接单成功：确认${acceptCount}种`
+  if (partialCount > 0) message += `（含部分数量${partialCount}种）`
+  if (rejectCount > 0) message += `，无法供货${rejectCount}种`
+  
+  Message.success(message)
   
   currentOrder.value.status = 'confirmed'
   currentOrder.value.confirmTime = new Date().toLocaleString()
   currentOrder.value.acceptItemCount = acceptCount
   currentOrder.value.rejectItemCount = rejectCount
+  currentOrder.value.partialItemCount = partialCount
+  currentOrder.value.confirmItems = acceptItems.map(i => ({
+    productName: i.productName,
+    purchaseQuantity: i.quantity,
+    supplyQuantity: i.supplyQuantity,
+    diffQuantity: i.quantity - i.supplyQuantity,
+    remark: i.remark
+  }))
   confirmVisible.value = false
   refreshOrderList()
 }
@@ -1014,6 +1034,7 @@ async function handleInvoiceSubmit() {
 
 function getStatusColor(status: string) {
   const colors: Record<string, string> = {
+    to_confirm: 'gold',
     pending: 'orange',
     confirmed: 'blue',
     shipped: 'cyan',
@@ -1025,7 +1046,8 @@ function getStatusColor(status: string) {
 
 function getStatusText(status: string) {
   const texts: Record<string, string> = {
-    pending: '待确认',
+    to_confirm: '待确认',
+    pending: '待接单',
     confirmed: '已确认',
     shipped: '待收货',
     completed: '已完成',

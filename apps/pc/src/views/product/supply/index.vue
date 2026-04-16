@@ -1,5 +1,6 @@
 <template>
   <div class="page-container">
+    <PrdPanel :items="prdItems" />
     <a-card :bordered="false">
       <template #title>
         <span>供应商供货管理</span>
@@ -536,9 +537,16 @@
               </div>
             </template>
           </a-table-column>
-          <a-table-column title="供货价" :width="120">
-            <template #cell="{ record }">
-              <span class="price-value">¥{{ record.supplyPrice.toFixed(2) }}</span>
+          <a-table-column title="供货价" :width="140">
+            <template #cell="{ record, rowIndex }">
+              <div class="price-row">
+                <span class="price-value" :class="{ 'price-best': rowIndex === 0 && record.status === 'active' }">
+                  ¥{{ record.supplyPrice.toFixed(2) }}
+                </span>
+                <a-tag v-if="rowIndex === 0 && record.status === 'active'" color="green" size="small">
+                  最低价
+                </a-tag>
+              </div>
             </template>
           </a-table-column>
           <a-table-column title="预计供货量" :width="100">
@@ -554,6 +562,28 @@
           <a-table-column title="供货周期" :width="80">
             <template #cell="{ record }">
               {{ record.leadTime }} 天
+            </template>
+          </a-table-column>
+          <a-table-column title="优先级" :width="90">
+            <template #cell="{ record }">
+              <a-select 
+                v-model="record.priority" 
+                size="small" 
+                :style="{ width: '100%' }"
+                @change="handleChangePriority(record)"
+              >
+                <a-option value="A">A级</a-option>
+                <a-option value="B">B级</a-option>
+                <a-option value="C">C级</a-option>
+                <a-option value="D">D级</a-option>
+              </a-select>
+            </template>
+          </a-table-column>
+          <a-table-column title="综合得分" :width="90" align="center">
+            <template #cell="{ record }">
+              <span class="score-value" :class="'score-' + (record.scoreLevel || 'B')">
+                {{ record.score || 85 }} 分
+              </span>
             </template>
           </a-table-column>
           <a-table-column title="状态" :width="100">
@@ -800,6 +830,218 @@
 <script setup lang="ts">
 import { ref, computed, reactive } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
+import PrdPanel from '@/components/PrdPanel/index.vue'
+
+const prdItems = [
+  {
+    title: '1. 项目背景',
+    content: `
+**业务痛点：**
+- 同商品多供应商报价分散，缺乏横向对比机制
+- 供货价格人工维护，历史变动无迹可寻
+- 供应商优先级无配置，选品逻辑不透明
+- 进入商品市场规则黑盒，无法干预
+
+**解决目标：**
+- 建立多供应商报价竞价体系，自动比价
+- 供货价格变动全程留痕，支持趋势回溯
+- 可视化配置供应商优先级
+- 可配置的自动进入商品市场规则
+
+**模块定位：**
+- 连接供应商与商品库的核心枢纽
+- 采购定价的数据源
+- 商品市场选品池的入口
+- 供应商竞争力评价体系
+    `
+  },
+  {
+    title: '2. 用户对象',
+    content: `
+| 角色 | 核心职责 | 对应功能 |
+|------|---------|---------|
+| 采购专员 | 日常维护供货关系 | 添加/编辑供货关联 |
+| 采购经理 | 价格审核与供应商管理 | 价格异常审核、供应商分级 |
+| 运营专员 | 商品市场运营 | 配置进入市场规则 |
+| 财务人员 | 价格合规校验 | 价格历史审计 |
+
+**权限矩阵：**
+| 操作 | 采购专员 | 采购经理 | 运营 | 财务 |
+|-----|--------|--------|-----|------|
+| 查看供货列表 | ✅ | ✅ | ✅ | ✅ |
+| 添加供货关联 | ✅ | ✅ | ❌ | ❌ |
+| 修改供货价格 | ✅ | ✅ | ❌ | ❌ |
+| 启停供货 | ✅ | ✅ | ❌ | ❌ |
+| 配置进入市场规则 | ❌ | ✅ | ✅ | ❌ |
+| 导出价格历史 | ❌ | ✅ | ❌ | ✅ |
+    `
+  },
+  {
+    title: '3. 权限系统',
+    content: `
+### 数据权限
+
+| 角色 | 可见供应商范围 |
+|------|--------------|
+| 普通采购 | 自己维护的供应商 |
+| 采购组长 | 本组所有供应商 |
+| 采购经理 | 全平台供应商 |
+
+### 字段级权限
+
+| 字段 | 采购员 | 经理 | 运营 |
+|------|-------|-----|------|
+| 供货结算价 | ✅ | ✅ | ❌ |
+| 供应商返利政策 | ✅ | ✅ | ❌ |
+| 账期天数 | ✅ | ✅ | ❌ |
+| 进入市场规则 | ❌ | ✅ | ✅ |
+    `
+  },
+  {
+    title: '4. 核心业务场景',
+    content: `
+### 场景一：供应商报价竞价
+
+>> 同一个SKU有3家供应商报价，系统自动识别最低价并推荐
+
+- S001 供应商：¥ 12.50 / 件，账期 30 天
+- S002 供应商：¥ 11.80 / 件，账期 15 天
+- S003 供应商：¥ 13.00 / 件，账期 45 天
+
+!! 综合评分 = 价格权重 70% + 账期权重 30%
+!! S002 虽然账期短，但价格优势明显，被推荐为首选供应商
+
+### 场景二：供货价格异动预警
+
+>> 某供应商将某 SKU 供货价从 ¥10 上调至 ¥15，涨幅 50%
+
+- 自动触发预警：价格涨幅 > 20%
+- 推送采购经理审核
+- 暂停自动进入商品市场，需人工确认
+
+### 场景三：智能选品进入市场
+
+>> 满足全部条件 → 自动进入商品市场
+
+| 条件 | 阈值 |
+|------|------|
+| 供货供应商数 | ≥ 2 家 |
+| 最低供货价 | ≤ 指导价 * 0.9 |
+| 报价时间差 | < 7 天 |
+| 历史履约率 | ≥ 95% |
+    `
+  },
+  {
+    title: '5. 业务逻辑图',
+    content: `
+\`\`\`mermaid
+graph TD
+    A[添加供货关联] --> B[设置供货价格]
+    A --> C[设置供应商优先级]
+    A --> D[配置账期/返利]
+    B --> E[价格异动校验]
+    E --> F{涨幅 > 阈值?}
+    F -->|是| G[触发预警]
+    G --> H[采购经理审核]
+    H --> I{审核通过?}
+    I -->|否| J[价格作废]
+    I -->|是| K[生效]
+    F -->|否| K
+    K --> L[计算综合得分]
+    L --> M[更新推荐供应商]
+    M --> N[选品规则校验]
+    N --> O{全部满足?}
+    O -->|是| P[进入商品市场]
+    O -->|否| Q[待观察池]
+    R[手动启停] --> K
+\`\`\`
+    `
+  },
+  {
+    title: '6. 功能清单',
+    content: `
+| 模块 | 功能点 | 优先级 | 角色 |
+|------|--------|-------|------|
+| 基础功能 | 按商品维度查看供货 | P0 | 全员 |
+| 基础功能 | 按供应商维度查看供货 | P0 | 全员 |
+| 基础功能 | 多条件筛选搜索 | P0 | 全员 |
+| 供货管理 | 单个添加供货关联 | P0 | 采购 |
+| 供货管理 | 批量关联供应商 | P0 | 采购 |
+| 供货管理 | 编辑供货价格 | P0 | 采购 |
+| 供货管理 | 启用/暂停供货 | P0 | 采购 |
+| 竞价体系 | 多供应商价格横向对比 | P0 | 采购 |
+| 竞价体系 | 计算综合得分推荐 | P1 | 采购经理 |
+| 价格管理 | 价格历史趋势图 | P1 | 财务/经理 |
+| 价格管理 | 异动预警规则配置 | P1 | 采购经理 |
+| 选品管理 | 自动进入市场规则配置 | P1 | 运营 |
+| 选品管理 | 手动强制进入/退出市场 | P1 | 运营 |
+    `
+  },
+  {
+    title: '7. 功能详细说明',
+    content: `
+### 7.1 双视图切换
+
+| 视图 | 核心用途 |
+|------|---------|
+| 按商品 | 看单个 SKU 的所有供应商报价，做比价 |
+| 按供应商 | 看单个供应商的所有供货 SKU，做管理 |
+
+### 7.2 核心列说明
+
+| 列名 | 特殊处理 |
+|------|---------|
+| 供应价格 | 有多家时显示价格区间：¥min - ¥max |
+| 供应商数量 | 蓝色可点击，打开详情弹层 |
+| 进入市场 | 自动/手动 Tag 标记 |
+
+### 7.3 三步骤添加向导
+1. **选择商品**：支持按 SPU 批量选择，或单个 SKU
+2. **选择供应商**：多选供应商，批量建立关联
+3. **设置供货信息**：价格、优先级、账期、备注
+    `
+  },
+  {
+    title: '8. Tag 色彩规范',
+    content: `
+| 状态 | 颜色 | 含义 |
+|------|------|------|
+| 供货中 | green | 正常供货，可以选品 |
+| 已暂停 | orange | 临时暂停，不进入市场 |
+| 已终止 | red | 永久终止合作 |
+| 自动进入市场 | green | 满足规则自动进入 |
+| 手动进入市场 | cyan | 运营强制进入 |
+| 未进入市场 | gray | 不满足选品条件 |
+
+**优先级标记：**
+| 级别 | 颜色 |
+|------|------|
+| A级（核心供应商） | #f53f3f |
+| B级（重要供应商） | #ff7d00 |
+| C级（普通供应商） | #00b42a |
+| D级（备选） | #165dff |
+    `
+  },
+  {
+    title: '9. 非功能性要求',
+    content: `
+### 性能要求
+- 支持 10000+ SKU 列表流畅滚动
+- 批量关联 100 SKU × 10 供应商 < 3 秒
+- 价格对比图表加载 < 500ms
+
+### 安全要求
+- 供货结算价字段加密存储
+- 价格变动操作日志永久保留
+- 超过 30% 涨价必须二次确认
+
+### 预警规则
+- 单次涨价 > 20% → 预警
+- 单日调价 SKU > 50 个 → 预警
+- 同一 SKU 7天内调价 > 3 次 → 预警
+    `
+  }
+]
 
 const loading = ref(false)
 const viewMode = ref('product')
@@ -933,9 +1175,9 @@ const supplySkuList = ref<any[]>([])
 const productSuppliersVisible = ref(false)
 const currentSku = ref<any>(null)
 const productSuppliers = ref([
-  { supplierId: 'SUP001', supplierName: '广东建材供应商', contactPerson: '张经理', contactPhone: '13800138001', supplyPrice: 26, estimatedStock: 500, minOrderQty: 50, leadTime: 3, unit: '袋', status: 'active', platformPrice: 28 },
-  { supplierId: 'SUP002', supplierName: '深圳建材供应商', contactPerson: '李经理', contactPhone: '13800138002', supplyPrice: 27, estimatedStock: 300, minOrderQty: 30, leadTime: 2, unit: '袋', status: 'active', platformPrice: 28 },
-  { supplierId: 'SUP003', supplierName: '佛山建材供应商', contactPerson: '王经理', contactPhone: '13800138003', supplyPrice: 28, estimatedStock: 200, minOrderQty: 20, leadTime: 5, unit: '袋', status: 'paused', platformPrice: 28 }
+  { supplierId: 'SUP001', supplierName: '广东建材供应商', contactPerson: '张经理', contactPhone: '13800138001', supplyPrice: 26, estimatedStock: 500, minOrderQty: 50, leadTime: 3, unit: '袋', status: 'active', platformPrice: 28, priority: 'A', score: 95, scoreLevel: 'A' },
+  { supplierId: 'SUP002', supplierName: '深圳建材供应商', contactPerson: '李经理', contactPhone: '13800138002', supplyPrice: 27, estimatedStock: 300, minOrderQty: 30, leadTime: 2, unit: '袋', status: 'active', platformPrice: 28, priority: 'B', score: 85, scoreLevel: 'B' },
+  { supplierId: 'SUP003', supplierName: '佛山建材供应商', contactPerson: '王经理', contactPhone: '13800138003', supplyPrice: 28, estimatedStock: 200, minOrderQty: 20, leadTime: 5, unit: '袋', status: 'paused', platformPrice: 28, priority: 'C', score: 75, scoreLevel: 'C' }
 ])
 const selectedSupplierKeys = ref<string[]>([])
 const supplierRowSelection = computed(() => ({
@@ -1316,6 +1558,14 @@ function handleBatchDeleteSuppliers() {
   })
 }
 
+function handleChangePriority(record: any) {
+  const priorityTexts: Record<string, string> = { A: 'A级', B: 'B级', C: 'C级', D: 'D级' }
+  record.scoreLevel = record.priority
+  const scores: Record<string, number> = { A: 95, B: 85, C: 75, D: 60 }
+  record.score = scores[record.priority] || 85
+  Message.success(`供应商优先级已设为 ${priorityTexts[record.priority] || record.priority}`)
+}
+
 function getSupplyStatusColor(status: string) {
   const colors: Record<string, string> = { active: 'green', paused: 'orange', platform_off: 'red', stopped: 'gray' }
   return colors[status] || 'gray'
@@ -1331,6 +1581,13 @@ function getSupplyStatusText(status: string) {
 .page-container { padding: 16px; }
 .table-actions { margin-bottom: 16px; display: flex; justify-content: space-between; }
 .price-value { color: rgb(var(--primary-6)); font-weight: 500; }
+.price-row { display: flex; align-items: center; gap: 8px; }
+.price-best { color: #00b42a; font-weight: 600; font-size: 16px; }
+.score-value { font-weight: 600; }
+.score-A { color: #f53f3f; }
+.score-B { color: #ff7d00; }
+.score-C { color: #00b42a; }
+.score-D { color: #165dff; }
 .price-range {
   display: flex;
   align-items: center;

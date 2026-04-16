@@ -1,5 +1,6 @@
 <template>
   <div class="page-container">
+    <PrdPanel :items="prdItems" />
     <a-card :bordered="false">
       <template #title>
         <span>采购计划管理</span>
@@ -81,12 +82,27 @@
                             {{ getPushStatusText(item.status) }}
                           </a-tag>
                         </div>
+                        <template v-if="item.status === 'pending'">
+                          <div class="push-actions">
+                            <a-button type="text" size="small" status="success" @click.stop="handleConfirmWarehouse(record, item)">
+                              确认收货
+                            </a-button>
+                            <a-button type="text" size="small" status="danger" @click.stop="handleRejectWarehouse(record, item)">
+                              拒绝
+                            </a-button>
+                          </div>
+                        </template>
                         <template v-if="item.status === 'confirmed' && item.totalConfirmedQuantity > 0">
                           <div class="push-summary">
                             确认数量: <strong>{{ item.totalConfirmedQuantity }}</strong> 件
                             <a-link size="small" @click.stop="handleViewConfirmDetail(record, item)">
                               查看明细
                             </a-link>
+                          </div>
+                        </template>
+                        <template v-if="item.status === 'rejected'">
+                          <div class="push-reject-reason">
+                            拒绝原因：{{ item.rejectReason || '未填写' }}
                           </div>
                         </template>
                       </div>
@@ -144,6 +160,13 @@
                   @ok="handleDelete(record)"
                 >
                   <a-button type="text" size="small" status="danger">删除</a-button>
+                </a-popconfirm>
+                <a-popconfirm 
+                  v-if="record.status === 'published' || record.status === 'partial'" 
+                  content="取消后已生成的采购单也将作废，确定吗？" 
+                  @ok="handleCancel(record)"
+                >
+                  <a-button type="text" size="small" status="danger">取消计划</a-button>
                 </a-popconfirm>
               </a-space>
             </template>
@@ -608,6 +631,237 @@
 <script setup lang="ts">
 import { ref, computed, reactive } from 'vue'
 import { Message } from '@arco-design/web-vue'
+import PrdPanel from '@/components/PrdPanel/index.vue'
+
+const prdItems = [
+  {
+    title: '1. 项目背景',
+    content: `
+**业务痛点：**
+- 多仓库采购需求分散，缺乏统一汇总机制
+- 人工邮件/微信传递采购需求，信息易丢失
+- 采购执行进度黑盒，无法追踪各仓库确认状态
+- 相同物料重复采购，导致库存积压和资金浪费
+
+**解决目标：**
+- 建立统一的采购计划汇总平台
+- 实现计划从创建 → 推送 → 确认 → 执行的全链路可追溯
+- 自动合并同类型物料采购需求，降低采购成本
+- 各仓库确认状态可视化，异常自动预警
+
+**模块定位：**
+- 供应链的起点和入口
+- 采购需求的统一收口
+- 仓库与采购部门的协同枢纽
+- 库存健康度的第一道防线
+
+**与其他模块关系：**
+- 上游：销售预测 / 安全库存预警
+- 下游：采购订单 / 入库单 / 财务付款
+    `
+  },
+  {
+    title: '2. 用户对象',
+    content: `
+| 用户角色 | 特征 | 核心目标 | 使用频率 |
+|---------|------|---------|---------|
+| 采购经理 | 负责整体采购策略 | 宏观把控 + 成本优化 | 每日 3-5 次 |
+| 采购专员 | 执行具体采购 | 确保计划按时执行 | 每日 10-15 次 |
+| 仓库主管 | 各仓库负责人 | 按需确认 + 准时收货 | 每日 2-3 次 |
+| 财务人员 | 预算和付款 | 预算控制 + 资金安排 | 每日 1-2 次 |
+| 需求申请人 | 各部门人员 | 跟踪需求进度 | 每周 1-3 次 |
+    `
+  },
+  {
+    title: '3. 权限体系',
+    content: `
+### 3.1 功能权限矩阵
+
+| 功能点 | 超管 | 采购经理 | 采购专员 | 仓库主管 | 财务 | 只读 |
+|--------|------|---------|---------|---------|-----|------|
+| 查看所有计划 | ✅ | ✅ | ✅ | 本仓库 | ✅ | ✅ |
+| 创建计划 | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| 编辑计划 | ✅ | ✅ | 创建人 | ❌ | ❌ | ❌ |
+| 发布计划 | ✅ | ✅ | 创建人 | ❌ | ❌ | ❌ |
+| 取消计划 | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| 删除计划 | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| 推送仓库 | ✅ | ✅ | 创建人 | ❌ | ❌ | ❌ |
+| 确认收货 | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| 导出报表 | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+
+### 3.2 数据权限
+- **采购专员**：仅可见自己创建的计划
+- **仓库主管**：仅可见推送到本仓库的计划
+- **采购经理/超管**：可见所有计划
+
+### 3.3 操作权限
+- 草稿状态：可编辑 / 可删除 / 可发布
+- 已发布状态：可取消 / 可推送仓库
+- 已推送状态：仓库可见，采购不可编辑
+    `
+  },
+  {
+    title: '4. 核心业务场景',
+    content: `
+### 场景 1：常规采购补货
+- **触发条件**：系统基于安全库存自动生成采购建议
+- **参与者**：采购专员
+- **结果**：生成正式采购计划 → 推送给供应商
+
+### 场景 2：多仓库集中采购
+- **触发条件**：月初各仓库提交月度采购需求
+- **参与者**：采购经理
+- **结果**：合并相同 SKU 需求 → 集中采购议价
+
+### 场景 3：紧急插单采购
+- **触发条件**：工地突发缺货申请
+- **参与者**：需求人 + 采购专员
+- **结果**：绿色通道审批 → 24 小时内完成采购
+
+### 场景 4：供应商分批送货
+- **触发条件**：采购数量过大无法一次交付
+- **参与者**：仓库主管 + 供应商
+- **结果**：按批次确认收货，系统自动累计完成度
+
+### 场景 5：计划变更取消
+- **触发条件**：项目延期/取消导致采购需求变更
+- **参与者**：采购经理
+- **结果**：通知供应商取消 → 避免违约成本
+    `
+  },
+  {
+    title: '5. 业务逻辑图',
+    content: `
+\`\`\`mermaid
+graph TD
+    A[安全库存预警] --> B[创建采购计划草稿]
+    C[人工申请] --> B
+    B --> D[添加SKU明细]
+    B --> E[选择目标仓库]
+    D --> F[采购审核]
+    E --> F
+    F --> G{审核通过?}
+    G -->|否| H[驳回修改]
+    H --> B
+    G -->|是| I[计划发布]
+    I --> J[推送到目标仓库]
+    J --> K{仓库确认?}
+    K -->|确认| L[生成采购订单]
+    K -->|拒绝| M[注明原因]
+    M --> I
+    L --> N[供应商送货]
+    N --> O[仓库收货确认]
+    O --> P{全部收货?}
+    P -->|部分收货| N
+    P -->|全部完成| Q[计划完成]
+    R[紧急取消] --> S[计划作废]
+    S --> T[通知供应商]
+\`\`\`
+
+**异常流程：**
+- 计划作废 → 已生成的采购订单同步作废
+- 仓库拒收 → 退回采购专员重新分配
+- 超期未确认（>48小时）→ 自动提醒 + 升级
+    `
+  },
+  {
+    title: '6. 功能清单',
+    content: `
+| 模块 | 功能点 | 优先级 | 对应角色 |
+|------|--------|-------|---------|
+| 基础功能 | 计划列表查询 | P0 | 全员 |
+| 基础功能 | 高级筛选搜索 | P0 | 全员 |
+| 基础功能 | 计划详情查看 | P0 | 全员 |
+| 计划管理 | 创建采购计划 | P0 | 采购 |
+| 计划管理 | 编辑草稿计划 | P0 | 采购 |
+| 计划管理 | 计划发布/取消 | P0 | 采购经理 |
+| 计划管理 | 删除计划 | P2 | 超管 |
+| 仓库协同 | 推送至指定仓库 | P0 | 采购 |
+| 仓库协同 | 仓库确认/拒绝 | P0 | 仓库主管 |
+| 仓库协同 | 收货进度可视化 | P1 | 全员 |
+| 报表分析 | 计划导出Excel | P1 | 全员 |
+| 报表分析 | 采购达成率统计 | P2 | 采购经理 |
+    `
+  },
+  {
+    title: '7. 功能详细说明',
+    content: `
+### 7.1 搜索筛选
+
+| 筛选条件 | 组件类型 | 宽度 | 校验规则 |
+|---------|---------|------|---------|
+| 计划编号 | Input输入框 | 180px | 模糊匹配，支持 PLAN-xxx |
+| 计划名称 | Input输入框 | 180px | 模糊匹配，最大20字 |
+| 计划状态 | Select下拉框 | 140px | 单选：草稿/已发布/待确认/已确认/已完成/已取消 |
+| 创建时间 | RangePicker | 280px | 默认最近30天 |
+| 创建人 | Select人员 | 140px | 支持多选 |
+
+### 7.2 表格列定义
+
+| 列名 | 宽度 | 对齐 | 特殊处理 |
+|------|------|-----|---------|
+| 计划编号 | 150px | left | 蓝色可点击，跳转详情 |
+| 计划名称 | 200px | left | 超长省略号 |
+| SKU数量 | 100px | center | 显示 "N 个"，hover看明细 |
+| 预计金额 | 120px | right | ¥ 前缀 + 千分位 |
+| 目标仓库 | 180px | left | 悬浮显示仓库明细弹层 |
+| 状态 | 120px | left | Tag 色彩标记 |
+| 创建人 | 120px | left | 显示头像+姓名 |
+| 创建时间 | 180px | left | YYYY-MM-DD HH:mm |
+| 操作 | 220px | left | 固定右侧，根据状态显示按钮 |
+
+### 7.3 交互说明
+- 点击计划编号 → 打开计划详情页（新标签页）
+- 点击目标仓库 → Popover 显示各子仓库确认状态
+- 发布操作 → 二次确认弹窗，防止误操作
+- 删除操作 → 只有草稿状态可删，已发布的需先取消
+    `
+  },
+  {
+    title: '8. Tag 色彩规范',
+    content: `
+| 状态值 | Tag颜色 | 含义 |
+|--------|---------|------|
+| 草稿 | gray | 未提交，可编辑 |
+| 已发布 | blue | 采购审核通过，待推送 |
+| 待确认 | gold | 已推送仓库，待收货确认 |
+| 部分确认 | orange | 部分仓库已确认 |
+| 全部确认 | green | 所有仓库已确认收货 |
+| 已完成 | purple | 采购订单全部执行完毕 |
+| 已取消 | red | 人工终止执行 |
+
+**状态流转规则：**
+- 草稿 → 已发布 → 待确认 → 已确认 → 已完成
+- 草稿 → 已取消
+- 已发布 → 已取消
+    `
+  },
+  {
+    title: '9. 非功能性要求',
+    content: `
+### 性能要求
+- 列表加载时间 < 1 秒
+- 支持 1000+ SKU 大计划流畅编辑
+- 10000 条计划数据下筛选响应 < 500ms
+
+### 安全要求
+- 采购价格字段仅财务和采购可见
+- 计划变更全程操作日志留痕
+- 敏感操作（发布/取消）需二次确认
+
+### 埋点要求
+- plan_create 埋点：创建人、SKU数、预估金额
+- plan_publish 埋点：发布人、审核时长
+- warehouse_confirm 埋点：确认时效、是否拒绝
+- plan_cancel 埋点：取消原因、取消时点
+
+### 异常处理
+- 推送失败自动重试 3 次
+- 超 48 小时未确认自动发送企业微信提醒
+- 预计金额超预算自动触发预警
+    `
+  }
+]
 
 const loading = ref(false)
 
@@ -1047,8 +1301,15 @@ const totalEstimatedAmount = computed(() => {
 
 const detailVisible = ref(false)
 const confirmDetailVisible = ref(false)
+const rejectVisible = ref(false)
 const currentPlan = ref<any>({})
 const currentConfirmWarehouse = ref<any>({})
+const currentRejectWarehouse = ref<any>({})
+const isWarehouseConfirming = ref(false)
+
+const rejectForm = reactive({
+  reason: ''
+})
 
 const publishVisible = ref(false)
 const selectedWarehouseIds = ref<string[]>([])
@@ -1199,7 +1460,12 @@ function handleConfirmPublish() {
   publishVisible.value = false
 }
 
+const totalConfirmingQuantity = computed(() => {
+  return currentConfirmWarehouse.value.confirmedItems?.reduce((sum: number, item: any) => sum + (item.confirmedQuantity || 0), 0) || 0
+})
+
 function handleViewConfirmDetail(plan: any, warehouse: any) {
+  isWarehouseConfirming.value = false
   if (warehouse.confirmedItems && warehouse.confirmedItems.length === 0) {
     warehouse.confirmedItems = [
       { skuCode: 'SKU001', productName: '32.5级普通硅酸盐水泥', specValues: '强度:32.5级', unit: '吨', planQuantity: 100, confirmedQuantity: 95, remark: '库存不足' },
@@ -1211,6 +1477,77 @@ function handleViewConfirmDetail(plan: any, warehouse: any) {
   }
   currentConfirmWarehouse.value = warehouse
   confirmDetailVisible.value = true
+}
+
+function handleConfirmWarehouse(plan: any, warehouse: any) {
+  isWarehouseConfirming.value = true
+  currentPlan.value = plan
+  currentConfirmWarehouse.value = warehouse
+  if (!warehouse.confirmedItems || warehouse.confirmedItems.length === 0) {
+    warehouse.confirmedItems = (plan.skuList || []).map((sku: any) => ({
+      skuCode: sku.skuCode,
+      productName: sku.productName,
+      specValues: sku.specValues,
+      unit: sku.unit,
+      planQuantity: sku.quantity,
+      confirmedQuantity: sku.quantity,
+      remark: ''
+    }))
+  }
+  confirmDetailVisible.value = true
+}
+
+function handleSaveWarehouseConfirm() {
+  currentConfirmWarehouse.value.status = 'confirmed'
+  currentConfirmWarehouse.value.confirmTime = new Date().toLocaleString()
+  currentConfirmWarehouse.value.totalConfirmedQuantity = totalConfirmingQuantity.value
+  
+  updatePlanStatus(currentPlan.value)
+  
+  Message.success('收货确认成功，已生成采购订单')
+  confirmDetailVisible.value = false
+}
+
+function handleRejectWarehouse(plan: any, warehouse: any) {
+  currentPlan.value = plan
+  currentRejectWarehouse.value = warehouse
+  rejectForm.reason = ''
+  rejectVisible.value = true
+}
+
+function handleSaveReject() {
+  if (!rejectForm.reason.trim()) {
+    Message.warning('请填写拒绝原因')
+    return
+  }
+  currentRejectWarehouse.value.status = 'rejected'
+  currentRejectWarehouse.value.rejectReason = rejectForm.reason
+  currentRejectWarehouse.value.rejectTime = new Date().toLocaleString()
+  
+  updatePlanStatus(currentPlan.value)
+  
+  Message.success('已拒绝，采购专员将收到通知')
+  rejectVisible.value = false
+}
+
+function updatePlanStatus(plan: any) {
+  if (!plan.pushList || plan.pushList.length === 0) return
+  
+  const statuses = plan.pushList.map((p: any) => p.status)
+  const allConfirmed = statuses.every((s: string) => s === 'confirmed')
+  const hasConfirmed = statuses.some((s: string) => s === 'confirmed')
+  
+  if (allConfirmed) {
+    plan.status = 'confirmed'
+  } else if (hasConfirmed) {
+    plan.status = 'partial'
+  }
+}
+
+function handleCancel(record: any) {
+  record.status = 'cancelled'
+  record.cancelTime = new Date().toLocaleString()
+  Message.success('计划已取消，相关采购单已作废')
 }
 
 function handleDelete(record: any) {
@@ -1307,6 +1644,7 @@ function getPushStatusColor(status: string) {
   const colors: Record<string, string> = {
     pending: 'orange',
     confirmed: 'green',
+    rejected: 'red',
     cancelled: 'red'
   }
   return colors[status] || 'gray'
@@ -1316,6 +1654,7 @@ function getPushStatusText(status: string) {
   const texts: Record<string, string> = {
     pending: '待确认',
     confirmed: '已确认',
+    rejected: '已拒绝',
     cancelled: '已取消'
   }
   return texts[status] || status
@@ -1597,5 +1936,58 @@ function getPushStatusText(status: string) {
 
 .stock-low {
   color: rgb(var(--warning-6));
+}
+
+.push-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.push-reject-reason {
+  padding: 8px 12px;
+  background: #fff2f0;
+  border-radius: 4px;
+  color: #f53f3f;
+  font-size: 12px;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+.detail-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px 32px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border-2);
+}
+
+.detail-item .label {
+  color: var(--color-text-3);
+  margin-right: 8px;
+}
+
+.detail-item .value {
+  font-weight: 500;
+}
+
+.detail-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.confirm-summary {
+  text-align: left;
+  color: var(--color-text-2);
+  flex: 1;
+}
+
+.confirm-summary strong {
+  color: #00b42a;
+  font-size: 18px;
 }
 </style>

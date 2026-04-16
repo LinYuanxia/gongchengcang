@@ -18,76 +18,54 @@
         </a-space>
       </template>
       
-      <a-descriptions :column="6" bordered size="small">
-        <a-descriptions-item label="仓库类型">
-          <a-tag :color="warehouseInfo.type === 'main' ? 'blue' : 'green'">
-            {{ warehouseInfo.type === 'main' ? '主仓' : '分仓' }}
-          </a-tag>
-        </a-descriptions-item>
+      <a-descriptions :column="4" bordered size="small">
         <a-descriptions-item label="负责人">{{ warehouseInfo.managerName }}</a-descriptions-item>
         <a-descriptions-item label="联系电话">{{ warehouseInfo.phone }}</a-descriptions-item>
-        <a-descriptions-item label="仓库地址" :span="2">{{ warehouseInfo.address }}</a-descriptions-item>
-        <a-descriptions-item label="状态">
-          <a-badge :status="warehouseInfo.status === 'active' ? 'success' : 'danger'" :text="warehouseInfo.status === 'active' ? '正常' : '停用'" />
+        <a-descriptions-item label="仓库标签">
+          <a-space>
+            <a-tag v-for="tag in warehouseInfo.tags" :key="tag" color="arcoblue" size="small">
+              {{ tag }}
+            </a-tag>
+          </a-space>
         </a-descriptions-item>
+        <a-descriptions-item label="仓库地址" :span="2">{{ warehouseInfo.address }}</a-descriptions-item>
       </a-descriptions>
     </a-page-header>
 
     <a-row :gutter="16" class="stat-row">
-      <a-col :span="4">
+      <a-col :span="6">
         <a-card :bordered="false" class="stat-card">
           <a-statistic title="商品种类" :value="stockStats.productCount" suffix="种">
             <template #prefix><icon-apps /></template>
           </a-statistic>
         </a-card>
       </a-col>
-      <a-col :span="4">
+      <a-col :span="6">
         <a-card :bordered="false" class="stat-card">
           <a-statistic title="库存总量" :value="stockStats.totalQuantity" suffix="件">
             <template #prefix><icon-storage /></template>
           </a-statistic>
         </a-card>
       </a-col>
-      <a-col :span="4">
+      <a-col :span="6">
         <a-card :bordered="false" class="stat-card">
           <a-statistic title="库存价值" :value="stockStats.totalValue" :precision="2" prefix="¥">
-            <template #prefix><icon-money-collect /></template>
+            <template #prefix><icon-safe /></template>
           </a-statistic>
         </a-card>
       </a-col>
-      <a-col :span="4">
+      <a-col :span="6">
         <a-card :bordered="false" class="stat-card">
           <a-statistic title="可用库存" :value="stockStats.availableQuantity" suffix="件" />
-        </a-card>
-      </a-col>
-      <a-col :span="4">
-        <a-card :bordered="false" class="stat-card warning-card">
-          <a-statistic title="预警商品" :value="stockStats.warningCount" suffix="种" />
-        </a-card>
-      </a-col>
-      <a-col :span="4">
-        <a-card :bordered="false" class="stat-card danger-card">
-          <a-statistic title="缺货商品" :value="stockStats.outOfStockCount" suffix="种" />
         </a-card>
       </a-col>
     </a-row>
 
     <a-card :bordered="false">
       <template #title>
-        <a-tabs v-model:active-key="currentTab" @change="handleTabChange">
-          <a-tab-pane key="all" title="全部商品" />
-          <a-tab-pane key="warning">
-            <template #title>
-              <span>预警商品</span>
-              <a-badge v-if="stockStats.warningCount > 0" :count="stockStats.warningCount" />
-            </template>
-          </a-tab-pane>
-          <a-tab-pane key="out">
-            <template #title>
-              <span>缺货商品</span>
-              <a-badge v-if="stockStats.outOfStockCount > 0" :count="stockStats.outOfStockCount" :dot-style="{ background: '#F53F3F' }" />
-            </template>
-          </a-tab-pane>
+        <a-tabs v-model:active-tab="activeTab" type="card" size="small">
+          <a-tab-pane key="spu" title="SPU列表" />
+          <a-tab-pane key="sku" title="SKU列表" />
         </a-tabs>
       </template>
       <template #extra>
@@ -111,6 +89,80 @@
       </template>
 
       <a-table
+        v-if="activeTab === 'spu'"
+        :data="filteredSpuProducts"
+        :pagination="spuPagination"
+        row-key="spuId"
+        @page-change="handleSpuPageChange"
+      >
+        <template #columns>
+          <a-table-column title="SPU 商品信息" :width="280">
+            <template #cell="{ record }">
+              <div class="product-info">
+                <a-image :src="record.mainImage" :width="48" :height="48" fit="cover" />
+                <div class="product-detail">
+                  <div class="product-name">{{ record.spuName }}</div>
+                  <div class="product-code">
+                    {{ record.spuCode }}
+                    <a-tag color="arcoblue" size="small" style="margin-left: 8px">
+                      {{ record.skuCount }} 个 SKU
+                    </a-tag>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </a-table-column>
+          <a-table-column title="分类" data-index="categoryName" :width="100" />
+          <a-table-column title="规格范围" :width="120">
+            <template #cell="{ record }">
+              <div class="spec-list">
+                <span v-for="(spec, idx) in record.specs?.slice(0, 2)" :key="idx" class="spec-item">
+                  {{ spec }}
+                </span>
+                <a-popover v-if="record.specs?.length > 2" trigger="hover">
+                  <template #content>
+                    <div v-for="spec in record.specs" :key="spec" style="padding: 4px 0">
+                      {{ spec }}
+                    </div>
+                  </template>
+                  <span class="more-spec">+{{ record.specs.length - 2 }} 更多</span>
+                </a-popover>
+              </div>
+            </template>
+          </a-table-column>
+          <a-table-column title="总库存" :width="100" align="right">
+            <template #cell="{ record }">
+              <span class="stock-main">{{ record.totalQuantity }} {{ record.unit }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="价格区间" :width="130" align="right">
+            <template #cell="{ record }">
+              <span class="price">¥{{ record.minPrice.toFixed(2) }} ~ ¥{{ record.maxPrice.toFixed(2) }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="库存总价值" :width="120" align="right">
+            <template #cell="{ record }">
+              <span class="price">¥{{ record.totalValue.toFixed(2) }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="供应商数" :width="90" align="center">
+            <template #cell="{ record }">
+              {{ record.supplierCount }} 家
+            </template>
+          </a-table-column>
+          <a-table-column title="更新时间" data-index="updatedAt" :width="140" />
+          <a-table-column title="操作" :width="100" fixed="right">
+            <template #cell="{ record }">
+              <a-button type="text" size="small" @click="handleViewSpuDetail(record)">
+                查看明细
+              </a-button>
+            </template>
+          </a-table-column>
+        </template>
+      </a-table>
+
+      <a-table
+        v-if="activeTab === 'sku'"
         :data="filteredProducts"
         :pagination="pagination"
         :row-selection="rowSelection"
@@ -118,7 +170,7 @@
         @page-change="handlePageChange"
       >
         <template #columns>
-          <a-table-column title="商品信息" :width="260">
+          <a-table-column title="SKU 商品信息" :width="260">
             <template #cell="{ record }">
               <div class="product-info">
                 <a-image :src="record.mainImage" :width="48" :height="48" fit="cover" />
@@ -131,28 +183,14 @@
           </a-table-column>
           <a-table-column title="分类" data-index="categoryName" :width="100" />
           <a-table-column title="规格" data-index="spec" :width="100" />
-          <a-table-column title="库存数量" :width="140">
+          <a-table-column title="库存数量" :width="160" align="right">
             <template #cell="{ record }">
               <div class="stock-info">
-                <span :class="getStockClass(record)">{{ record.quantity }} {{ record.unit }}</span>
+                <span class="stock-main">{{ record.quantity }} {{ record.unit }}</span>
                 <div class="stock-detail">
                   可用: {{ record.availableQty }} | 锁定: {{ record.lockedQty }}
                 </div>
               </div>
-            </template>
-          </a-table-column>
-          <a-table-column title="安全库存" :width="100">
-            <template #cell="{ record }">
-              <a-button type="text" size="small" @click="handleSetSafetyStock(record)">
-                {{ record.safetyStock }} {{ record.unit }}
-              </a-button>
-            </template>
-          </a-table-column>
-          <a-table-column title="库存状态" :width="100" align="center">
-            <template #cell="{ record }">
-              <a-tag :color="getStockStatusColor(record)">
-                {{ getStockStatusText(record) }}
-              </a-tag>
             </template>
           </a-table-column>
           <a-table-column title="采购价" :width="100">
@@ -165,11 +203,6 @@
               <span class="price">¥{{ (record.quantity * record.purchasePrice).toFixed(2) }}</span>
             </template>
           </a-table-column>
-          <a-table-column title="库位" :width="80">
-            <template #cell="{ record }">
-              {{ record.location || '-' }}
-            </template>
-          </a-table-column>
           <a-table-column title="更新时间" data-index="updatedAt" :width="140" />
           <a-table-column title="批次" :width="80" align="center">
             <template #cell="{ record }">
@@ -178,42 +211,14 @@
               </a-button>
             </template>
           </a-table-column>
-          <a-table-column title="操作" :width="200" fixed="right">
+          <a-table-column title="操作" :width="120" fixed="right">
             <template #cell="{ record }">
-              <a-space>
-                <a-button type="text" size="small" @click="handleStockIn(record)">入库</a-button>
-                <a-button type="text" size="small" @click="handleStockOut(record)">出库</a-button>
-                <a-button type="text" size="small" @click="handleViewRecord(record)">记录</a-button>
-                <a-button type="text" size="small" @click="handleAdjustStock(record)">调整</a-button>
-              </a-space>
+              <a-button type="text" size="small" @click="handleViewRecord(record)">查看详情</a-button>
             </template>
           </a-table-column>
         </template>
       </a-table>
     </a-card>
-
-    <a-modal
-      v-model:visible="safetyStockVisible"
-      title="设置安全库存"
-      :width="400"
-      @ok="handleSafetyStockConfirm"
-    >
-      <a-form :model="safetyStockForm" layout="vertical">
-        <a-descriptions :column="1" bordered size="small" style="margin-bottom: 16px">
-          <a-descriptions-item label="商品名称">{{ currentProduct?.skuName }}</a-descriptions-item>
-          <a-descriptions-item label="当前库存">{{ currentProduct?.quantity }} {{ currentProduct?.unit }}</a-descriptions-item>
-        </a-descriptions>
-        <a-form-item label="安全库存" required>
-          <a-input-number v-model="safetyStockForm.safetyStock" :min="0" style="width: 100%">
-            <template #suffix>{{ currentProduct?.unit }}</template>
-          </a-input-number>
-          <div class="form-tip">当库存低于安全库存时，系统将发出预警提醒</div>
-        </a-form-item>
-        <a-form-item label="库位">
-          <a-input v-model="safetyStockForm.location" placeholder="请输入库位" />
-        </a-form-item>
-      </a-form>
-    </a-modal>
 
     <a-modal
       v-model:visible="adjustStockVisible"
@@ -499,11 +504,10 @@ const warehouseInfo = ref({
   id: warehouseId,
   name: '深圳湾科技园项目仓',
   code: 'WH001',
-  type: 'main',
   managerName: '张三',
   phone: '13800138001',
   address: '广东省深圳市南山区科技园南区',
-  status: 'active',
+  tags: ['重点项目', '大型仓库'],
 })
 
 const stockStats = reactive({
@@ -511,11 +515,7 @@ const stockStats = reactive({
   totalQuantity: 4580,
   totalValue: 328500.00,
   availableQuantity: 4200,
-  warningCount: 5,
-  outOfStockCount: 1,
 })
-
-const currentTab = ref('all')
 
 const searchForm = reactive({
   keyword: '',
@@ -527,6 +527,14 @@ const pagination = reactive({
   pageSize: 10,
   total: 0,
 })
+
+const spuPagination = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+})
+
+const activeTab = ref('spu')
 
 const selectedKeys = ref<string[]>([])
 
@@ -662,6 +670,132 @@ const mockProducts = ref([
     updatedAt: '2024-03-24 11:00',
     batches: [],
   },
+  {
+    id: 'wp7',
+    skuId: 'sku7',
+    skuCode: 'SKU-SN-002',
+    skuName: '水泥 P.O 52.5',
+    categoryName: '水泥',
+    spec: '50kg/袋 高强度',
+    mainImage: 'https://picsum.photos/200/200?random=7',
+    unit: '吨',
+    quantity: 320,
+    availableQty: 300,
+    lockedQty: 20,
+    safetyStock: 100,
+    purchasePrice: 420,
+    location: 'A-01-02',
+    updatedAt: '2024-03-24 10:30',
+    batches: [],
+  },
+  {
+    id: 'wp8',
+    skuId: 'sku8',
+    skuCode: 'SKU-SN-003',
+    skuName: '水泥 P.C 32.5',
+    categoryName: '水泥',
+    spec: '50kg/袋 复合',
+    mainImage: 'https://picsum.photos/200/200?random=8',
+    unit: '吨',
+    quantity: 180,
+    availableQty: 170,
+    lockedQty: 10,
+    safetyStock: 80,
+    purchasePrice: 320,
+    location: 'A-01-03',
+    updatedAt: '2024-03-24 11:00',
+    batches: [],
+  },
+  {
+    id: 'wp9',
+    skuId: 'sku9',
+    skuCode: 'SKU-LG-002',
+    skuName: '螺纹钢 HRB400 12mm',
+    categoryName: '钢材',
+    spec: '12mm',
+    mainImage: 'https://picsum.photos/200/200?random=9',
+    unit: '吨',
+    quantity: 120,
+    availableQty: 115,
+    lockedQty: 5,
+    safetyStock: 100,
+    purchasePrice: 3100,
+    location: 'B-02-02',
+    updatedAt: '2024-03-24 09:00',
+    batches: [],
+  },
+  {
+    id: 'wp10',
+    skuId: 'sku10',
+    skuCode: 'SKU-LG-003',
+    skuName: '螺纹钢 HRB400 20mm',
+    categoryName: '钢材',
+    spec: '20mm',
+    mainImage: 'https://picsum.photos/200/200?random=10',
+    unit: '吨',
+    quantity: 95,
+    availableQty: 90,
+    lockedQty: 5,
+    safetyStock: 100,
+    purchasePrice: 3300,
+    location: 'B-02-03',
+    updatedAt: '2024-03-24 08:30',
+    batches: [],
+  },
+  {
+    id: 'wp11',
+    skuId: 'sku11',
+    skuCode: 'SKU-LG-004',
+    skuName: '螺纹钢 HRB400 25mm',
+    categoryName: '钢材',
+    spec: '25mm',
+    mainImage: 'https://picsum.photos/200/200?random=11',
+    unit: '吨',
+    quantity: 65,
+    availableQty: 62,
+    lockedQty: 3,
+    safetyStock: 80,
+    purchasePrice: 3400,
+    location: 'B-02-04',
+    updatedAt: '2024-03-24 08:00',
+    batches: [],
+  },
+  {
+    id: 'wp12',
+    skuId: 'sku12',
+    skuCode: 'SKU-HS-002',
+    skuName: '黄砂 细砂',
+    categoryName: '砂石',
+    spec: '细砂',
+    mainImage: 'https://picsum.photos/200/200?random=12',
+    unit: '方',
+    quantity: 280,
+    availableQty: 265,
+    lockedQty: 15,
+    safetyStock: 200,
+    purchasePrice: 105,
+    location: 'C-01-02',
+    updatedAt: '2024-03-23 15:00',
+    batches: [],
+  },
+  {
+    id: 'wp13',
+    skuId: 'sku13',
+    skuCode: 'SKU-HS-003',
+    skuName: '黄砂 粗砂',
+    categoryName: '砂石',
+    spec: '粗砂',
+    mainImage: 'https://picsum.photos/200/200?random=13',
+    unit: '方',
+    quantity: 320,
+    availableQty: 300,
+    lockedQty: 20,
+    safetyStock: 200,
+    purchasePrice: 90,
+    location: 'C-01-03',
+    updatedAt: '2024-03-23 15:30',
+    batches: [],
+  },
 ])
 
 const rowSelection = computed(() => ({
@@ -673,14 +807,63 @@ const rowSelection = computed(() => ({
   },
 }))
 
+const spuProducts = computed(() => {
+  const spuMap = new Map()
+  
+  mockProducts.value.forEach(sku => {
+    const spuName = sku.skuName.split(' ')[0] || sku.skuName
+    const spuId = `spu-${spuName}`
+    
+    if (!spuMap.has(spuId)) {
+      spuMap.set(spuId, {
+        spuId,
+        spuName,
+        spuCode: `SPU-${spuName.toUpperCase().slice(0, 5)}`,
+        categoryName: sku.categoryName,
+        mainImage: sku.mainImage,
+        unit: sku.unit,
+        skuCount: 0,
+        totalQuantity: 0,
+        totalValue: 0,
+        minPrice: Infinity,
+        maxPrice: -Infinity,
+        specs: [] as string[],
+        supplierCount: Math.floor(Math.random() * 3) + 1,
+        updatedAt: sku.updatedAt,
+      })
+    }
+    
+    const spu = spuMap.get(spuId)
+    spu.skuCount++
+    spu.totalQuantity += sku.quantity
+    spu.totalValue += sku.quantity * sku.purchasePrice
+    spu.minPrice = Math.min(spu.minPrice, sku.purchasePrice)
+    spu.maxPrice = Math.max(spu.maxPrice, sku.purchasePrice)
+    if (!spu.specs.includes(sku.spec)) {
+      spu.specs.push(sku.spec)
+    }
+  })
+  
+  return Array.from(spuMap.values())
+})
+
+const filteredSpuProducts = computed(() => {
+  let result = spuProducts.value
+  
+  if (searchForm.keyword) {
+    const keyword = searchForm.keyword.toLowerCase()
+    result = result.filter(p => 
+      p.spuName.toLowerCase().includes(keyword) ||
+      p.spuCode.toLowerCase().includes(keyword)
+    )
+  }
+  
+  spuPagination.total = result.length
+  return result
+})
+
 const filteredProducts = computed(() => {
   let result = mockProducts.value
-  
-  if (currentTab.value === 'warning') {
-    result = result.filter(p => p.quantity > 0 && p.quantity < p.safetyStock)
-  } else if (currentTab.value === 'out') {
-    result = result.filter(p => p.quantity === 0)
-  }
   
   if (searchForm.keyword) {
     const keyword = searchForm.keyword.toLowerCase()
@@ -705,12 +888,7 @@ const otherWarehouses = ref([
   { id: 'w5', name: '南山科技园项目仓' },
 ])
 
-const safetyStockVisible = ref(false)
 const currentProduct = ref<any>(null)
-const safetyStockForm = reactive({
-  safetyStock: 0,
-  location: '',
-})
 
 const adjustStockVisible = ref(false)
 const adjustStockForm = reactive({
@@ -762,6 +940,15 @@ function handlePageChange(page: number) {
   pagination.current = page
 }
 
+function handleSpuPageChange(page: number) {
+  spuPagination.current = page
+}
+
+function handleViewSpuDetail(spu: any) {
+  activeTab.value = 'sku'
+  searchForm.keyword = spu.spuName
+}
+
 function handleExport() {
   Message.success('导出功能开发中')
 }
@@ -794,25 +981,6 @@ function handleTransferConfirm() {
   Message.success('调拨申请已提交')
   transferModalVisible.value = false
   selectedKeys.value = []
-}
-
-function handleSetSafetyStock(record: any) {
-  currentProduct.value = record
-  safetyStockForm.safetyStock = record.safetyStock
-  safetyStockForm.location = record.location || ''
-  safetyStockVisible.value = true
-}
-
-function handleSafetyStockConfirm() {
-  if (currentProduct.value) {
-    const index = mockProducts.value.findIndex(p => p.id === currentProduct.value.id)
-    if (index > -1) {
-      mockProducts.value[index].safetyStock = safetyStockForm.safetyStock
-      mockProducts.value[index].location = safetyStockForm.location
-    }
-    Message.success('安全库存设置成功')
-  }
-  safetyStockVisible.value = false
 }
 
 function handleAdjustStock(record: any) {
@@ -857,32 +1025,7 @@ function handleAdjustStockConfirm() {
 }
 
 function handleViewRecord(record: any) {
-  currentProduct.value = record
-  stockRecords.value = [
-    {
-      id: 'r1',
-      type: 'out',
-      quantity: 20,
-      unit: record.unit,
-      beforeQty: record.quantity + 20,
-      afterQty: record.quantity,
-      orderNo: 'SO202403240001',
-      remark: '销售出库',
-      createdAt: '2024-03-24 14:00:00',
-    },
-    {
-      id: 'r2',
-      type: 'in',
-      quantity: 50,
-      unit: record.unit,
-      beforeQty: record.quantity - 30,
-      afterQty: record.quantity + 20,
-      orderNo: 'PO202403240001',
-      remark: '采购入库',
-      createdAt: '2024-03-24 10:00:00',
-    },
-  ]
-  recordVisible.value = true
+  router.push(`/product/sku/view/${record.skuId || record.id}`)
 }
 
 function handleStockIn(record: any) {
@@ -1045,6 +1188,29 @@ function getStockStatusText(record: any) {
 .danger-card {
   border-left: 3px solid var(--color-danger);
 }
+
+.spec-list {
+  .spec-item {
+    display: inline-block;
+    padding: 0 6px;
+    margin: 2px 4px 2px 0;
+    background: var(--color-fill-2);
+    border-radius: 4px;
+    font-size: 12px;
+  }
+  
+  .more-spec {
+    cursor: pointer;
+    color: var(--color-primary-6);
+    font-size: 12px;
+  }
+}
+
+:deep(.arco-tabs-header-title) {
+  padding: 4px 16px;
+  font-size: 13px;
+}
+
 
 .product-info {
   display: flex;

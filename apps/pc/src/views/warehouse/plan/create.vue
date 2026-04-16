@@ -371,7 +371,7 @@ function handleSubmit() {
 }
 
 function handleViewPlan() {
-  router.push('/warehouse/plan/list')
+  router.push('/warehouse/market/plan')
 }
 
 function handleCreateAnother() {

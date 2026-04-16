@@ -1,5 +1,6 @@
 <template>
   <div class="page-container">
+    <PrdPanel :items="prdModules" />
     <a-card :bordered="false">
       <template #title>
         <span>采购计划</span>
@@ -252,9 +253,195 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
+import PrdPanel from '@/components/PrdPanel/index.vue'
+
+const prdModules = [
+  {
+    moduleName: '业务流程图',
+    content: `
+## 工程仓向供应商采购业务流程图
+
+\`\`\`mermaid
+graph TD
+    A[工程仓创建采购计划] --> B[生成采购订单<br/>状态：待确认 to_confirm]
+    B --> C[供应商端接收订单]
+    C --> D{供应商确认?}
+    D -->|拒绝| Z[订单取消]
+    D -->|接受| E[订单状态更新：已确认 confirmed<br/>支付状态：待支付 unpaid]
+    
+    E --> E1[🔄 支付与发货解耦 并行执行]
+    
+    %% 支付分支 - 支持分批支付
+    E1 --> F[支付流程：支持分批支付]
+    F --> F1{是否分批支付?}
+    F1 -->|全额| F2[上传银行转账凭证<br/>支付状态：已支付 paid]
+    F1 -->|分批| F3[第一次付款 50%<br/>支付状态：部分支付 partial]
+    F3 --> F4[第二次付款 30%<br/>支付状态：部分支付 partial]
+    F4 --> F5[尾款支付 20%<br/>支付状态：已支付 paid]
+    
+    %% 发货分支 - 支持分批发货
+    E1 --> G[发货流程：支持分批发货]
+    G --> G1{是否分批发货?}
+    G1 -->|一次性发货| G2[供应商创建发货单<br/>订单状态：发货中 shipping]
+    G1 -->|分批发货| G3[第一批发货 50%<br/>生成发货单01]
+    G3 --> G4[第二批发货 30%<br/>生成发货单02]
+    G4 --> G5[尾款发货 20%<br/>生成发货单03]
+    
+    %% 收货分支 - 支持分批收货/批次管理
+    G2 --> H[收货流程：批次管理]
+    G5 --> H
+    
+    H --> H1[工程仓分批验收]
+    H1 --> H2[第一批收货<br/>生成收货批次 + 入库单]
+    H2 --> H3[第二批收货<br/>生成收货批次 + 入库单]
+    H3 --> H4[收货全部完成<br/>订单状态：已收货 received]
+    
+    %% 最终完成条件
+    H4 --> I{最终完成条件校验}
+    F5 --> I
+    F2 --> I
+    I -->|全部支付 + 全部收货| J[订单标记：已完成 completed]
+    
+    %% 数据关联说明
+    style E1 fill:#ff7d00,stroke:#ff7d00,color:white,stroke-width:2px
+    style I fill:#00b42a,stroke:#00b42a,color:white,stroke-width:2px
+\`\`\`
+
+> **核心设计要点：支付与发货解耦**
+> - ✅ 供应商确认订单后即可发货，无需等待支付
+> - ✅ 支付状态仅在最终完成时校验，不影响中间流程
+> - ✅ 支持任意次数的分批支付/发货/收货
+> - ✅ 所有操作均关联原始订单ID
+    `
+  },
+  {
+    moduleName: '数据流转关系图',
+    content: `
+## 核心单据数据流转
+
+\`\`\`mermaid
+erDiagram
+    采购计划 ||--o{ 采购订单 : "生成"
+    采购订单 ||--o{ 付款记录 : "1对多 分批支付"
+    采购订单 ||--o{ 发货单 : "1对多 分批发货"
+    发货单 ||--o{ 收货批次 : "1对多 分批收货"
+    收货批次 ||--|| 入库单 : "1对1 生成入库"
+    
+    采购订单 {
+        string orderNo PK
+        string supplierName
+        decimal totalAmount
+        string status
+        string paymentStatus
+        string shipStatus
+        string receiveStatus
+    }
+    
+    付款记录 {
+        string paymentNo PK
+        string orderNo FK
+        decimal amount
+        string voucherUrl "银行转账凭证"
+        datetime payTime
+        string operator
+    }
+    
+    发货单 {
+        string shipmentNo PK
+        string orderNo FK
+        string logisticsCompany
+        string logisticsNo
+        datetime shipTime
+        int batchNo "第N批发货"
+    }
+    
+    收货批次 {
+        string batchNo PK
+        string shipmentNo FK
+        string orderNo FK
+        int receiveQuantity
+        string warehouseName
+        string inspector
+        int stockAge "库龄计算"
+    }
+    
+    入库单 {
+        string inboundNo PK
+        string batchNo FK
+        datetime inboundTime
+        string operator
+    }
+\`\`\`
+    `
+  },
+  {
+    moduleName: '状态机矩阵',
+    content: `
+## 订单状态流转矩阵
+
+| 订单状态 | 支付状态 | 允许操作 | 约束条件 |
+|---------|---------|---------|---------|
+| **to_confirm 待确认** | unpaid | 供应商确认/拒绝 | - |
+| **confirmed 已确认** | unpaid<br/>partial | 供应商发货<br/>工程仓付款 | ✅ **无支付约束即可发货** |
+| **shipping 发货中** | unpaid<br/>partial<br/>paid | 收货<br/>继续付款 | 支付不影响收货 |
+| **received 已收货** | partial | 支付尾款 | - |
+| **received 已收货** | paid | 标记完成 | ✅ 支付全部完成 |
+| **completed 已完成** | paid | 查看详情 | 不可逆 |
+
+## 分批支付规则
+
+| 支付批次 | 建议比例 | 触发时机 | 凭证要求 |
+|---------|---------|---------|---------|
+| 首付款 | 30%-50% | 确认订单后3日内 | 银行回单 |
+| 进度款 | 30%-40% | 主要货物签收后 | 银行回单 |
+| 质保金 | 5%-10% | 验收合格30天后 | 银行回单 |
+    `
+  },
+  {
+    moduleName: '收货批次设计',
+    content: `
+## 收货批次四层级追溯体系
+
+\`\`\`mermaid
+graph LR
+    Z[采购订单] --> A[发货单1]
+    Z --> B[发货单2]
+    A --> C[收货批次001]
+    A --> D[收货批次002]
+    B --> E[收货批次003]
+    C --> F[入库单IB001]
+    D --> G[入库单IB002]
+    E --> H[入库单IB003]
+    
+    C --> C1[库存记录<br/>库龄: 收货批次起算]
+    C --> C2[库存预警<br/>先进先出判定]
+    
+    style C fill:#0fc6c2,stroke:#0fc6c2
+    style D fill:#0fc6c2,stroke:#0fc6c2
+    style E fill:#0fc6c2,stroke:#0fc6c2
+\`\`\`
+
+### 批次核心字段定义
+
+| 字段 | 类型 | 业务意义 |
+|-----|------|---------|
+| batchNo | string | 全局唯一批次号 |
+| receiveTime | datetime | 库龄起算时间点 |
+| warehouseName | string | 入库位置 |
+| inspector | string | 验收责任人 |
+| currentStock | int | 批次剩余库存 |
+| stockAge | int | 实时计算：当前时间 - receiveTime |
+
+### 库龄预警规则
+- 🟢 0-30天：正常周转
+- 🟠 31-90天：周转缓慢
+- 🔴 91天+：积压风险
+    `
+  }
+]
 
 const router = useRouter()
 const loading = ref(false)
@@ -440,7 +627,7 @@ function handleViewOrder(record: any) {
 }
 
 function handleCreatePlan() {
-  router.push('/warehouse/plan/create')
+  router.push('/warehouse/market/plan/create')
 }
 
 function getStatusColor(status: string) {

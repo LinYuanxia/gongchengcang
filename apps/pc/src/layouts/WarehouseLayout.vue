@@ -20,12 +20,12 @@
         @sub-menu-click="onSubMenuClick"
       >
         <template v-for="menu in menuList" :key="menu.name">
-          <a-sub-menu v-if="menu.children?.filter(c => !c.meta?.hidden && !c.meta?.hideInMenu).length" :key="menu.name">
+          <a-sub-menu v-if="menu.children?.length" :key="menu.name">
             <template #icon>
               <component :is="getIcon(menu.meta?.icon)" />
             </template>
             <template #title>{{ menu.meta?.title }}</template>
-            <a-menu-item v-for="child in menu.children.filter(c => !c.meta?.hidden && !c.meta?.hideInMenu)" :key="child.name">
+            <a-menu-item v-for="child in menu.children" :key="child.name">
               {{ child.meta?.title }}
             </a-menu-item>
           </a-sub-menu>
@@ -105,11 +105,7 @@
         </div>
       </a-layout-header>
       <a-layout-content class="content">
-        <router-view v-slot="{ Component }">
-          <transition name="fade" mode="out-in">
-            <component :is="Component" />
-          </transition>
-        </router-view>
+        <router-view />
       </a-layout-content>
       <a-layout-footer class="footer">
         <span>集团开发中心 - 工程仓端</span>
@@ -144,6 +140,8 @@ const iconMap: Record<string, any> = {
   'icon-apps': IconApps,
   'icon-folder': IconFolder,
   'icon-tags': IconTags,
+  'icon-shopping-cart': IconTags,
+  'icon-shop': IconApps,
   'icon-file': IconFile,
   'icon-storage': IconStorage,
   'icon-list': IconList,
@@ -166,7 +164,11 @@ const openKeys = ref<string[]>([])
 
 const menuList = computed(() => {
   const layoutRoute = router.options.routes.find((r: RouteRecordRaw) => r.path === '/warehouse')
-  return layoutRoute?.children?.filter((r: RouteRecordRaw) => !r.meta?.hidden && !r.meta?.hideInMenu) || []
+  const children = layoutRoute?.children?.filter((r: RouteRecordRaw) => !r.meta?.hidden && !r.meta?.hideInMenu) || []
+  return children.map((menu: RouteRecordRaw) => ({
+    ...menu,
+    children: menu.children?.filter((c: RouteRecordRaw) => !c.meta?.hidden && !c.meta?.hideInMenu) || []
+  }))
 })
 
 const breadcrumbs = computed(() => {

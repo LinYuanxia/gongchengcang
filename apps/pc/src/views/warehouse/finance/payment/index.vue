@@ -73,8 +73,8 @@
         @page-change="handlePageChange"
       >
         <template #columns>
-          <a-table-column title="支付流水号" data-index="paymentNo" :width="180" />
-          <a-table-column title="订单编号" :width="150">
+          <a-table-column title="支付记录号" data-index="paymentNo" :width="180" />
+          <a-table-column title="采购订单号" :width="150">
             <template #cell="{ record }">
               <a-link @click="handleViewOrder(record)">{{ record.orderNo }}</a-link>
             </template>
@@ -87,9 +87,7 @@
           </a-table-column>
           <a-table-column title="支付方式" :width="120">
             <template #cell="{ record }">
-              <a-tag :color="getPaymentMethodColor(record.paymentMethod)">
-                {{ getPaymentMethodText(record.paymentMethod) }}
-              </a-tag>
+              <a-tag color="green">线下转账</a-tag>
             </template>
           </a-table-column>
           <a-table-column title="支付类型" :width="100">
@@ -97,7 +95,6 @@
               {{ record.paymentType === 'full' ? '全额支付' : '部分支付' }}
             </template>
           </a-table-column>
-          <a-table-column title="托管账户" data-index="custodyAccountNo" :width="180" />
           <a-table-column title="支付状态" :width="100">
             <template #cell="{ record }">
               <a-tag :color="getStatusColor(record.status)">
@@ -105,17 +102,24 @@
               </a-tag>
             </template>
           </a-table-column>
-          <a-table-column title="支付时间" data-index="createTime" :width="160" />
-          <a-table-column title="完成时间" data-index="completeTime" :width="160">
+          <a-table-column title="供应商确认状态" :width="120">
             <template #cell="{ record }">
-              {{ record.completeTime || '-' }}
+              <a-tag :color="record.confirmed ? 'green' : 'orange'">
+                {{ record.confirmed ? '已确认' : '待确认' }}
+              </a-tag>
             </template>
           </a-table-column>
-          <a-table-column title="操作" :width="150" fixed="right">
+          <a-table-column title="上传凭证" :width="100">
+            <template #cell="{ record }">
+              <a-link v-if="record.hasVoucher" @click="handleDownloadVoucher(record)">查看</a-link>
+              <span v-else class="text-subtle">-</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="支付时间" data-index="createTime" :width="160" />
+          <a-table-column title="操作" :width="120" fixed="right">
             <template #cell="{ record }">
               <a-space>
                 <a-link @click="handleView(record)">详情</a-link>
-                <a-link @click="handleDownloadVoucher(record)">凭证</a-link>
               </a-space>
             </template>
           </a-table-column>
@@ -130,36 +134,43 @@
       :footer="false"
     >
       <a-descriptions :column="2" bordered>
-        <a-descriptions-item label="支付流水号">{{ currentRecord.paymentNo }}</a-descriptions-item>
-        <a-descriptions-item label="订单编号">{{ currentRecord.orderNo }}</a-descriptions-item>
+        <a-descriptions-item label="支付记录号">{{ currentRecord.paymentNo }}</a-descriptions-item>
+        <a-descriptions-item label="采购订单号">{{ currentRecord.orderNo }}</a-descriptions-item>
         <a-descriptions-item label="供应商">{{ currentRecord.supplierName }}</a-descriptions-item>
         <a-descriptions-item label="支付金额">
           <span class="amount">¥{{ currentRecord.paymentAmount?.toLocaleString() }}</span>
         </a-descriptions-item>
         <a-descriptions-item label="支付方式">
-          <a-tag :color="getPaymentMethodColor(currentRecord.paymentMethod)">
-            {{ getPaymentMethodText(currentRecord.paymentMethod) }}
-          </a-tag>
+          <a-tag color="green">线下转账</a-tag>
         </a-descriptions-item>
         <a-descriptions-item label="支付类型">
           {{ currentRecord.paymentType === 'full' ? '全额支付' : '部分支付' }}
         </a-descriptions-item>
-        <a-descriptions-item label="托管账户">{{ currentRecord.custodyAccountNo }}</a-descriptions-item>
-        <a-descriptions-item label="交易流水号">{{ currentRecord.transactionNo }}</a-descriptions-item>
         <a-descriptions-item label="支付状态">
           <a-tag :color="getStatusColor(currentRecord.status)">
             {{ getStatusText(currentRecord.status) }}
           </a-tag>
         </a-descriptions-item>
+        <a-descriptions-item label="供应商确认状态">
+          <a-tag :color="currentRecord.confirmed ? 'green' : 'orange'">
+            {{ currentRecord.confirmed ? '供应商已确认收款' : '待供应商确认' }}
+          </a-tag>
+        </a-descriptions-item>
         <a-descriptions-item label="支付时间">{{ currentRecord.createTime }}</a-descriptions-item>
-        <a-descriptions-item label="完成时间">{{ currentRecord.completeTime || '-' }}</a-descriptions-item>
         <a-descriptions-item label="操作人">{{ currentRecord.operator }}</a-descriptions-item>
         <a-descriptions-item label="备注" :span="2">{{ currentRecord.remark || '-' }}</a-descriptions-item>
       </a-descriptions>
 
+      <a-divider v-if="currentRecord.hasVoucher" />
+
+      <h4 v-if="currentRecord.hasVoucher">转账凭证</h4>
+      <div class="voucher-preview" v-if="currentRecord.hasVoucher">
+        <img src="https://picsum.photos/600/400?random=1" style="max-width: 500px; border-radius: 4px; border: 1px solid var(--color-border-2)" />
+      </div>
+
       <a-divider />
 
-      <h4>支付进度</h4>
+      <h4>确认流程</h4>
       <a-timeline>
         <a-timeline-item v-for="(log, index) in currentRecord.logs" :key="index" :label="log.time">
           {{ log.content }}
@@ -204,20 +215,17 @@ const records = ref([
     orderNo: 'PO202401150001',
     supplierName: '广东建材有限公司',
     paymentAmount: 205000,
-    paymentMethod: 'custody',
     paymentType: 'full',
-    custodyAccountNo: '8888000001234567',
-    transactionNo: 'TXN2024011516300001',
     status: 'success',
+    confirmed: true,
+    hasVoucher: true,
     createTime: '2024-01-15 16:30:00',
-    completeTime: '2024-01-15 16:30:05',
     operator: '张三',
-    remark: '',
+    remark: '采购水泥和砂石货款',
     logs: [
-      { time: '2024-01-15 16:30:05', content: '支付成功' },
-      { time: '2024-01-15 16:30:03', content: '托管账户扣款成功' },
-      { time: '2024-01-15 16:30:01', content: '验证支付密码成功' },
-      { time: '2024-01-15 16:30:00', content: '发起支付请求' },
+      { time: '2024-01-16 09:00:00', content: '供应商确认收到款项' },
+      { time: '2024-01-15 17:00:00', content: '已上传银行转账凭证' },
+      { time: '2024-01-15 16:30:00', content: '提交付款申请，完成线下转账' },
     ],
   },
   {
@@ -225,21 +233,18 @@ const records = ref([
     paymentNo: 'PAY2024011514200001',
     orderNo: 'PO202401150002',
     supplierName: '上海钢材集团',
-    paymentAmount: 82000,
-    paymentMethod: 'custody',
+    paymentAmount: 500000,
     paymentType: 'partial',
-    custodyAccountNo: '8888000001234567',
-    transactionNo: 'TXN2024011514200001',
     status: 'success',
+    confirmed: true,
+    hasVoucher: true,
     createTime: '2024-01-15 14:20:00',
-    completeTime: '2024-01-15 14:20:03',
     operator: '张三',
-    remark: '部分支付',
+    remark: '螺纹钢货款，分两笔支付',
     logs: [
-      { time: '2024-01-15 14:20:03', content: '支付成功' },
-      { time: '2024-01-15 14:20:02', content: '托管账户扣款成功' },
-      { time: '2024-01-15 14:20:01', content: '验证支付密码成功' },
-      { time: '2024-01-15 14:20:00', content: '发起支付请求' },
+      { time: '2024-01-16 10:30:00', content: '供应商确认收到款项' },
+      { time: '2024-01-15 15:00:00', content: '已上传银行转账凭证' },
+      { time: '2024-01-15 14:20:00', content: '提交付款申请，完成线下转账' },
     ],
   },
   {
@@ -248,19 +253,16 @@ const records = ref([
     orderNo: 'PO202401140001',
     supplierName: '惠州砂石厂',
     paymentAmount: 15000,
-    paymentMethod: 'custody',
     paymentType: 'full',
-    custodyAccountNo: '8888000001234567',
-    transactionNo: 'TXN2024011410000001',
-    status: 'failed',
+    status: 'success',
+    confirmed: false,
+    hasVoucher: true,
     createTime: '2024-01-14 10:00:00',
-    completeTime: null,
     operator: '李四',
-    remark: '支付失败：余额不足',
+    remark: '黄砂、碎石货款',
     logs: [
-      { time: '2024-01-14 10:00:02', content: '支付失败：托管账户余额不足' },
-      { time: '2024-01-14 10:00:01', content: '验证支付密码成功' },
-      { time: '2024-01-14 10:00:00', content: '发起支付请求' },
+      { time: '2024-01-14 10:30:00', content: '已上传银行转账凭证，等待供应商确认' },
+      { time: '2024-01-14 10:00:00', content: '提交付款申请，完成线下转账' },
     ],
   },
   {
@@ -269,19 +271,15 @@ const records = ref([
     orderNo: 'PO202401160001',
     supplierName: '深圳混凝土公司',
     paymentAmount: 38000,
-    paymentMethod: 'custody',
     paymentType: 'full',
-    custodyAccountNo: '8888000001234567',
-    transactionNo: 'TXN2024011609000001',
-    status: 'processing',
+    status: 'success',
+    confirmed: false,
+    hasVoucher: false,
     createTime: '2024-01-16 09:00:00',
-    completeTime: null,
     operator: '张三',
-    remark: '',
+    remark: 'C30混凝土货款',
     logs: [
-      { time: '2024-01-16 09:00:02', content: '托管账户扣款处理中' },
-      { time: '2024-01-16 09:00:01', content: '验证支付密码成功' },
-      { time: '2024-01-16 09:00:00', content: '发起支付请求' },
+      { time: '2024-01-16 09:00:00', content: '提交付款申请，待转账、待上传凭证' },
     ],
   },
 ])

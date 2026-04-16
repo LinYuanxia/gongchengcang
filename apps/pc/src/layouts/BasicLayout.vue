@@ -110,11 +110,7 @@
         </div>
       </a-layout-header>
       <a-layout-content class="content">
-        <router-view v-slot="{ Component }">
-          <transition name="fade" mode="out-in">
-            <component :is="Component" />
-          </transition>
-        </router-view>
+        <router-view />
       </a-layout-content>
       <a-layout-footer class="footer">
         <span>集团开发中心</span>
@@ -152,6 +148,8 @@ const iconMap: Record<string, any> = {
   'icon-user-group': IconUserGroup,
   'icon-apps': IconApps,
   'icon-tags': IconTags,
+  'icon-shopping-cart': IconTags,
+  'icon-shop': IconApps,
   'icon-folder': IconFolder,
   'icon-file': IconFile,
   'icon-calendar': IconCalendar,
@@ -162,7 +160,6 @@ const iconMap: Record<string, any> = {
   'icon-user': IconUser,
   'icon-tag': IconTag,
   'icon-tool': IconTool,
-  'icon-shopping-cart': IconTags,
   'icon-list': IconList,
 }
 
@@ -194,7 +191,10 @@ const currentPlatformInfo = computed(() => {
 
 const menuList = computed(() => {
   const routes = router.options.routes.find(r => r.name === 'Layout')?.children || []
-  return routes.filter(r => !r.meta?.hidden && !r.meta?.hideInMenu)
+  return routes.filter(r => !r.meta?.hidden && !r.meta?.hideInMenu).map((menu: RouteRecordRaw) => ({
+    ...menu,
+    children: menu.children?.filter((c: RouteRecordRaw) => !c.meta?.hidden && !c.meta?.hideInMenu) || []
+  }))
 })
 
 const breadcrumbs = computed(() => {

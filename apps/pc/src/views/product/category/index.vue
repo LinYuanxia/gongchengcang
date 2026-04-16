@@ -1,5 +1,6 @@
 <template>
   <div class="page-container">
+    <PrdPanel :items="prdItems" />
     <a-card :bordered="false">
       <div class="category-layout">
         <div class="category-tree">
@@ -97,6 +98,68 @@ import { ProductCategoryStatus } from '@gongchengcang/types'
 import type { ProductCategory } from '@gongchengcang/types'
 import { getCategoryTree, deleteCategory, updateCategory } from '@gongchengcang/api'
 import CategoryFormDrawer from './components/CategoryFormDrawer.vue'
+import PrdPanel from '@/components/PrdPanel/index.vue'
+
+const prdItems = [
+  {
+    title: '1. 功能设计说明',
+    content: `
+采用 **左树右详情** 布局
+
+- 左侧：分类树（最多支持 3 级），支持拖拽调整层级
+- 右侧：当前选中分类的属性列表详情
+
+分类等级限制：最多 3 级，超过则不允许新增子分类
+    `
+  },
+  {
+    title: '2. 树节点交互',
+    content: `
+| 操作 | 触发方式 | 说明 |
+|------|---------|------|
+| 新增一级分类 | 顶部按钮 | 创建根节点 |
+| 新增子分类 | 节点 + 按钮 | 最多到 3 级 |
+| 编辑分类 | 节点 编辑 按钮 | 修改名称/排序/状态 |
+| 删除分类 | 节点 删除 按钮 | 有子分类则级联删除 |
+| 拖拽排序 | 节点拖拽 | 可调整同级排序或移动层级 |
+
+删除前置校验：该分类下无商品才能删除
+    `
+  },
+  {
+    title: '3. 分类字段定义',
+    content: `
+| 字段名 | 组件 | 必填 | 长度限制 | 验证规则 |
+|--------|------|------|----------|----------|
+| 分类名称 | Input | ✅ 是 | 最多 50 字符 | 非空 |
+| 分类编码 | Input | ✅ 是 | 最多 32 字符 | 字母/数字/下划线 |
+| 排序值 | InputNumber | ❌ 否 | 0-99999 | 数字越大越靠前 |
+| 状态 | Switch | - | - | 启用/禁用 |
+    `
+  },
+  {
+    title: '4. 属性关联功能',
+    content: `
+每个分类可以绑定一组规格属性：
+- 绑定后，该分类下所有商品自动继承这些属性
+- 绑定的属性用于自动生成 SKU 规格组合
+- 解绑属性需要二次确认（影响已有商品）
+    `
+  },
+  {
+    title: '5. 权限矩阵',
+    content: `
+| 功能点 | 超管 | 商品运营 | 供应商 | 只读 |
+|--------|------|---------|--------|------|
+| 查看分类树 | ✅ | ✅ | ✅ | ✅ |
+| 新增分类 | ✅ | ✅ | ❌ | ❌ |
+| 编辑分类 | ✅ | ✅ | ❌ | ❌ |
+| 删除分类 | ✅ | ❌ | ❌ | ❌ |
+| 拖拽调整 | ✅ | ✅ | ❌ | ❌ |
+| 绑定属性 | ✅ | ✅ | ❌ | ❌ |
+    `
+  }
+]
 
 const router = useRouter()
 const treeData = ref<ProductCategory[]>([])

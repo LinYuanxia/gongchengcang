@@ -118,7 +118,7 @@
         </a-col>
         <a-col :span="6">
           <a-statistic title="销售额" :value="bom.salesAmount" :precision="2" prefix="¥">
-            <template #prefix><icon-money-collect /></template>
+            <template #prefix><icon-safe /></template>
           </a-statistic>
         </a-col>
         <a-col :span="6">

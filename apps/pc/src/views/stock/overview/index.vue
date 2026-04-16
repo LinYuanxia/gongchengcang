@@ -43,7 +43,7 @@
         <a-card :bordered="false" class="stat-card">
           <a-statistic title="库存总价值" :value="stockStats.totalValue" :precision="2" prefix="¥">
             <template #prefix>
-              <icon-money-collect class="stat-icon value-icon" />
+              <icon-safe class="stat-icon value-icon" />
             </template>
           </a-statistic>
           <div class="stat-footer">

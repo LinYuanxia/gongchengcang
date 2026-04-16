@@ -36,6 +36,9 @@
               </a-tag>
             </a-descriptions-item>
             <a-descriptions-item label="条形码">{{ skuData.barcode || '-' }}</a-descriptions-item>
+            <a-descriptions-item label="总库存">
+              <strong class="text-primary">{{ totalStock }}</strong> {{ skuData.unit || '' }}
+            </a-descriptions-item>
             <a-descriptions-item label="供应商数">{{ skuData.supplierCount || 0 }} 个</a-descriptions-item>
           </a-descriptions>
 
@@ -64,7 +67,14 @@
             </a-row>
         </a-card>
 
-        <a-card title="价格信息" class="section-card">
+        <a-tabs v-model:active-tab="detailTab" type="card" size="small" style="margin-bottom: 16px;">
+          <a-tab-pane key="price" title="价格信息" />
+          <a-tab-pane key="stock" title="供应商库存明细" />
+          <a-tab-pane key="batch" title="库存批次" />
+          <a-tab-pane key="record" title="出入库流水" />
+        </a-tabs>
+
+        <a-card v-if="detailTab === 'price'" title="价格信息" class="section-card">
           <a-descriptions :column="2" bordered>
             <a-descriptions-item label="供货价">
               <span v-if="skuData.supplyPrice" class="price-value">¥{{ skuData.supplyPrice.toFixed(2) }}</span>
@@ -77,7 +87,85 @@
           </a-descriptions>
         </a-card>
 
-        <a-card v-if="splitRules.length > 0" title="分账配置" class="section-card">
+        <a-card v-if="detailTab === 'stock'" title="供应商库存明细" class="section-card">
+          <a-table :data="supplierStock" :pagination="false" size="small">
+            <template #columns>
+              <a-table-column title="供应商名称" data-index="supplierName" :width="200" />
+              <a-table-column title="关联批次" data-index="batchNo" :width="140">
+                <template #cell="{ record }">
+                  <a-tag color="arcoblue" size="small">{{ record.batchNo }}</a-tag>
+                </template>
+              </a-table-column>
+              <a-table-column title="采购单价" :width="100" align="right">
+                <template #cell="{ record }">
+                  <span class="price-value">¥{{ record.price.toFixed(2) }}</span>
+                </template>
+              </a-table-column>
+              <a-table-column title="入库数量" :width="100" align="right">
+                <template #cell="{ record }">{{ record.inQty }}</template>
+              </a-table-column>
+              <a-table-column title="已使用" :width="100" align="right">
+                <template #cell="{ record }">{{ record.usedQty }} ({{ Math.round(record.usedQty / record.inQty * 100) }}%)</template>
+              </a-table-column>
+              <a-table-column title="当前库存" :width="100" align="right">
+                <template #cell="{ record }">
+                  <strong class="text-success">{{ record.currentStock }} {{ skuUnit }}</strong>
+                </template>
+              </a-table-column>
+              <a-table-column title="入库时间" data-index="inDate" :width="160" />
+              <a-table-column title="所在仓库" data-index="warehouseName" :width="160" />
+            </template>
+          </a-table>
+        </a-card>
+
+        <a-card v-if="detailTab === 'batch'" title="库存批次" class="section-card">
+          <a-table :data="batchList" :pagination="false" size="small">
+            <template #columns>
+              <a-table-column title="批次号" data-index="batchNo" :width="140">
+                <template #cell="{ record }">
+                  <a-tag color="arcoblue" size="small">{{ record.batchNo }}</a-tag>
+                </template>
+              </a-table-column>
+              <a-table-column title="供应商" data-index="supplierName" :width="180" />
+              <a-table-column title="采购单价" :width="100" align="right">
+                <template #cell="{ record }">
+                  <span class="price-value">¥{{ record.price.toFixed(2) }}</span>
+                </template>
+              </a-table-column>
+              <a-table-column title="入库数量" :width="90" align="right">
+                <template #cell="{ record }">{{ record.inQty }}</template>
+              </a-table-column>
+              <a-table-column title="已使用" :width="100" align="right">
+                <template #cell="{ record }">
+                  {{ record.usedQty }} ({{ Math.round(record.usedQty / record.inQty * 100) }}%)
+                </template>
+              </a-table-column>
+              <a-table-column title="当前库存" :width="90" align="right">
+                <template #cell="{ record }">
+                  <strong :class="record.currentStock > 0 ? 'text-success' : 'text-secondary'">
+                    {{ record.currentStock }} {{ skuUnit }}
+                  </strong>
+                </template>
+              </a-table-column>
+              <a-table-column title="所在仓库" data-index="warehouseName" :width="160" />
+              <a-table-column title="操作人" data-index="operator" :width="100" />
+              <a-table-column title="入库时间" data-index="inDate" :width="160" />
+              <a-table-column title="状态" :width="80">
+                <template #cell="{ record }">
+                  <a-tag :color="record.currentStock > 0 ? 'green' : 'gray'" size="small">
+                    {{ record.currentStock > 0 ? '可用' : '已用完' }}
+                  </a-tag>
+                </template>
+              </a-table-column>
+            </template>
+          </a-table>
+        </a-card>
+
+        <a-card v-if="detailTab === 'record'" title="出入库流水" class="section-card">
+          <a-empty description="暂无出入库记录" />
+        </a-card>
+
+        <a-card v-if="splitRules.length > 0 && detailTab === 'price'" title="分账配置" class="section-card">
           <a-table :data="splitRules" :pagination="false" size="small">
             <template #columns>
               <a-table-column title="规则名称" data-index="ruleName" :width="200" />
@@ -86,9 +174,14 @@
                   <a-tag>{{ getRuleCategoryLabel(record.ruleCategory) }}</a-tag>
                 </template>
               </a-table-column>
-              <a-table-column title="分账比例" :width="120">
+              <a-table-column title="分账比例" :width="100">
                 <template #cell="{ record }">
                   <span class="rate-value">{{ (record.rateValue * 100).toFixed(2) }}%</span>
+                </template>
+              </a-table-column>
+              <a-table-column title="平台手续费" :width="100">
+                <template #cell="{ record }">
+                  <span class="rate-value text-danger">{{ (record.feeRate * 100).toFixed(2) }}%</span>
                 </template>
               </a-table-column>
               <a-table-column title="生效时间" :width="200">
@@ -113,50 +206,6 @@
           </a-table>
         </a-card>
 
-        <a-card title="材料供应商" class="section-card">
-          <template #extra>
-            <a-button type="text" @click="handleViewSuppliers">
-              <template #icon><icon-list /></template>
-              查看全部供应商商品
-            </a-button>
-          </template>
-          <div v-if="suppliers.length === 0" class="empty-supplier">
-            <a-empty description="暂无材料供应商供货" />
-          </div>
-          <a-table v-else :data="suppliers" :pagination="false" size="small">
-            <template #columns>
-              <a-table-column title="供应商名称" data-index="supplierName" :width="200" />
-              <a-table-column title="供货价" :width="120">
-                <template #cell="{ record }">
-                  <span class="price-value">¥{{ record.supplyPrice.toFixed(2) }}</span>
-                </template>
-              </a-table-column>
-              <a-table-column title="预计供货量" :width="120">
-                <template #cell="{ record }">
-                  {{ record.estimatedStock }} {{ skuData.unit }}
-                </template>
-              </a-table-column>
-              <a-table-column title="最小起订量" :width="120">
-                <template #cell="{ record }">
-                  {{ record.minOrderQty }} {{ skuData.unit }}
-                </template>
-              </a-table-column>
-              <a-table-column title="供货周期" :width="100">
-                <template #cell="{ record }">
-                  {{ record.leadTime }} 天
-                </template>
-              </a-table-column>
-              <a-table-column title="状态" :width="100">
-                <template #cell="{ record }">
-                  <a-tag :color="record.status === 'active' ? 'green' : 'orange'">
-                    {{ record.status === 'active' ? '供货中' : '暂停供货' }}
-                  </a-tag>
-                </template>
-              </a-table-column>
-            </template>
-          </a-table>
-        </a-card>
-
         <a-card title="操作记录" class="section-card">
           <a-empty description="暂无操作记录" />
         </a-card>
@@ -169,7 +218,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
-import type { Sku, SplitRule, SupplierProduct } from '@gongchengcang/types'
+import type { Sku, SplitRule } from '@gongchengcang/types'
 import { SPLIT_RULE_CATEGORY_OPTIONS } from '@gongchengcang/types'
 import { getSkuDetail, getSplitRulesBySkuId } from '@gongchengcang/api'
 
@@ -179,9 +228,84 @@ const router = useRouter()
 const skuId = computed(() => route.params.id as string)
 
 const loading = ref(false)
-const skuData = ref<Partial<Sku> | null>({})
+const detailTab = ref('price')
+const skuData = ref<Partial<Sku>>({})
 const splitRules = ref<SplitRule[]>([])
-const suppliers = ref<SupplierProduct[]>([])
+
+const totalStock = computed(() => {
+  return supplierStock.value.reduce((sum, s) => sum + s.currentStock, 0)
+})
+
+const skuUnit = computed(() => skuData.value.unit || '')
+
+const supplierStock = ref([
+  {
+    supplierName: '华润水泥(深圳)有限公司',
+    batchNo: 'B202412250001',
+    price: 420,
+    inQty: 500,
+    usedQty: 180,
+    currentStock: 320,
+    inDate: '2024-12-25 08:30:00',
+    warehouseName: '深圳湾科技园项目仓',
+  },
+  {
+    supplierName: '海螺水泥(广东)',
+    batchNo: 'B202412200005',
+    price: 415,
+    inQty: 300,
+    usedQty: 50,
+    currentStock: 250,
+    inDate: '2024-12-20 14:15:00',
+    warehouseName: '福田CBD项目仓',
+  },
+  {
+    supplierName: '南方水泥',
+    batchNo: 'B202412150008',
+    price: 418,
+    inQty: 200,
+    usedQty: 200,
+    currentStock: 0,
+    inDate: '2024-12-15 09:00:00',
+    warehouseName: '深圳湾科技园项目仓',
+  },
+])
+
+const batchList = ref([
+  {
+    batchNo: 'B202412250001',
+    supplierName: '华润水泥(深圳)有限公司',
+    price: 420,
+    inQty: 500,
+    usedQty: 180,
+    currentStock: 320,
+    warehouseName: '深圳湾科技园项目仓',
+    operator: '张三',
+    inDate: '2024-12-25 08:30:00',
+  },
+  {
+    batchNo: 'B202412200005',
+    supplierName: '海螺水泥(广东)',
+    price: 415,
+    inQty: 300,
+    usedQty: 50,
+    currentStock: 250,
+    warehouseName: '福田CBD项目仓',
+    operator: '李四',
+    inDate: '2024-12-20 14:15:00',
+  },
+  {
+    batchNo: 'B202412150008',
+    supplierName: '南方水泥',
+    price: 418,
+    inQty: 200,
+    usedQty: 200,
+    currentStock: 0,
+    warehouseName: '深圳湾科技园项目仓',
+    operator: '王五',
+    inDate: '2024-12-15 09:00:00',
+  },
+])
 
 onMounted(async () => {
   await loadSkuDetail()
@@ -191,73 +315,18 @@ async function loadSkuDetail() {
   loading.value = true
   try {
     const sku = await getSkuDetail(skuId.value)
-    skuData.value = sku
+    skuData.value = sku || {}
 
     const rules = await getSplitRulesBySkuId(skuId.value)
-    splitRules.value = rules
-
-    suppliers.value = getMockSuppliers()
+    splitRules.value = rules.map(r => ({
+      ...r,
+      feeRate: 0.015,
+    }))
   } catch (error: any) {
     Message.error(error.message || '获取SKU详情失败')
   } finally {
     loading.value = false
   }
-}
-
-function getMockSuppliers(): SupplierProduct[] {
-  if (skuId.value === 'SKU001' || skuId.value === 'SKU002' || skuId.value === 'SKU003') {
-    return [
-      {
-        id: 'SP001',
-        supplierId: 'SUP001',
-        supplierName: '宝钢集团有限公司',
-        skuId: skuId.value,
-        skuCode: skuData.value.skuCode || '',
-        skuName: skuData.value.skuName || '',
-        supplyPrice: (skuData.value.supplyPrice || 3500) * 0.9,
-        estimatedStock: 500,
-        actualStock: 480,
-        minOrderQty: 10,
-        leadTime: 3,
-        status: 'active',
-        createdAt: '2024-01-01 00:00:00',
-        updatedAt: '2024-01-01 00:00:00',
-      },
-      {
-        id: 'SP002',
-        supplierId: 'SUP002',
-        supplierName: '江苏沙钢集团有限公司',
-        skuId: skuId.value,
-        skuCode: skuData.value.skuCode || '',
-        skuName: skuData.value.skuName || '',
-        supplyPrice: (skuData.value.supplyPrice || 3500) * 0.92,
-        estimatedStock: 300,
-        actualStock: 280,
-        minOrderQty: 5,
-        leadTime: 5,
-        status: 'active',
-        createdAt: '2024-01-02 00:00:00',
-        updatedAt: '2024-01-02 00:00:00',
-      },
-      {
-        id: 'SP003',
-        supplierId: 'SUP003',
-        supplierName: '鞍钢股份有限公司',
-        skuId: skuId.value,
-        skuCode: skuData.value.skuCode || '',
-        skuName: skuData.value.skuName || '',
-        supplyPrice: (skuData.value.supplyPrice || 3500) * 0.88,
-        estimatedStock: 200,
-        actualStock: 180,
-        minOrderQty: 20,
-        leadTime: 7,
-        status: 'inactive',
-        createdAt: '2024-01-03 00:00:00',
-        updatedAt: '2024-01-03 00:00:00',
-      },
-    ]
-  }
-  return []
 }
 
 function handleBack() {
@@ -272,13 +341,6 @@ function handleViewSpu() {
   if (skuData.value.spuId) {
     router.push(`/product/spu/view/${skuData.value.spuId}`)
   }
-}
-
-function handleViewSuppliers() {
-  router.push({
-    path: '/product/supplier-product',
-    query: { skuId: skuId.value, skuName: skuData.value.skuName }
-  })
 }
 
 function getRuleCategoryLabel(category: string) {

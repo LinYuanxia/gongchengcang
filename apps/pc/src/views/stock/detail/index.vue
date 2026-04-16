@@ -54,7 +54,7 @@
       <a-col :span="4">
         <a-card :bordered="false" class="stat-card">
           <a-statistic title="库存价值" :value="stockStats.totalValue" :precision="2" prefix="¥">
-            <template #prefix><icon-money-collect /></template>
+            <template #prefix><icon-safe /></template>
           </a-statistic>
         </a-card>
       </a-col>

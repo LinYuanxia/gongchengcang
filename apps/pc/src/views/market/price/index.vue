@@ -1,5 +1,6 @@
 <template>
   <div class="page-container">
+    <PrdPanel :items="prdItems" />
     <a-row :gutter="16" style="margin-bottom: 16px">
       <a-col :span="6">
         <a-card>
@@ -188,6 +189,73 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Message } from '@arco-design/web-vue'
+import PrdPanel from '@/components/PrdPanel/index.vue'
+
+const prdItems = [
+  {
+    title: '1. 数据看板模块',
+    content: `
+| 看板指标 | 数据来源 | 更新频率 |
+|---------|---------|---------|
+| 价格调整次数 | 调价记录表 | 实时 |
+| 平台标准价商品数 | SPU表 - 平台商品 | 每日统计 |
+| 供应商商品数 | SPU表 - 供应商商品 | 每日统计 |
+| 工程仓商品数 | 工程仓商品配置表 | 每日统计 |
+
+说明：4 个看板卡片采用 25% 等分布局，白色背景。
+    `
+  },
+  {
+    title: '2. Tab 分类模块',
+    content: `
+| Tab 标签 | 数据范围 |
+|---------|---------|
+| 全部变更 | 所有价格变更记录 |
+| 平台标准价调整 | source = platform |
+| 供应商商品调价 | source = supplier |
+| 工程仓售价调整 | source = warehouse |
+
+说明：Tab 切换自动触发对应分类数据刷新。
+    `
+  },
+  {
+    title: '3. 搜索与筛选',
+    content: `
+| 筛选条件 | 组件类型 | 宽度 | 特殊处理 |
+|---------|---------|------|---------|
+| 关键词搜索 | InputSearch | 240px | 匹配商品名称/SKU编码 |
+| 调价幅度 | Select下拉 | 140px | 涨价/降价 2 选 |
+| 变更时间 | RangePicker | 260px | 日期范围精确到天 |
+    `
+  },
+  {
+    title: '4. 表格字段说明',
+    content: `
+| 列名 | 宽度 | 格式化规则 |
+|------|------|---------|
+| 商品名称 | 240px | 悬停显示完整名称 |
+| SKU编码 | 140px | 等宽字体 |
+| 调价类型 | 120px | Tag色彩：平台-blue、供应商-cyan、仓库-green |
+| 原价格 | 100px | right 右对齐、¥前缀 |
+| 新价格 | 100px | right 右对齐、¥前缀 |
+| 调价幅度 | 120px | right、涨价红/降价绿、带%号、带箭头 ↑↓ |
+| 操作人 | 120px | - |
+| 调价时间 | 180px | - |
+    `
+  },
+  {
+    title: '5. 价格体系权限矩阵',
+    content: `
+| 功能点 | 平台定价员 | 供应商 | 仓库经理 | 只读 |
+|--------|---------|--------|--------|------|
+| 设置平台标准价 | ✅ | ❌ | ❌ | ❌ |
+| 供应商商品调价 | ❌ | ✅ | ❌ | ❌ |
+| 工程仓售价调整 | ❌ | ❌ | ✅ | ❌ |
+| 查看价格变更历史 | ✅ | ✅ | ✅ | ✅ |
+| 导出价格报表 | ✅ | ✅ | ✅ | ❌ |
+    `
+  }
+]
 
 const loading = ref(false)
 const activeTab = ref('all')

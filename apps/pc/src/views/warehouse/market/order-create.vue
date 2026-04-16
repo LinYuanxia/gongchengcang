@@ -15,9 +15,12 @@
             <div class="address-header">
               <span class="name">{{ selectedAddress.name }}</span>
               <span class="phone">{{ selectedAddress.phone }}</span>
+              <a-tag v-if="selectedAddress.isWarehouse" color="green" size="small">仓库地址</a-tag>
               <a-tag v-if="selectedAddress.isDefault" color="blue" size="small">默认</a-tag>
             </div>
-            <div class="address-detail">{{ selectedAddress.address }}</div>
+            <div class="address-detail">
+              {{ selectedAddress.warehouseName || '' }} {{ selectedAddress.address }}
+            </div>
           </div>
           <div class="address-empty" v-else>
             <icon-plus />
@@ -108,33 +111,16 @@
               <a-alert 
                 type="info" 
                 style="margin-top: 12px"
-              >
-                <template #message>
-                  <div class="payment-tip">
-                    <span>请在供应商确认订单后，将款项转至以上账户，并在订单中上传转账凭证</span>
-                  </div>
-                </template>
-              </a-alert>
+                content="请在供应商确认订单后，将款项转至以上账户，并在订单中上传转账凭证"
+              />
             </a-card>
           </div>
           
-          <div class="order-process-tip">
-            <a-alert 
-              type="warning" 
-              style="margin-top: 12px"
-            >
-              <template #message>
-                <div class="process-tip">
-                  <span>订单流程：</span>
-                  <span class="process-step">1. 提交订单 → </span>
-                  <span class="process-step">2. 供应商确认 → </span>
-                  <span class="process-step">3. 线下转账 → </span>
-                  <span class="process-step">4. 上传凭证 → </span>
-                  <span class="process-step">5. 供应商发货</span>
-                </div>
-              </template>
-            </a-alert>
-          </div>
+          <a-alert 
+            type="warning" 
+            style="margin-top: 12px"
+            content="订单流程：1. 提交订单 → 2. 供应商确认 → 3. 线下转账 → 4. 上传凭证 → 5. 供应商发货"
+          />
           
           <a-form-item label="订单备注" style="margin-top: 16px">
             <a-textarea
@@ -181,29 +167,65 @@
     </div>
 
     <a-modal v-model:visible="addressModalVisible" title="选择收货地址" :width="600">
-      <div class="address-list">
-        <div 
-          class="address-item"
-          :class="{ active: selectedAddress?.id === addr.id }"
-          v-for="addr in addressList"
-          :key="addr.id"
-          @click="handleConfirmAddress(addr)"
-        >
-          <div class="address-radio">
-            <icon-check v-if="selectedAddress?.id === addr.id" />
-          </div>
-          <div class="address-info">
-            <div class="address-header">
-              <span class="name">{{ addr.name }}</span>
-              <span class="phone">{{ addr.phone }}</span>
-              <a-tag v-if="addr.isDefault" color="blue" size="small">默认</a-tag>
+      <div class="address-group">
+         <div class="group-title">
+           <span class="group-icon">🏭</span>
+           <span>仓库地址</span>
+           <span class="group-desc">（优先选择仓库收货）</span>
+         </div>
+        <div class="address-list">
+          <div 
+            class="address-item"
+            :class="{ active: selectedAddress?.id === addr.id }"
+            v-for="addr in warehouseList"
+            :key="addr.id"
+            @click="handleConfirmAddress(addr)"
+          >
+            <div class="address-radio">
+              <icon-check v-if="selectedAddress?.id === addr.id" />
             </div>
-            <div class="address-text">{{ addr.address }}</div>
+            <div class="address-info">
+              <div class="address-header">
+                <span class="warehouse-name">{{ addr.warehouseName }}</span>
+                <span class="name">{{ addr.name }}</span>
+                <span class="phone">{{ addr.phone }}</span>
+                <a-tag color="green" size="small">仓库</a-tag>
+                <a-tag v-if="addr.isDefault" color="blue" size="small">默认</a-tag>
+              </div>
+              <div class="address-text">{{ addr.address }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="address-group" style="margin-top: 20px;">
+         <div class="group-title">
+           <span class="group-icon">📍</span>
+           <span>自定义地址</span>
+         </div>
+        <div class="address-list">
+          <div 
+            class="address-item"
+            :class="{ active: selectedAddress?.id === addr.id }"
+            v-for="addr in customAddressList"
+            :key="addr.id"
+            @click="handleConfirmAddress(addr)"
+          >
+            <div class="address-radio">
+              <icon-check v-if="selectedAddress?.id === addr.id" />
+            </div>
+            <div class="address-info">
+              <div class="address-header">
+                <span class="name">{{ addr.name }}</span>
+                <span class="phone">{{ addr.phone }}</span>
+              </div>
+              <div class="address-text">{{ addr.address }}</div>
+            </div>
           </div>
         </div>
       </div>
       <template #footer>
-        <a-button type="primary" @click="handleAddAddress">新增地址</a-button>
+        <a-button type="primary" @click="handleAddAddress">新增自定义地址</a-button>
       </template>
     </a-modal>
   </div>
@@ -219,9 +241,19 @@ const router = useRouter()
 const addressModalVisible = ref(false)
 
 const selectedAddress = ref<any>(null)
-const addressList = ref([
-  { id: 'a1', name: '张三', phone: '13800138001', address: '广东省深圳市南山区科技园南区深圳湾科技生态园10栋B座', isDefault: true },
-  { id: 'a2', name: '李四', phone: '13800138002', address: '广东省深圳市福田区CBD中心区平安金融中心', isDefault: false },
+const warehouseList = ref([
+  { id: 'w1', name: '仓管员', phone: '13800138000', address: '广东省深圳市南山区科技园南区', isDefault: true, isWarehouse: true, warehouseName: '深圳湾科技园项目仓' },
+  { id: 'w2', name: '李仓库', phone: '13800138002', address: '广东省深圳市福田区CBD中心区', isDefault: false, isWarehouse: true, warehouseName: '福田CBD项目仓' },
+  { id: 'w3', name: '王主管', phone: '13800138003', address: '广东省深圳市龙华区观澜街道', isDefault: false, isWarehouse: true, warehouseName: '龙华仓储中心' },
+])
+const customAddressList = ref([
+  { id: 'a1', name: '张三', phone: '13800138001', address: '广东省深圳市南山区科技园南区深圳湾科技生态园10栋B座', isDefault: false },
+  { id: 'a2', name: '李四', phone: '13800138002', address: '广东省深圳市罗湖区京基100大厦', isDefault: false },
+])
+
+const addressList = computed(() => [
+  ...warehouseList.value,
+  ...customAddressList.value,
 ])
 
 const orderForm = ref({
@@ -393,6 +425,34 @@ function handleSubmit() {
     border-color: rgb(var(--primary-6));
     background: rgb(var(--primary-1));
   }
+}
+
+.group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-1);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border-2);
+  margin-bottom: 12px;
+  
+  .group-icon {
+    font-size: 18px;
+  }
+  
+  .group-desc {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--color-text-3);
+  }
+}
+
+.warehouse-name {
+  font-weight: 600;
+  color: rgb(var(--primary-6));
+  margin-right: 8px;
 }
 
 .address-content {

@@ -18,6 +18,10 @@
             <template #icon><icon-location /></template>
             物流跟踪
           </a-button>
+          <a-button v-if="order.status !== 'refunded' && order.status !== 'cancelled'" type="primary" status="danger" @click="handleApplyRefund">
+            <template #icon><icon-refund /></template>
+            申请退款
+          </a-button>
         </a-space>
       </template>
     </a-page-header>
@@ -171,6 +175,65 @@
         </template>
       </a-table>
     </a-card>
+
+    <a-alert type="info" class="mt-16">
+      <template #message>
+        <icon-info-circle />
+        <span>【支付与发货解耦】：支付状态不影响发货流程，发货无需等待支付完成，但订单最终完成前需结清全部款项。当前支持分批支付</span>
+      </template>
+    </a-alert>
+
+    <a-card title="付款记录" class="mt-16">
+      <template #extra>
+        <div class="pay-summary">
+          <span>订单金额：<strong>¥{{ order.totalAmount?.toLocaleString() }}</strong></span>
+          <span class="paid">已到账：<strong>¥{{ paidAmount.toLocaleString() }}</strong></span>
+          <span class="unpaid">待结算：<strong>¥{{ unpaidAmount.toLocaleString() }}</strong></span>
+        </div>
+      </template>
+
+      <a-table :data="paymentRecords" :pagination="false">
+        <template #columns>
+          <a-table-column title="付款单号" data-index="paymentNo" :width="160" />
+          <a-table-column title="付款金额" :width="120" align="right">
+            <template #cell="{ record }">
+              <strong>¥{{ record.amount.toLocaleString() }}</strong>
+            </template>
+          </a-table-column>
+          <a-table-column title="付款方式" :width="100">
+            <template #cell="{ record }">
+              <a-tag color="blue">银行转账</a-tag>
+            </template>
+          </a-table-column>
+          <a-table-column title="转账凭证" :width="120">
+            <template #cell="{ record }">
+              <a-link v-if="record.voucher" @click="handleViewVoucher(record)">
+                <icon-file /> 查看凭证
+              </a-link>
+              <span v-else>-</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="到账时间" data-index="payTime" :width="160" />
+          <a-table-column title="备注" data-index="remark" :width="200" />
+          <a-table-column title="状态" :width="100">
+            <template #cell="{ record }">
+              <a-tag color="green">已确认</a-tag>
+            </template>
+          </a-table-column>
+        </template>
+      </a-table>
+    </a-card>
+
+    <a-modal
+      v-model:visible="voucherVisible"
+      title="转账凭证"
+      :width="500"
+      :footer="false"
+    >
+      <div class="voucher-preview">
+        <img src="https://picsum.photos/400/500" style="width: 100%; border-radius: 4px" />
+      </div>
+    </a-modal>
 
     <a-modal
       v-model:visible="reissueModalVisible"
@@ -747,11 +810,62 @@ const order = ref<any>({
   ],
   logs: [
     { time: '2024-01-16 09:00:00', content: '第一次发货完成，发货单号：SH202401160001' },
-    { time: '2024-01-15 16:30:00', content: '订单支付成功' },
+    { time: '2024-01-15 16:30:00', content: '收到第一笔付款' },
     { time: '2024-01-15 11:00:00', content: '已确认接单，预计发货时间：2024-01-16' },
     { time: '2024-01-15 10:30:00', content: '订单创建成功' },
   ],
 })
+
+const receiveBatches = ref([
+  {
+    batchNo: 'B202401160001',
+    shipmentNo: 'SH202401160001',
+    productName: 'C30混凝土',
+    receiveQuantity: 50,
+    warehouseName: '深圳湾科技园仓',
+    receiveTime: '2024-01-16 14:30:00',
+    inspector: '验收员A',
+  },
+])
+
+const paymentRecords = ref([
+  {
+    paymentNo: 'PAY202401150001',
+    amount: 100000,
+    voucher: true,
+    payTime: '2024-01-15 16:30:00',
+    remark: '首付款50%',
+  },
+  {
+    paymentNo: 'PAY202401160002',
+    amount: 50000,
+    voucher: true,
+    payTime: '2024-01-16 10:00:00',
+    remark: '进度款',
+  },
+])
+
+const paidAmount = computed(() => {
+  return paymentRecords.value.reduce((sum, r) => sum + r.amount, 0)
+})
+
+const unpaidAmount = computed(() => {
+  return (order.value.totalAmount || 0) - paidAmount.value
+})
+
+order.value.paymentStatus = computed(() => {
+  if (unpaidAmount.value === 0) return 'paid'
+  if (paidAmount.value > 0) return 'partial'
+  return 'pending'
+}).value
+
+order.value.status = 'confirmed'
+
+const voucherVisible = ref(false)
+
+function handleViewVoucher(record: any) {
+  voucherVisible.value = true
+}
 
 const normalShipments = ref([
   {
@@ -1115,7 +1229,8 @@ const currentShipment = ref<any>({})
 
 function getStatusColor(status: string) {
   const colors: Record<string, string> = {
-    pending: 'gray',
+    to_confirm: 'gold',
+    pending: 'orange',
     paid: 'blue',
     confirmed: 'green',
     shipped: 'cyan',
@@ -1127,7 +1242,8 @@ function getStatusColor(status: string) {
 
 function getStatusText(status: string) {
   const texts: Record<string, string> = {
-    pending: '待支付',
+    to_confirm: '待确认',
+    pending: '待接单',
     paid: '已支付',
     confirmed: '已确认',
     shipped: '已发货',
@@ -1477,5 +1593,28 @@ function handleViewShipment(record: any) {
 
 .text-success {
   color: #00b42a;
+}
+
+.pay-summary {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+
+  span {
+    font-size: 13px;
+
+    &.paid {
+      color: #00b42a;
+    }
+
+    &.unpaid {
+      color: #f53f3f;
+    }
+  }
+}
+
+.voucher-preview {
+  text-align: center;
+  padding: 16px;
 }
 </style>

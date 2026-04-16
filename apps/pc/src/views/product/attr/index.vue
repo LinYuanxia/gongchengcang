@@ -1,5 +1,6 @@
 <template>
   <div class="page-container">
+    <PrdPanel :items="prdItems" />
     <a-card :bordered="false">
       <div class="table-actions">
         <a-space>
@@ -85,6 +86,63 @@ import { AttrType } from '@gongchengcang/types'
 import type { ProductAttr } from '@gongchengcang/types'
 import { getAttrList, deleteAttr } from '@gongchengcang/api'
 import AttrFormDrawer from './components/AttrFormDrawer.vue'
+import PrdPanel from '@/components/PrdPanel/index.vue'
+
+const prdItems = [
+  {
+    title: '1. 属性类型说明',
+    content: `
+| 属性类型 | Tag颜色 | 说明 | 使用场景 |
+|---------|---------|------|---------|
+| 单选 | blue | 单值选择 | 材质、颜色 |
+| 多选 | cyan | 多值选择 | 包装规格、标签 |
+| 输入框 | green | 用户输入 | 品牌、自定义 |
+
+属性 = 规格维度，用于组合生成不同 SKU
+    `
+  },
+  {
+    title: '2. 搜索与筛选',
+    content: `
+| 筛选条件 | 组件类型 | 宽度 | 说明 |
+|---------|---------|------|------|
+| 属性名称 | InputSearch | 240px | 模糊匹配 |
+| 状态 | Select | 120px | 启用/禁用 |
+    `
+  },
+  {
+    title: '3. 可选值渲染规则',
+    content: `
+- 单选/多选类型：Tag 横向排列展示
+- 最多显示 5 个值，超出部分 +N 收起
+- 输入框类型无可选值，显示 - 占位
+    `
+  },
+  {
+    title: '4. 字段级定义',
+    content: `
+| 字段名 | 组件类型 | 必填 | 长度限制 | 验证规则 |
+|--------|---------|------|----------|----------|
+| 属性名称 | Input | ✅ 是 | 最多 32 字符 | 非空 |
+| 属性编码 | Input | ✅ 是 | 最多 32 字符 | 唯一、英文 |
+| 属性类型 | Radio | ✅ 是 | - | 单选/多选/输入框 |
+| 可选值 | TagInput | * 条件 | 最多 100 个 | 单选/多选必填 |
+| 排序 | InputNumber | ❌ 否 | 0-9999 | 数字越大越前 |
+    `
+  },
+  {
+    title: '5. 权限矩阵',
+    content: `
+| 功能点 | 超管 | 商品运营 | 供应商 | 只读 |
+|--------|------|---------|--------|------|
+| 查看属性列表 | ✅ | ✅ | ✅ | ✅ |
+| 新增属性 | ✅ | ✅ | ❌ | ❌ |
+| 编辑属性 | ✅ | ✅ | ❌ | ❌ |
+| 删除属性 | ✅ | ❌ | ❌ | ❌ |
+| 批量导入 | ✅ | ✅ | ❌ | ❌ |
+    `
+  }
+]
 
 const loading = ref(false)
 const tableData = ref<ProductAttr[]>([])

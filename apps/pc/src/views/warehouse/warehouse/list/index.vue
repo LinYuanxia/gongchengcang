@@ -1,42 +1,32 @@
 <template>
   <div class="warehouse-list">
     <a-row :gutter="16" class="stat-row">
-      <a-col :span="4">
+      <a-col :span="5">
         <a-card :bordered="false" class="stat-card">
           <a-statistic title="仓库总数" :value="warehouseStats.totalCount" suffix="个">
             <template #prefix><icon-home /></template>
           </a-statistic>
         </a-card>
       </a-col>
-      <a-col :span="4">
+      <a-col :span="5">
         <a-card :bordered="false" class="stat-card">
           <a-statistic title="商品种类" :value="warehouseStats.productCount" suffix="种">
             <template #prefix><icon-apps /></template>
           </a-statistic>
         </a-card>
       </a-col>
-      <a-col :span="4">
+      <a-col :span="5">
         <a-card :bordered="false" class="stat-card">
           <a-statistic title="库存总量" :value="warehouseStats.totalQuantity" suffix="件">
             <template #prefix><icon-storage /></template>
           </a-statistic>
         </a-card>
       </a-col>
-      <a-col :span="4">
+      <a-col :span="6">
         <a-card :bordered="false" class="stat-card">
-          <a-statistic title="库存总价值" :value="warehouseStats.totalValue" :precision="2" prefix="¥">
-            <template #prefix><icon-money-collect /></template>
+          <a-statistic title="库存总价值" :value="warehouseStats.totalValue" :precision="0" prefix="¥">
+            <template #prefix><icon-safe /></template>
           </a-statistic>
-        </a-card>
-      </a-col>
-      <a-col :span="4">
-        <a-card :bordered="false" class="stat-card warning-card">
-          <a-statistic title="预警商品" :value="warehouseStats.warningCount" suffix="种" />
-        </a-card>
-      </a-col>
-      <a-col :span="4">
-        <a-card :bordered="false" class="stat-card danger-card">
-          <a-statistic title="缺货商品" :value="warehouseStats.outOfStockCount" suffix="种" />
         </a-card>
       </a-col>
     </a-row>
@@ -51,13 +41,9 @@
           <a-input-search
             v-model="searchForm.keyword"
             placeholder="搜索仓库名称/编码"
-            style="width: 200px"
+            style="width: 240px"
             @search="handleSearch"
           />
-          <a-select v-model="searchForm.warehouseType" placeholder="仓库类型" style="width: 120px" allow-clear>
-            <a-option value="main">主仓</a-option>
-            <a-option value="sub">分仓</a-option>
-          </a-select>
           <a-select v-model="searchForm.status" placeholder="状态" style="width: 100px" allow-clear>
             <a-option value="active">启用</a-option>
             <a-option value="inactive">停用</a-option>
@@ -67,19 +53,10 @@
 
       <a-table :data="filteredWarehouses" :pagination="pagination" @page-change="handlePageChange">
         <template #columns>
-          <a-table-column title="仓库信息" :width="220">
+          <a-table-column title="仓库编码" data-index="code" :width="120" />
+          <a-table-column title="仓库名称" :width="160">
             <template #cell="{ record }">
-              <div class="warehouse-cell" @click="handleViewDetail(record)">
-                <div class="warehouse-name">
-                  <icon-home class="icon" />
-                  <span class="code-text">{{ record.code }}</span>
-                </div>
-                <div class="warehouse-meta">
-                  <span class="name-text">{{ record.name }}</span>
-                  <a-tag v-if="record.type === 'main'" color="blue" size="small">主仓</a-tag>
-                  <a-tag v-else color="green" size="small">分仓</a-tag>
-                </div>
-              </div>
+              <a-link @click="handleViewDetail(record)">{{ record.name }}</a-link>
             </template>
           </a-table-column>
           <a-table-column title="负责人" :width="120">
@@ -90,42 +67,14 @@
               </div>
             </template>
           </a-table-column>
-          <a-table-column title="地址" data-index="address" :width="200" :ellipsis="true" />
-          <a-table-column title="覆盖区域" :width="150">
-            <template #cell="{ record }">
-              <div class="area-tags">
-                <a-tag v-for="area in record.coverageAreas?.slice(0, 2)" :key="area" size="small">
-                  {{ area }}
-                </a-tag>
-                <span v-if="!record.coverageAreas?.length">-</span>
-              </div>
-            </template>
-          </a-table-column>
-          <a-table-column title="仓库标签" :width="150">
+          <a-table-column title="仓库地址" data-index="address" :width="220" :ellipsis="true" />
+          <a-table-column title="仓库标签" :width="180">
             <template #cell="{ record }">
               <div class="warehouse-tags">
-                <a-tag v-for="tag in record.tags?.slice(0, 2)" :key="tag" color="arcoblue" size="small">
+                <a-tag v-for="tag in record.tags?.slice(0, 3)" :key="tag" color="arcoblue" size="small">
                   {{ tag }}
                 </a-tag>
                 <span v-if="!record.tags?.length">-</span>
-              </div>
-            </template>
-          </a-table-column>
-          <a-table-column title="库存容量" :width="140">
-            <template #cell="{ record }">
-              <div class="capacity-info">
-                <div class="capacity-bar">
-                  <div 
-                    class="capacity-used" 
-                    :style="{ 
-                      width: `${(record.usedCapacity / record.totalCapacity) * 100}%`,
-                      background: getCapacityColor(record.usedCapacity / record.totalCapacity)
-                    }"
-                  ></div>
-                </div>
-                <div class="capacity-text">
-                  {{ record.usedCapacity }} / {{ record.totalCapacity }} m²
-                </div>
               </div>
             </template>
           </a-table-column>
@@ -142,24 +91,6 @@
           <a-table-column title="库存价值" :width="120" align="right">
             <template #cell="{ record }">
               <span class="price">¥{{ record.totalValue.toFixed(2) }}</span>
-            </template>
-          </a-table-column>
-          <a-table-column title="预警/缺货" :width="100" align="center">
-            <template #cell="{ record }">
-              <a-space :size="4">
-                <a-tooltip content="预警商品">
-                  <a-tag v-if="record.warningCount > 0" color="orange" size="small">
-                    {{ record.warningCount }}
-                  </a-tag>
-                  <span v-else class="zero">0</span>
-                </a-tooltip>
-                <a-tooltip content="缺货商品">
-                  <a-tag v-if="record.outOfStockCount > 0" color="red" size="small">
-                    {{ record.outOfStockCount }}
-                  </a-tag>
-                  <span v-else class="zero">0</span>
-                </a-tooltip>
-              </a-space>
             </template>
           </a-table-column>
           <a-table-column title="状态" :width="80" align="center">
@@ -196,21 +127,6 @@
               </a-form-item>
             </a-col>
           </a-row>
-          <a-row :gutter="16">
-            <a-col :span="12">
-              <a-form-item label="仓库类型" required>
-                <a-select v-model="form.type" placeholder="请选择仓库类型">
-                  <a-option value="main">主仓</a-option>
-                  <a-option value="sub">分仓</a-option>
-                </a-select>
-              </a-form-item>
-            </a-col>
-            <a-col :span="12">
-              <a-form-item label="库存容量(m²)" required>
-                <a-input-number v-model="form.totalCapacity" :min="1" style="width: 100%" />
-              </a-form-item>
-            </a-col>
-          </a-row>
           <a-form-item label="仓库地址" required>
             <a-cascader
               v-model="form.addressArea"
@@ -221,48 +137,34 @@
             />
             <a-input v-model="form.addressDetail" placeholder="请输入详细地址" style="margin-top: 8px" />
           </a-form-item>
-          <a-form-item label="覆盖区域范围">
-            <a-select 
-              v-model="form.coverageAreas" 
-              placeholder="请选择覆盖区域" 
-              multiple 
-              allow-create
-            >
-              <a-option value="南山区">南山区</a-option>
-              <a-option value="福田区">福田区</a-option>
-              <a-option value="宝安区">宝安区</a-option>
-              <a-option value="龙岗区">龙岗区</a-option>
-              <a-option value="罗湖区">罗湖区</a-option>
-              <a-option value="龙华区">龙华区</a-option>
-              <a-option value="光明区">光明区</a-option>
-              <a-option value="坪山区">坪山区</a-option>
-            </a-select>
-          </a-form-item>
           <a-form-item label="仓库标签">
-            <a-select 
-              v-model="form.tags" 
-              placeholder="请选择或输入标签" 
-              multiple 
-              allow-create
-            >
-              <a-option value="重点项目">重点项目</a-option>
-              <a-option value="紧急配送">紧急配送</a-option>
-              <a-option value="大型仓库">大型仓库</a-option>
-              <a-option value="冷链仓库">冷链仓库</a-option>
-              <a-option value="临时仓库">临时仓库</a-option>
-            </a-select>
+            <a-input-tag v-model="form.tags" placeholder="输入标签后按回车" />
+            <div class="form-tip fs-12 mt-4 text-secondary">直接输入标签文字按回车即可添加，支持完全自定义</div>
           </a-form-item>
-          <a-form-item label="负责人" required>
-            <a-select 
-              v-model="form.managerId" 
-              placeholder="请选择负责人"
-              @change="handleManagerChange"
-            >
-              <a-option v-for="item in accountList" :key="item.id" :value="item.id">
-                {{ item.name }} ({{ item.phone }})
-              </a-option>
-            </a-select>
-          </a-form-item>
+          <a-row :gutter="16">
+            <a-col :span="18">
+              <a-form-item label="仓库负责人" required>
+                <a-select 
+                  v-model="form.managerId" 
+                  placeholder="请选择负责人"
+                  @change="handleManagerChange"
+                  allow-search
+                >
+                  <a-option v-for="item in employeeList" :key="item.id" :value="item.id">
+                    {{ item.name }} ({{ item.phone }})
+                  </a-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+            <a-col :span="6">
+              <a-form-item label="&nbsp;">
+                <a-button @click="openAddEmployee" style="width: 100%">
+                  <template #icon><icon-plus /></template>
+                  新增员工
+                </a-button>
+              </a-form-item>
+            </a-col>
+          </a-row>
           <a-form-item label="联系电话">
             <a-input v-model="form.phone" placeholder="自动带出负责人电话" />
           </a-form-item>
@@ -271,6 +173,20 @@
               <a-radio value="active">启用</a-radio>
               <a-radio value="inactive">停用</a-radio>
             </a-radio-group>
+          </a-form-item>
+        </a-form>
+      </a-modal>
+      
+      <a-modal v-model:visible="employeeModalVisible" title="新增员工" :width="460" @ok="handleAddEmployee">
+        <a-form :model="employeeForm" layout="vertical">
+          <a-form-item label="员工姓名" required>
+            <a-input v-model="employeeForm.name" placeholder="请输入员工姓名" />
+          </a-form-item>
+          <a-form-item label="联系电话" required>
+            <a-input v-model="employeeForm.phone" placeholder="请输入联系电话" maxlength="11" />
+          </a-form-item>
+          <a-form-item label="员工职位">
+            <a-input v-model="employeeForm.position" placeholder="请输入职位，如：仓管、主管" />
           </a-form-item>
         </a-form>
       </a-modal>
@@ -287,28 +203,28 @@ interface WarehouseItem {
   id: string
   name: string
   code: string
-  type: 'main' | 'sub'
   managerName: string
   managerId: string
   phone: string
   address: string
-  coverageAreas: string[]
   tags: string[]
-  usedCapacity: number
-  totalCapacity: number
   productCount: number
   totalQuantity: number
   totalValue: number
-  warningCount: number
-  outOfStockCount: number
   status: 'active' | 'inactive'
+}
+
+interface Employee {
+  id: string
+  name: string
+  phone: string
+  position: string
 }
 
 const router = useRouter()
 
 const searchForm = reactive({
   keyword: '',
-  warehouseType: undefined as string | undefined,
   status: undefined as string | undefined,
 })
 
@@ -325,24 +241,27 @@ const editId = ref('')
 const form = reactive({
   code: '',
   name: '',
-  type: 'main' as 'main' | 'sub',
-  totalCapacity: 1000,
   address: '',
   addressArea: [] as string[],
   addressDetail: '',
-  coverageAreas: [] as string[],
   tags: [] as string[],
   managerId: '',
   phone: '',
   status: 'active' as 'active' | 'inactive',
 })
 
-const accountList = ref([
-  { id: 'acc1', name: '张三', phone: '13800138001' },
-  { id: 'acc2', name: '李四', phone: '13800138002' },
-  { id: 'acc3', name: '王五', phone: '13800138003' },
-  { id: 'acc4', name: '赵六', phone: '13800138004' },
-  { id: 'acc5', name: '钱七', phone: '13800138005' },
+const employeeModalVisible = ref(false)
+const employeeForm = reactive({
+  name: '',
+  phone: '',
+  position: '',
+})
+
+const employeeList = ref<Employee[]>([
+  { id: 'emp1', name: '张三', phone: '13800138001', position: '仓库主管' },
+  { id: 'emp2', name: '李四', phone: '13800138002', position: '仓管员' },
+  { id: 'emp3', name: '王五', phone: '13800138003', position: '仓管员' },
+  { id: 'emp4', name: '赵六', phone: '13800138004', position: '收货员' },
 ])
 
 const addressOptions = ref([
@@ -397,100 +316,70 @@ const warehouses = ref<WarehouseItem[]>([
     id: 'wh001',
     name: '深圳湾科技园项目仓',
     code: 'WH001',
-    type: 'main',
-    managerId: 'acc1',
+    managerId: 'emp1',
     managerName: '张三',
     phone: '13800138001',
     address: '广东省深圳市南山区科技园南区',
-    coverageAreas: ['南山区', '福田区'],
     tags: ['重点项目', '大型仓库'],
-    usedCapacity: 1200,
-    totalCapacity: 2000,
     productCount: 156,
     totalQuantity: 4580,
     totalValue: 328500.00,
-    warningCount: 5,
-    outOfStockCount: 1,
     status: 'active',
   },
   {
     id: 'wh002',
     name: '福田CBD项目仓',
     code: 'WH002',
-    type: 'main',
-    managerId: 'acc2',
+    managerId: 'emp2',
     managerName: '李四',
     phone: '13800138002',
     address: '广东省深圳市福田区CBD中心区',
-    coverageAreas: ['福田区', '罗湖区'],
     tags: ['重点项目'],
-    usedCapacity: 800,
-    totalCapacity: 1000,
     productCount: 89,
     totalQuantity: 3260,
     totalValue: 245600.00,
-    warningCount: 3,
-    outOfStockCount: 1,
     status: 'active',
   },
   {
     id: 'wh003',
     name: '宝安新安项目仓',
     code: 'WH003',
-    type: 'main',
-    managerId: 'acc3',
+    managerId: 'emp3',
     managerName: '王五',
     phone: '13800138003',
     address: '广东省深圳市宝安区新安街道',
-    coverageAreas: ['宝安区', '光明区'],
     tags: ['大型仓库'],
-    usedCapacity: 450,
-    totalCapacity: 800,
     productCount: 120,
     totalQuantity: 4120,
     totalValue: 198350.00,
-    warningCount: 4,
-    outOfStockCount: 1,
     status: 'active',
   },
   {
     id: 'wh004',
     name: '龙岗中心城项目仓',
     code: 'WH004',
-    type: 'sub',
-    managerId: 'acc4',
+    managerId: 'emp4',
     managerName: '赵六',
     phone: '13800138004',
     address: '广东省深圳市龙岗区中心城',
-    coverageAreas: ['龙岗区', '坪山区'],
-    tags: [],
-    usedCapacity: 300,
-    totalCapacity: 500,
+    tags: ['临时周转'],
     productCount: 75,
     totalQuantity: 2100,
     totalValue: 75000.00,
-    warningCount: 0,
-    outOfStockCount: 0,
     status: 'active',
   },
   {
     id: 'wh005',
     name: '南山科技园项目仓',
     code: 'WH005',
-    type: 'sub',
-    managerId: 'acc5',
-    managerName: '钱七',
-    phone: '13800138005',
+    managerId: 'emp1',
+    managerName: '张三',
+    phone: '13800138001',
     address: '广东省深圳市南山区科技园北区',
-    coverageAreas: ['南山区'],
     tags: ['临时仓库'],
-    usedCapacity: 0,
-    totalCapacity: 600,
     productCount: 62,
     totalQuantity: 1620,
     totalValue: 45000.00,
-    warningCount: 0,
-    outOfStockCount: 0,
     status: 'inactive',
   },
 ])
@@ -500,16 +389,12 @@ const warehouseStats = computed(() => {
   const productCount = warehouses.value.reduce((sum, w) => sum + w.productCount, 0)
   const totalQuantity = warehouses.value.reduce((sum, w) => sum + w.totalQuantity, 0)
   const totalValue = warehouses.value.reduce((sum, w) => sum + w.totalValue, 0)
-  const warningCount = warehouses.value.reduce((sum, w) => sum + w.warningCount, 0)
-  const outOfStockCount = warehouses.value.reduce((sum, w) => sum + w.outOfStockCount, 0)
   
   return {
     totalCount,
     productCount,
     totalQuantity,
     totalValue,
-    warningCount,
-    outOfStockCount,
   }
 })
 
@@ -524,10 +409,6 @@ const filteredWarehouses = computed(() => {
     )
   }
 
-  if (searchForm.warehouseType) {
-    result = result.filter(w => w.type === searchForm.warehouseType)
-  }
-
   if (searchForm.status) {
     result = result.filter(w => w.status === searchForm.status)
   }
@@ -535,12 +416,6 @@ const filteredWarehouses = computed(() => {
   pagination.total = result.length
   return result
 })
-
-function getCapacityColor(ratio: number) {
-  if (ratio >= 0.9) return '#F53F3F'
-  if (ratio >= 0.7) return '#FF7D00'
-  return '#165DFF'
-}
 
 function handleSearch() {
   pagination.current = 1
@@ -556,12 +431,9 @@ function handleAdd() {
   Object.assign(form, {
     code: '',
     name: '',
-    type: 'main',
-    totalCapacity: 1000,
     address: '',
     addressArea: [],
     addressDetail: '',
-    coverageAreas: [],
     tags: [],
     managerId: '',
     phone: '',
@@ -576,18 +448,44 @@ function handleEdit(record: WarehouseItem) {
   Object.assign(form, {
     code: record.code,
     name: record.name,
-    type: record.type,
-    totalCapacity: record.totalCapacity,
     address: record.address,
     addressArea: [],
     addressDetail: record.address,
-    coverageAreas: record.coverageAreas || [],
     tags: record.tags || [],
     managerId: record.managerId,
     phone: record.phone,
     status: record.status,
   })
   modalVisible.value = true
+}
+
+function openAddEmployee() {
+  employeeForm.name = ''
+  employeeForm.phone = ''
+  employeeForm.position = ''
+  employeeModalVisible.value = true
+}
+
+function handleAddEmployee() {
+  if (!employeeForm.name) {
+    Message.warning('请输入员工姓名')
+    return
+  }
+  if (!employeeForm.phone) {
+    Message.warning('请输入联系电话')
+    return
+  }
+  const newEmployee: Employee = {
+    id: `emp${Date.now()}`,
+    name: employeeForm.name,
+    phone: employeeForm.phone,
+    position: employeeForm.position || '仓管员',
+  }
+  employeeList.value.push(newEmployee)
+  form.managerId = newEmployee.id
+  form.phone = newEmployee.phone
+  employeeModalVisible.value = false
+  Message.success('员工添加成功，已自动选为负责人')
 }
 
 function handleAddressChange(value: string[]) {
@@ -635,7 +533,7 @@ function handleSubmit() {
   
   form.address = selectedAreas + form.addressDetail
 
-  const manager = accountList.value.find(u => u.id === form.managerId)
+  const manager = employeeList.value.find(u => u.id === form.managerId)
 
   if (isEdit.value) {
     const index = warehouses.value.findIndex(w => w.id === editId.value)
@@ -654,12 +552,9 @@ function handleSubmit() {
       ...form,
       managerName: manager?.name || '',
       phone: form.phone || manager?.phone || '',
-      usedCapacity: 0,
       productCount: 0,
       totalQuantity: 0,
       totalValue: 0,
-      warningCount: 0,
-      outOfStockCount: 0,
     }
     warehouses.value.push(newWarehouse)
     Message.success('仓库创建成功')
@@ -668,15 +563,15 @@ function handleSubmit() {
 }
 
 function handleManagerChange(managerId: string) {
-  const account = accountList.value.find(a => a.id === managerId)
-  if (account) {
-    form.phone = account.phone
+  const employee = employeeList.value.find(a => a.id === managerId)
+  if (employee) {
+    form.phone = employee.phone
   }
 }
 
 function handleViewDetail(record: WarehouseItem) {
   router.push({
-    path: '/warehouse/warehouse/detail',
+    path: `/warehouse/warehouse-detail/${record.id}`,
     query: { id: record.id }
   })
 }
@@ -709,6 +604,18 @@ function handleDelete(record: WarehouseItem) {
     :deep(.arco-statistic-value) {
       font-size: 22px;
       font-weight: 600;
+    }
+
+    .trend {
+      font-size: 12px;
+      margin-left: 4px;
+
+      &.down {
+        color: var(--color-success-6);
+      }
+      &.up {
+        color: var(--color-danger-6);
+      }
     }
   }
   

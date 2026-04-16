@@ -159,16 +159,12 @@
 
       <a-divider>资金流向说明</a-divider>
 
-      <a-alert type="info">
-        <template #message>
-          <div class="alert-desc">
-            <p><strong>应收服务费</strong>为平台向商户收取的交易佣金，按照订单交易金额的一定比例计算。</p>
-            <p style="margin: 4px 0 0 0;">• 当订单创建后，系统自动生成<strong>应收服务费记录</strong>（债权凭证）</p>
-            <p style="margin: 4px 0 0 0;">• 当订单完成后，执行实际分账，生成<strong>分账记录</strong>（资金清算凭证）</p>
-            <p style="margin: 4px 0 0 0;">• 商户完成结算后，应收状态变更为「已收」</p>
-          </div>
-        </template>
-      </a-alert>
+      <div class="fund-flow-desc">
+        <p><strong>应收服务费</strong>为平台向商户收取的交易佣金，按照订单交易金额的一定比例计算。</p>
+        <p>• 当订单创建后，系统自动生成<strong>应收服务费记录</strong>（债权凭证）</p>
+        <p>• 当订单完成后，执行实际分账，生成<strong>分账记录</strong>（资金清算凭证）</p>
+        <p>• 商户完成结算后，应收状态变更为「已收」</p>
+      </div>
     </a-modal>
   </div>
 </template>
@@ -176,6 +172,29 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import { Message } from '@arco-design/web-vue'
+import PrdPanel from '@/components/PrdPanel/index.vue'
+
+const prdItems = [
+  {
+    title: '1. 项目背景',
+    content: `
+**业务痛点：**
+- 平台服务费应收无统一台账，与分账记录、结算记录割裂
+- 资金流向不透明，商户对账困难
+- 逾期应收无预警，坏账风险高
+
+**解决目标：**
+- 建立应收服务费全生命周期台账
+- 清晰展示资金流向：订单 → 应收 → 分账 → 结算
+- 自动逾期监控，降低坏账风险
+
+**模块定位：**
+- 平台服务费债权的记账凭证
+- 连接订单与财务结算的枢纽
+- 商户收入对账的核心依据
+    `
+  }
+]
 
 interface ReceivableRecord {
   id: string
@@ -428,6 +447,22 @@ function handleExport() {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+}
+
+.fund-flow-desc {
+  background: #e6f7ff;
+  border: 1px solid #91d5ff;
+  border-radius: 4px;
+  padding: 12px 16px;
+  line-height: 1.8;
+  
+  p {
+    margin: 4px 0 0 0;
+    
+    &:first-child {
+      margin-top: 0;
+    }
+  }
 }
 
 .highlight {
