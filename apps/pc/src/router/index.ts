@@ -31,7 +31,7 @@ const routes: RouteRecordRaw[] = [
         path: 'prd',
         name: 'Prd',
         component: () => import('@/views/warehouse/prd/index.vue'),
-        meta: { title: '产品需求文档', icon: 'icon-list', hideInMenu: true },
+        meta: { title: '产品需求文档', icon: 'icon-list', requiresAuth: false },
       },
       {
         path: 'merchant',
