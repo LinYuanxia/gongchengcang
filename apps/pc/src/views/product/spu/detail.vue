@@ -384,7 +384,7 @@
     </a-modal>
 
     <a-modal v-model:visible="editSpecModalVisible" title="编辑SKU规格" :width="700" @ok="handleEditSpecConfirm" @cancel="editSpecModalVisible = false">
-      <a-form layout="vertical">
+      <a-form :model="{}" layout="vertical">
         <a-form-item label="规格属性">
           <template #extra>
             <a-button type="text" size="small" @click="handleAddEditSpec">

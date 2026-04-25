@@ -10,6 +10,7 @@ dist/
 .vscode/*
 !.vscode/extensions.json
 .idea/
+.qoder/
 
 # Logs
 logs/
@@ -27,6 +28,14 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+
+# Generated screenshots / temp assets
+*.png
+!apps/**/images/**/*.png
+!apps/**/static/**/*.png
+
+# Generated scripts output
+scripts/产品功能清单/
 
 # Test coverage
 coverage/

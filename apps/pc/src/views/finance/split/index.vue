@@ -1,6 +1,5 @@
 <template>
   <div class="split-list page-container">
-    <PrdPanel :items="prdItems" />
     <a-card>
       <template #extra>
         <a-space>
@@ -175,7 +174,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Message } from '@arco-design/web-vue'
-import PrdPanel from '@/components/PrdPanel/index.vue'
 
 const prdItems = [
   {

@@ -1,6 +1,5 @@
 <template>
   <div class="page-container">
-    <PrdPanel :items="prdItems" />
     <a-card :bordered="false">
       <template #title>
         <span>平台商品市场</span>
@@ -201,24 +200,6 @@
               <a-tag v-else color="gray">全部可见</a-tag>
             </template>
           </a-table-column>
-          <a-table-column title="热门" :width="70">
-            <template #cell="{ record }">
-              <a-switch
-                v-model="record.isHot"
-                :disabled="record.marketStatus !== 'online'"
-                @change="(val: boolean) => handleHotChange(record, val)"
-              />
-            </template>
-          </a-table-column>
-          <a-table-column title="推荐" :width="70">
-            <template #cell="{ record }">
-              <a-switch
-                v-model="record.isRecommend"
-                :disabled="record.marketStatus !== 'online'"
-                @change="(val: boolean) => handleRecommendChange(record, val)"
-              />
-            </template>
-          </a-table-column>
           <a-table-column title="排序" :width="80">
             <template #cell="{ record }">
               <a-input-number
@@ -230,7 +211,7 @@
               />
             </template>
           </a-table-column>
-          <a-table-column title="操作" :width="220" fixed="right">
+          <a-table-column title="操作" :width="180" fixed="right">
             <template #cell="{ record }">
               <a-space>
                 <a-button type="text" size="small" @click="handleViewDetail(record)">详情</a-button>
@@ -238,7 +219,6 @@
                 <template v-if="record.marketStatus === 'pending'">
                   <a-button type="text" size="small" @click="handleSetPrice(record)">调价</a-button>
                   <a-button type="text" size="small" @click="handleOnline(record)">上架</a-button>
-                  <a-button type="text" size="small" status="danger" @click="handleRemove(record)">移除</a-button>
                 </template>
                 <template v-else-if="record.marketStatus === 'online'">
                   <a-button type="text" size="small" @click="handleSetPrice(record)">调价</a-button>
@@ -364,18 +344,6 @@
           <a-descriptions-item label="供应商数量">{{ onlineProduct?.suppliers?.length || 1 }} 家</a-descriptions-item>
           <a-descriptions-item label="最低供货价">¥{{ getMinSupplyPrice(onlineProduct) }}</a-descriptions-item>
         </a-descriptions>
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-form-item label="设为热门商品">
-              <a-switch v-model="onlineForm.isHot" />
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item label="设为推荐商品">
-              <a-switch v-model="onlineForm.isRecommend" />
-            </a-form-item>
-          </a-col>
-        </a-row>
         <a-form-item label="商品标签">
           <a-select v-model="onlineForm.tags" placeholder="选择或输入标签" multiple allow-create>
             <a-option value="爆款">爆款</a-option>
@@ -578,16 +546,6 @@
             </a-tag>
           </a-descriptions-item>
           <a-descriptions-item label="上架时间">{{ detailProduct.onlineAt || '-' }}</a-descriptions-item>
-          <a-descriptions-item label="热门商品">
-            <a-tag :color="detailProduct.isHot ? 'red' : 'gray'">
-              {{ detailProduct.isHot ? '是' : '否' }}
-            </a-tag>
-          </a-descriptions-item>
-          <a-descriptions-item label="推荐商品">
-            <a-tag :color="detailProduct.isRecommend ? 'green' : 'gray'">
-              {{ detailProduct.isRecommend ? '是' : '否' }}
-            </a-tag>
-          </a-descriptions-item>
           <a-descriptions-item label="商品标签" :span="2">
             <a-tag v-for="tag in detailProduct.tags" :key="tag" color="arcoblue">{{ tag }}</a-tag>
             <span v-if="!detailProduct.tags?.length">无</span>
@@ -642,7 +600,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Message } from '@arco-design/web-vue'
-import PrdPanel from '@/components/PrdPanel/index.vue'
 
 const prdItems = [
   {
@@ -926,8 +883,6 @@ interface MarketProduct {
   autoToMarket?: boolean
   marketPrice?: number
   priceStatus?: 'pending' | 'approved' | 'rejected'
-  isHot: boolean
-  isRecommend: boolean
   tags: string[]
   sortWeight: number
   onlineAt?: string
@@ -1083,8 +1038,6 @@ const importPagination = reactive({
 const onlineVisible = ref(false)
 const onlineProduct = ref<MarketProduct | null>(null)
 const onlineForm = reactive({
-  isHot: false,
-  isRecommend: false,
   tags: [] as string[],
   sortWeight: 0,
 })
@@ -1460,8 +1413,6 @@ function handleConfirmImport() {
 
 function handleOnline(record: MarketProduct) {
   onlineProduct.value = record
-  onlineForm.isHot = record.isHot
-  onlineForm.isRecommend = record.isRecommend
   onlineForm.tags = [...record.tags]
   onlineForm.sortWeight = record.sortWeight
   onlineVisible.value = true
@@ -1474,8 +1425,6 @@ function handleOnlineConfirm() {
       mockProducts.value[index] = {
         ...mockProducts.value[index],
         marketStatus: 'online',
-        isHot: onlineForm.isHot,
-        isRecommend: onlineForm.isRecommend,
         tags: onlineForm.tags,
         sortWeight: onlineForm.sortWeight,
         onlineAt: new Date().toLocaleString(),
@@ -1484,14 +1433,6 @@ function handleOnlineConfirm() {
     Message.success('上架成功')
   }
   onlineVisible.value = false
-}
-
-function handleRemove(record: MarketProduct) {
-  const index = mockProducts.value.findIndex(p => p.id === record.id)
-  if (index > -1) {
-    mockProducts.value.splice(index, 1)
-    Message.success('已移除')
-  }
 }
 
 function handleSetPrice(record: MarketProduct) {
@@ -1691,14 +1632,6 @@ function handleMarketStatusChange(record: MarketProduct, val: boolean) {
     }
     Message.success('下架成功')
   }
-}
-
-function handleHotChange(record: MarketProduct, val: boolean) {
-  Message.success(`${val ? '已设为热门' : '已取消热门'}`)
-}
-
-function handleRecommendChange(record: MarketProduct, val: boolean) {
-  Message.success(`${val ? '已设为推荐' : '已取消推荐'}`)
 }
 
 function handleSortChange(record: MarketProduct) {

@@ -1,6 +1,5 @@
 <template>
   <div class="invoice-output page-container">
-    <PrdPanel :items="prdItems" />
     <a-card>
       <template #extra>
         <a-space>
@@ -309,7 +308,6 @@
 import { ref, reactive, computed } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
 import { IconPlus, IconDelete, IconInfoCircle } from '@arco-design/web-vue/es/icon'
-import PrdPanel from '@/components/PrdPanel/index.vue'
 
 const prdItems = [
   {

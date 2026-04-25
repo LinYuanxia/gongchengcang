@@ -1,6 +1,5 @@
 <template>
   <div class="product-detail">
-    <PrdPanel :items="prdModules" />
     <a-page-header title="SPU详情" @back="router.back()">
       <template #extra>
         <a-space>
@@ -192,7 +191,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import PrdPanel from '@/components/PrdPanel/index.vue'
 
 const router = useRouter()
 const route = useRoute()

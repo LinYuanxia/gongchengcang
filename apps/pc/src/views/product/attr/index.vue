@@ -1,6 +1,5 @@
 <template>
   <div class="page-container">
-    <PrdPanel :items="prdItems" />
     <a-card :bordered="false">
       <div class="table-actions">
         <a-space>
@@ -86,7 +85,6 @@ import { AttrType } from '@gongchengcang/types'
 import type { ProductAttr } from '@gongchengcang/types'
 import { getAttrList, deleteAttr } from '@gongchengcang/api'
 import AttrFormDrawer from './components/AttrFormDrawer.vue'
-import PrdPanel from '@/components/PrdPanel/index.vue'
 
 const prdItems = [
   {

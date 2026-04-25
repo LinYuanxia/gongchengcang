@@ -279,12 +279,12 @@
           </a-table>
         </a-form-item>
 
-        <a-divider>物流信息</a-divider>
+        <a-divider>物流信息（选填）</a-divider>
 
         <a-row :gutter="16">
           <a-col :span="12">
-            <a-form-item label="物流公司" required>
-              <a-select v-model="reissueForm.logisticsCompany" placeholder="请选择物流公司" style="width: 100%">
+            <a-form-item label="物流公司">
+              <a-select v-model="reissueForm.logisticsCompany" placeholder="请选择物流公司（选填）" style="width: 100%" allow-clear>
                 <a-option value="顺丰速运">顺丰速运</a-option>
                 <a-option value="京东物流">京东物流</a-option>
                 <a-option value="中通快递">中通快递</a-option>
@@ -294,8 +294,8 @@
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item label="物流单号" required>
-              <a-input v-model="reissueForm.logisticsNo" placeholder="请输入物流单号" />
+            <a-form-item label="物流单号">
+              <a-input v-model="reissueForm.logisticsNo" placeholder="请输入物流单号（选填）" />
             </a-form-item>
           </a-col>
         </a-row>
@@ -518,10 +518,10 @@
           </a-table>
         </a-form-item>
 
-        <a-divider>物流信息</a-divider>
+        <a-divider>物流信息（选填）</a-divider>
 
-        <a-form-item label="物流公司" required>
-          <a-select v-model="shipForm.logisticsCompany" placeholder="请选择物流公司" style="width: 300px">
+        <a-form-item label="物流公司">
+          <a-select v-model="shipForm.logisticsCompany" placeholder="请选择物流公司（选填）" style="width: 300px" allow-clear>
             <a-option value="顺丰速运">顺丰速运</a-option>
             <a-option value="中通快递">中通快递</a-option>
             <a-option value="圆通速递">圆通速递</a-option>
@@ -532,8 +532,8 @@
           </a-select>
         </a-form-item>
 
-        <a-form-item label="物流单号" required>
-          <a-input v-model="shipForm.logisticsNo" placeholder="请输入物流单号" style="width: 300px" />
+        <a-form-item label="物流单号">
+          <a-input v-model="shipForm.logisticsNo" placeholder="请输入物流单号（选填）" style="width: 300px" />
           <a-button type="text" @click="handleAddLogistics" style="margin-left: 8px">
             <template #icon><icon-plus /></template>
             添加物流单号

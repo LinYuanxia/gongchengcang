@@ -1,6 +1,5 @@
 <template>
   <div class="page-container">
-    <PrdPanel :items="prdItems" />
     <a-card :bordered="false">
       <template #title>
         <span>供应商供货管理</span>
@@ -830,7 +829,6 @@
 <script setup lang="ts">
 import { ref, computed, reactive } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
-import PrdPanel from '@/components/PrdPanel/index.vue'
 
 const prdItems = [
   {

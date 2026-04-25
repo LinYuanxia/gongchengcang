@@ -1,6 +1,5 @@
 <template>
   <div class="page-container">
-    <PrdPanel :items="prdItems" />
     <a-card :bordered="false">
       <a-tabs v-model:active-tab="activeTab" class="order-tabs">
         <a-tab-pane key="all" :title="`全部 (${orderStats.total})`" />
@@ -94,7 +93,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import PrdPanel from '@/components/PrdPanel/index.vue'
 
 const prdItems = [
   {

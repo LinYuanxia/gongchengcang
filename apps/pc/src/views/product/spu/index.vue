@@ -1,6 +1,5 @@
 <template>
   <div class="page-container">
-    <PrdPanel :items="prdItems" />
     <a-card :bordered="false">
       <div class="table-actions">
         <a-space>
@@ -71,7 +70,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { Message, Modal } from '@arco-design/web-vue'
 import type { Spu, ProductCategory } from '@gongchengcang/types'
 import { getSpuList, deleteSpu, getCategoryTree } from '@gongchengcang/api'
-import PrdPanel from '@/components/PrdPanel/index.vue'
 
 const prdItems = [
   {

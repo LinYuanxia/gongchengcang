@@ -28,6 +28,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '小程序预览', hideInMenu: true },
       },
       {
+        path: 'prd',
+        name: 'Prd',
+        component: () => import('@/views/warehouse/prd/index.vue'),
+        meta: { title: '产品需求文档', icon: 'icon-list', hideInMenu: true },
+      },
+      {
         path: 'merchant',
         name: 'Merchant',
         redirect: '/merchant/list',
@@ -550,7 +556,7 @@ const routes: RouteRecordRaw[] = [
             path: 'contract',
             name: 'WarehouseContract',
             component: () => import('@/views/warehouse/contract/index.vue'),
-            meta: { title: '合同列表' },
+            meta: { title: '合同列表', hideInMenu: true },
           },
         ],
       },

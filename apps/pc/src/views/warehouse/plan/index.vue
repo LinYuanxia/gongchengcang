@@ -1,6 +1,5 @@
 <template>
   <div class="page-container">
-    <PrdPanel :items="prdModules" />
     <a-card :bordered="false">
       <template #title>
         <span>采购计划</span>
@@ -15,10 +14,6 @@
             <a-option value="WH002-S02">黄埔分仓</a-option>
             <a-option value="WH003-S01">南城中心仓</a-option>
           </a-select>
-          <a-button type="primary" @click="handleCreatePlan">
-            <template #icon><icon-plus /></template>
-            新建采购计划
-          </a-button>
           <a-radio-group v-model="viewMode" type="button">
             <a-radio value="all">全部</a-radio>
             <a-radio value="pending">待处理</a-radio>
@@ -71,10 +66,9 @@
               </a-tag>
             </template>
           </a-table-column>
-          <a-table-column title="操作" :width="200" fixed="right">
+          <a-table-column title="操作" :width="150" fixed="right">
             <template #cell="{ record }">
               <a-space>
-                <a-button type="text" size="small" @click="handleView(record)">查看</a-button>
                 <a-button 
                   v-if="record.status === 'pending'" 
                   type="text" 
@@ -85,12 +79,12 @@
                   确认下单
                 </a-button>
                 <a-button 
-                  v-if="record.status === 'confirmed' || record.status === 'ordered'" 
+                  v-if="record.status === 'confirmed'" 
                   type="text" 
                   size="small"
-                  @click="handleViewOrder(record)"
+                  @click="handleView(record)"
                 >
-                  查看订单
+                  查看
                 </a-button>
               </a-space>
             </template>
@@ -156,18 +150,18 @@
 
     <a-modal 
       v-model:visible="confirmVisible" 
-      title="确认采购计划" 
+      :title="isViewMode ? '查看采购确认' : '确认采购计划'" 
       :width="1100"
       :footer="false"
-      unmount-on-close
     >
-      <a-alert type="info" style="margin-bottom: 16px">
-        请确认采购商品清单，可调整实际采购数量。确认后将生成采购订单发送给供应商。
+      <a-alert :type="isViewMode ? 'info' : 'info'" style="margin-bottom: 16px">
+        {{ isViewMode ? '查看确认下单时的采购商品清单和实际采购数量。' : '请确认采购商品清单，可调整实际采购数量。确认后将生成采购订单发送给供应商。' }}
       </a-alert>
 
       <a-descriptions :column="3" bordered size="small">
         <a-descriptions-item label="计划编号">{{ currentPlan.planNo }}</a-descriptions-item>
         <a-descriptions-item label="计划名称">{{ currentPlan.planName }}</a-descriptions-item>
+        <a-descriptions-item label="所属仓库">{{ currentPlan.warehouseName }}</a-descriptions-item>
         <a-descriptions-item label="预计金额">¥{{ currentPlan.estimatedAmount?.toLocaleString() }}</a-descriptions-item>
       </a-descriptions>
 
@@ -188,14 +182,16 @@
               {{ record.suggestQuantity }}
             </template>
           </a-table-column>
-          <a-table-column title="实际采购量" :width="120">
+          <a-table-column title="实际采购量" :width="120" align="center">
             <template #cell="{ record }">
               <a-input-number 
+                v-if="!isViewMode"
                 v-model="record.quantity" 
                 :min="0" 
                 :max="99999"
                 style="width: 100%"
               />
+              <span v-else><strong>{{ record.quantity }}</strong></span>
             </template>
           </a-table-column>
           <a-table-column title="供货价" :width="100" align="right">
@@ -208,18 +204,35 @@
               ¥{{ (record.quantity * record.referencePrice).toFixed(2) }}
             </template>
           </a-table-column>
-          <a-table-column title="绑定供应商" :width="200">
+          <a-table-column title="选择供应商" :width="220">
             <template #cell="{ record }">
-              <div class="supplier-info">
+              <div v-if="isViewMode" class="supplier-info">
                 <div class="supplier-name">
                   <icon-check-circle-fill class="success-icon" />
-                  {{ record.boundSupplier.name }}
+                  {{ (record.supplierList || [record.boundSupplier]).find((s: any) => s.id === record.selectedSupplierId)?.name || record.boundSupplier.name }}
                 </div>
-                <div class="supplier-price">供货价：¥{{ record.boundSupplier.price }}</div>
+                <div class="supplier-price">供货价：¥{{ (record.supplierList || [record.boundSupplier]).find((s: any) => s.id === record.selectedSupplierId)?.price || record.boundSupplier.price }}</div>
               </div>
+              <a-select 
+                v-else
+                v-model="record.selectedSupplierId"
+                style="width: 100%"
+                placeholder="选择供应商"
+              >
+                <a-option 
+                  v-for="supplier in (record.supplierList || [record.boundSupplier])"
+                  :key="supplier.id"
+                  :value="supplier.id"
+                >
+                  <div class="supplier-option">
+                    <span>{{ supplier.name }}</span>
+                    <span class="option-price">¥{{ supplier.price }}</span>
+                  </div>
+                </a-option>
+              </a-select>
             </template>
           </a-table-column>
-          <a-table-column title="操作" :width="80" fixed="right">
+          <a-table-column v-if="!isViewMode" title="操作" :width="80" fixed="right">
             <template #cell="{ rowIndex }">
               <a-button 
                 type="text" 
@@ -242,8 +255,10 @@
           </span>
         </div>
         <a-space>
-          <a-button @click="confirmVisible = false">取消</a-button>
-          <a-button type="primary" @click="handleSubmitOrder">
+          <a-button @click="confirmVisible = false">
+            {{ isViewMode ? '关闭' : '取消' }}
+          </a-button>
+          <a-button v-if="!isViewMode" type="primary" @click="handleSubmitOrder">
             确认下单
           </a-button>
         </a-space>
@@ -254,9 +269,7 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive } from 'vue'
-import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
-import PrdPanel from '@/components/PrdPanel/index.vue'
 
 const prdModules = [
   {
@@ -443,7 +456,6 @@ graph LR
   }
 ]
 
-const router = useRouter()
 const loading = ref(false)
 const viewMode = ref('all')
 
@@ -497,7 +509,7 @@ const planList = ref([
     warehouseName: '沙井应急仓',
     skuCount: 42,
     estimatedAmount: 528000,
-    status: 'ordered',
+    status: 'confirmed',
     pushTime: '2024-01-20 16:00:00',
     confirmTime: '2024-01-21 10:00:00',
     orderNo: 'SO202401002'
@@ -527,7 +539,7 @@ const filteredPlans = computed(() => {
   }
   
   if (viewMode.value === 'pending') return result.filter(p => p.status === 'pending')
-  if (viewMode.value === 'confirmed') return result.filter(p => ['confirmed', 'ordered'].includes(p.status))
+  if (viewMode.value === 'confirmed') return result.filter(p => p.status === 'confirmed')
   return result
 })
 
@@ -536,6 +548,7 @@ const currentPlan = ref<any>({})
 
 const confirmVisible = ref(false)
 const confirmSkuList = ref<any[]>([])
+const isViewMode = ref(false)
 
 const totalConfirmAmount = computed(() => {
   return confirmSkuList.value.reduce((sum, item) => sum + item.quantity * item.referencePrice, 0).toFixed(2)
@@ -551,15 +564,45 @@ function handlePageChange(page: number) {
 }
 
 function handleView(record: any) {
-  currentPlan.value = {
-    ...record,
-    skuList: [
-      { skuCode: 'SKU001', productName: '普通硅酸盐水泥P.O42.5', specValues: '50kg/袋', unit: '袋', referencePrice: 28, quantity: 100, remark: '' },
-      { skuCode: 'SKU003', productName: '抛光砖', specValues: '800×800mm', unit: '片', referencePrice: 45, quantity: 500, remark: '优先选择广东品牌' },
-      { skuCode: 'SKU004', productName: '内墙乳胶漆', specValues: '20L/桶', unit: '桶', referencePrice: 380, quantity: 20, remark: '' }
-    ]
-  }
-  detailVisible.value = true
+  currentPlan.value = record
+  confirmSkuList.value = (record.confirmedItems || [
+    { 
+      skuCode: 'SKU001', 
+      productName: '普通硅酸盐水泥P.O42.5', 
+      specValues: '50kg/袋', 
+      unit: '袋', 
+      referencePrice: 26, 
+      suggestQuantity: 100, 
+      quantity: record.id === '2' ? 95 : 100,
+      boundSupplier: { id: 'SUP001', name: '广东建材供应商', price: 26 },
+      selectedSupplierId: 'SUP001'
+    },
+    { 
+      skuCode: 'SKU003', 
+      productName: '抛光砖', 
+      specValues: '800×800mm', 
+      unit: '片', 
+      referencePrice: 42, 
+      suggestQuantity: 500, 
+      quantity: 500,
+      boundSupplier: { id: 'SUP003', name: '佛山陶瓷供应商', price: 42 },
+      selectedSupplierId: 'SUP003'
+    },
+    { 
+      skuCode: 'SKU004', 
+      productName: '内墙乳胶漆', 
+      specValues: '20L/桶', 
+      unit: '桶', 
+      referencePrice: 360, 
+      suggestQuantity: 20, 
+      quantity: 20,
+      boundSupplier: { id: 'SUP005', name: '广州涂料供应商', price: 360 },
+      selectedSupplierId: 'SUP005'
+    }
+  ])
+  isViewMode.value = true
+  detailVisible.value = false
+  confirmVisible.value = true
 }
 
 function handleConfirm(record: any) {
@@ -573,7 +616,13 @@ function handleConfirm(record: any) {
       referencePrice: 26, 
       suggestQuantity: 100, 
       quantity: 100,
-      boundSupplier: { id: 'SUP001', name: '广东建材供应商', price: 26 }
+      boundSupplier: { id: 'SUP001', name: '广东建材供应商', price: 26 },
+      supplierList: [
+        { id: 'SUP001', name: '广东建材供应商', price: 26 },
+        { id: 'SUP002', name: '华润水泥', price: 25 },
+        { id: 'SUP006', name: '海螺水泥', price: 27 }
+      ],
+      selectedSupplierId: 'SUP001'
     },
     { 
       skuCode: 'SKU003', 
@@ -583,7 +632,13 @@ function handleConfirm(record: any) {
       referencePrice: 42, 
       suggestQuantity: 500, 
       quantity: 500,
-      boundSupplier: { id: 'SUP003', name: '佛山陶瓷供应商', price: 42 }
+      boundSupplier: { id: 'SUP003', name: '佛山陶瓷供应商', price: 42 },
+      supplierList: [
+        { id: 'SUP003', name: '佛山陶瓷供应商', price: 42 },
+        { id: 'SUP007', name: '东鹏陶瓷', price: 45 },
+        { id: 'SUP008', name: '马可波罗', price: 48 }
+      ],
+      selectedSupplierId: 'SUP003'
     },
     { 
       skuCode: 'SKU004', 
@@ -593,9 +648,15 @@ function handleConfirm(record: any) {
       referencePrice: 360, 
       suggestQuantity: 20, 
       quantity: 20,
-      boundSupplier: { id: 'SUP005', name: '广州涂料供应商', price: 360 }
+      boundSupplier: { id: 'SUP005', name: '广州涂料供应商', price: 360 },
+      supplierList: [
+        { id: 'SUP005', name: '广州涂料供应商', price: 360 },
+        { id: 'SUP009', name: '立邦涂料', price: 380 }
+      ],
+      selectedSupplierId: 'SUP005'
     }
   ]
+  isViewMode.value = false
   detailVisible.value = false
   confirmVisible.value = true
 }
@@ -626,15 +687,11 @@ function handleViewOrder(record: any) {
   Message.info(`查看订单详情：${record.orderNo}`)
 }
 
-function handleCreatePlan() {
-  router.push('/warehouse/market/plan/create')
-}
-
 function getStatusColor(status: string) {
   const colors: Record<string, string> = {
     pending: 'orange',
     confirmed: 'cyan',
-    ordered: 'blue',
+    ordered: 'cyan',
     completed: 'green',
     cancelled: 'red'
   }
@@ -643,10 +700,10 @@ function getStatusColor(status: string) {
 
 function getStatusText(status: string) {
   const texts: Record<string, string> = {
-    pending: '待确认',
+    pending: '待处理',
     confirmed: '已确认',
-    ordered: '已下单',
-    completed: '已完成',
+    ordered: '已确认',
+    completed: '已确认',
     cancelled: '已取消'
   }
   return texts[status] || status
@@ -660,6 +717,18 @@ function getStatusText(status: string) {
 
 .text-danger {
   color: rgb(var(--danger-6));
+}
+
+.supplier-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.option-price {
+  font-weight: bold;
+  color: var(--color-primary-6);
 }
 
 .sub-text {

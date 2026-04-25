@@ -35,7 +35,14 @@
     <a-row :gutter="16" class="stat-row">
       <a-col :span="6">
         <a-card :bordered="false" class="stat-card">
-          <a-statistic title="商品种类" :value="stockStats.productCount" suffix="种">
+          <a-statistic title="SPU数量" :value="stockStats.spuCount" suffix="个">
+            <template #prefix><icon-tag /></template>
+          </a-statistic>
+        </a-card>
+      </a-col>
+      <a-col :span="6">
+        <a-card :bordered="false" class="stat-card">
+          <a-statistic title="SKU数量" :value="stockStats.skuCount" suffix="个">
             <template #prefix><icon-apps /></template>
           </a-statistic>
         </a-card>
@@ -49,31 +56,26 @@
       </a-col>
       <a-col :span="6">
         <a-card :bordered="false" class="stat-card">
-          <a-statistic title="库存价值" :value="stockStats.totalValue" :precision="2" prefix="¥">
+          <a-statistic title="库存价值" :value="stockStats.totalValue" :precision="0" prefix="¥">
             <template #prefix><icon-safe /></template>
           </a-statistic>
         </a-card>
       </a-col>
-      <a-col :span="6">
-        <a-card :bordered="false" class="stat-card">
-          <a-statistic title="可用库存" :value="stockStats.availableQuantity" suffix="件" />
-        </a-card>
-      </a-col>
     </a-row>
 
-    <a-card :bordered="false">
-      <template #title>
-        <a-tabs v-model:active-tab="activeTab" type="card" size="small">
-          <a-tab-pane key="spu" title="SPU列表" />
-          <a-tab-pane key="sku" title="SKU列表" />
-        </a-tabs>
-      </template>
+    <a-card :bordered="false" title="SKU库存列表">
       <template #extra>
         <a-space>
           <a-input-search
+            v-model="searchForm.spuKeyword"
+            placeholder="搜索所属SPU"
+            style="width: 180px"
+            @search="handleSearch"
+          />
+          <a-input-search
             v-model="searchForm.keyword"
             placeholder="搜索商品名称/编码"
-            style="width: 220px"
+            style="width: 180px"
             @search="handleSearch"
           />
           <a-cascader
@@ -89,80 +91,6 @@
       </template>
 
       <a-table
-        v-if="activeTab === 'spu'"
-        :data="filteredSpuProducts"
-        :pagination="spuPagination"
-        row-key="spuId"
-        @page-change="handleSpuPageChange"
-      >
-        <template #columns>
-          <a-table-column title="SPU 商品信息" :width="280">
-            <template #cell="{ record }">
-              <div class="product-info">
-                <a-image :src="record.mainImage" :width="48" :height="48" fit="cover" />
-                <div class="product-detail">
-                  <div class="product-name">{{ record.spuName }}</div>
-                  <div class="product-code">
-                    {{ record.spuCode }}
-                    <a-tag color="arcoblue" size="small" style="margin-left: 8px">
-                      {{ record.skuCount }} 个 SKU
-                    </a-tag>
-                  </div>
-                </div>
-              </div>
-            </template>
-          </a-table-column>
-          <a-table-column title="分类" data-index="categoryName" :width="100" />
-          <a-table-column title="规格范围" :width="120">
-            <template #cell="{ record }">
-              <div class="spec-list">
-                <span v-for="(spec, idx) in record.specs?.slice(0, 2)" :key="idx" class="spec-item">
-                  {{ spec }}
-                </span>
-                <a-popover v-if="record.specs?.length > 2" trigger="hover">
-                  <template #content>
-                    <div v-for="spec in record.specs" :key="spec" style="padding: 4px 0">
-                      {{ spec }}
-                    </div>
-                  </template>
-                  <span class="more-spec">+{{ record.specs.length - 2 }} 更多</span>
-                </a-popover>
-              </div>
-            </template>
-          </a-table-column>
-          <a-table-column title="总库存" :width="100" align="right">
-            <template #cell="{ record }">
-              <span class="stock-main">{{ record.totalQuantity }} {{ record.unit }}</span>
-            </template>
-          </a-table-column>
-          <a-table-column title="价格区间" :width="130" align="right">
-            <template #cell="{ record }">
-              <span class="price">¥{{ record.minPrice.toFixed(2) }} ~ ¥{{ record.maxPrice.toFixed(2) }}</span>
-            </template>
-          </a-table-column>
-          <a-table-column title="库存总价值" :width="120" align="right">
-            <template #cell="{ record }">
-              <span class="price">¥{{ record.totalValue.toFixed(2) }}</span>
-            </template>
-          </a-table-column>
-          <a-table-column title="供应商数" :width="90" align="center">
-            <template #cell="{ record }">
-              {{ record.supplierCount }} 家
-            </template>
-          </a-table-column>
-          <a-table-column title="更新时间" data-index="updatedAt" :width="140" />
-          <a-table-column title="操作" :width="100" fixed="right">
-            <template #cell="{ record }">
-              <a-button type="text" size="small" @click="handleViewSpuDetail(record)">
-                查看明细
-              </a-button>
-            </template>
-          </a-table-column>
-        </template>
-      </a-table>
-
-      <a-table
-        v-if="activeTab === 'sku'"
         :data="filteredProducts"
         :pagination="pagination"
         :row-selection="rowSelection"
@@ -179,6 +107,12 @@
                   <div class="product-code">{{ record.skuCode }}</div>
                 </div>
               </div>
+            </template>
+          </a-table-column>
+          <a-table-column title="所属SPU" :width="150">
+            <template #cell="{ record }">
+              <a-tag size="small">{{ record.spuCode }}</a-tag>
+              <div class="sub-text" style="margin-top: 4px">{{ record.spuName }}</div>
             </template>
           </a-table-column>
           <a-table-column title="分类" data-index="categoryName" :width="100" />
@@ -511,14 +445,15 @@ const warehouseInfo = ref({
 })
 
 const stockStats = reactive({
-  productCount: 156,
+  spuCount: 8,
+  skuCount: 13,
   totalQuantity: 4580,
-  totalValue: 328500.00,
-  availableQuantity: 4200,
+  totalValue: 328500,
 })
 
 const searchForm = reactive({
   keyword: '',
+  spuKeyword: '',
   categoryId: undefined as string[] | undefined,
 })
 
@@ -527,14 +462,6 @@ const pagination = reactive({
   pageSize: 10,
   total: 0,
 })
-
-const spuPagination = reactive({
-  current: 1,
-  pageSize: 10,
-  total: 0,
-})
-
-const activeTab = ref('spu')
 
 const selectedKeys = ref<string[]>([])
 
@@ -798,6 +725,12 @@ const mockProducts = ref([
   },
 ])
 
+mockProducts.value.forEach(sku => {
+  const spuName = sku.skuName.split(' ')[0] || sku.skuName
+  sku.spuName = spuName
+  sku.spuCode = `SPU-${spuName.toUpperCase().slice(0, 5)}`
+})
+
 const rowSelection = computed(() => ({
   type: 'checkbox' as const,
   selectedRowKeys: selectedKeys.value,
@@ -807,61 +740,6 @@ const rowSelection = computed(() => ({
   },
 }))
 
-const spuProducts = computed(() => {
-  const spuMap = new Map()
-  
-  mockProducts.value.forEach(sku => {
-    const spuName = sku.skuName.split(' ')[0] || sku.skuName
-    const spuId = `spu-${spuName}`
-    
-    if (!spuMap.has(spuId)) {
-      spuMap.set(spuId, {
-        spuId,
-        spuName,
-        spuCode: `SPU-${spuName.toUpperCase().slice(0, 5)}`,
-        categoryName: sku.categoryName,
-        mainImage: sku.mainImage,
-        unit: sku.unit,
-        skuCount: 0,
-        totalQuantity: 0,
-        totalValue: 0,
-        minPrice: Infinity,
-        maxPrice: -Infinity,
-        specs: [] as string[],
-        supplierCount: Math.floor(Math.random() * 3) + 1,
-        updatedAt: sku.updatedAt,
-      })
-    }
-    
-    const spu = spuMap.get(spuId)
-    spu.skuCount++
-    spu.totalQuantity += sku.quantity
-    spu.totalValue += sku.quantity * sku.purchasePrice
-    spu.minPrice = Math.min(spu.minPrice, sku.purchasePrice)
-    spu.maxPrice = Math.max(spu.maxPrice, sku.purchasePrice)
-    if (!spu.specs.includes(sku.spec)) {
-      spu.specs.push(sku.spec)
-    }
-  })
-  
-  return Array.from(spuMap.values())
-})
-
-const filteredSpuProducts = computed(() => {
-  let result = spuProducts.value
-  
-  if (searchForm.keyword) {
-    const keyword = searchForm.keyword.toLowerCase()
-    result = result.filter(p => 
-      p.spuName.toLowerCase().includes(keyword) ||
-      p.spuCode.toLowerCase().includes(keyword)
-    )
-  }
-  
-  spuPagination.total = result.length
-  return result
-})
-
 const filteredProducts = computed(() => {
   let result = mockProducts.value
   
@@ -870,6 +748,14 @@ const filteredProducts = computed(() => {
     result = result.filter(p => 
       p.skuName.toLowerCase().includes(keyword) ||
       p.skuCode.toLowerCase().includes(keyword)
+    )
+  }
+  
+  if (searchForm.spuKeyword) {
+    const keyword = searchForm.spuKeyword.toLowerCase()
+    result = result.filter(p => 
+      p.spuName?.toLowerCase().includes(keyword) ||
+      p.spuCode?.toLowerCase().includes(keyword)
     )
   }
   
@@ -938,15 +824,6 @@ function handleSearch() {
 
 function handlePageChange(page: number) {
   pagination.current = page
-}
-
-function handleSpuPageChange(page: number) {
-  spuPagination.current = page
-}
-
-function handleViewSpuDetail(spu: any) {
-  activeTab.value = 'sku'
-  searchForm.keyword = spu.spuName
 }
 
 function handleExport() {
@@ -1025,7 +902,7 @@ function handleAdjustStockConfirm() {
 }
 
 function handleViewRecord(record: any) {
-  router.push(`/product/sku/view/${record.skuId || record.id}`)
+  router.push(`/warehouse/product/sku-detail/${record.skuId || record.id}`)
 }
 
 function handleStockIn(record: any) {

@@ -1,6 +1,5 @@
 <template>
   <div class="invoice-input page-container">
-    <PrdPanel :items="prdItems" />
     <a-card :bordered="false">
       <template #extra>
         <a-space>
@@ -111,7 +110,6 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { Message } from '@arco-design/web-vue'
-import PrdPanel from '@/components/PrdPanel/index.vue'
 
 const prdItems = [
   {

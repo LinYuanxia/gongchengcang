@@ -1,6 +1,5 @@
 <template>
   <div class="stock-manage">
-    <PrdPanel :items="prdModules" />
     
     <div class="page-header">
       <h2 class="page-title">📦 出入库管理</h2>
@@ -77,10 +76,9 @@
               </a-table-column>
               <a-table-column title="入库仓库" data-index="warehouseName" :width="150" />
               <a-table-column title="供应商/来源" data-index="supplierName" :width="150" />
-              <a-table-column title="关联批次" data-index="batchNo" :width="160">
+              <a-table-column title="批次数量" :width="100" align="center">
                 <template #cell="{ record }">
-                  <a-tag v-if="record.batchNo" color="arcoblue" size="small">{{ record.batchNo }}</a-tag>
-                  <span v-else class="text-secondary">-</span>
+                  <a-tag color="blue">{{ (record.batches || []).length }} 批</a-tag>
                 </template>
               </a-table-column>
               <a-table-column title="商品种类" :width="100" align="center">
@@ -316,7 +314,7 @@
     <a-modal
       v-model:visible="detailModalVisible"
       title="入库单详情"
-      :width="800"
+      :width="900"
       :footer="false"
     >
       <template #extra>
@@ -334,7 +332,7 @@
           <a-descriptions-item label="来源单据">{{ currentInbound.sourceNo || '-' }}</a-descriptions-item>
           <a-descriptions-item label="入库仓库">{{ currentInbound.warehouseName }}</a-descriptions-item>
           <a-descriptions-item label="供应商">{{ currentInbound.supplierName }}</a-descriptions-item>
-          <a-descriptions-item label="关联批次">{{ currentInbound.batchNo || '-' }}</a-descriptions-item>
+          <a-descriptions-item label="关联批次">{{ (currentInbound.batches || []).length }} 批</a-descriptions-item>
           <a-descriptions-item label="创建人">{{ currentInbound.creator }}</a-descriptions-item>
           <a-descriptions-item label="创建时间">{{ currentInbound.createdAt }}</a-descriptions-item>
           <a-descriptions-item label="状态">
@@ -345,7 +343,7 @@
         </a-descriptions>
 
         <h4 style="margin: 16px 0 8px;">入库商品明细</h4>
-        <a-table :data="currentInbound.items" :pagination="false" size="small">
+        <a-table :data="currentInbound.items || []" :pagination="false" size="small">
           <template #columns>
             <a-table-column title="商品名称" data-index="skuName" :width="200" />
             <a-table-column title="规格" data-index="specs" :width="150">
@@ -362,6 +360,25 @@
             </a-table-column>
             <a-table-column title="金额" :width="120" align="right">
               <template #cell="{ record }">¥{{ (record.price * record.quantity).toLocaleString() }}</template>
+            </a-table-column>
+          </template>
+        </a-table>
+
+        <a-divider>关联批次明细</a-divider>
+
+        <a-table :data="currentInbound.batches || []" :pagination="false" size="small">
+          <template #columns>
+            <a-table-column title="批次号" data-index="batchNo" :width="150">
+              <template #cell="{ record }">
+                <a-tag color="blue">{{ record.batchNo }}</a-tag>
+              </template>
+            </a-table-column>
+            <a-table-column title="SKU编码" data-index="skuCode" :width="120" />
+            <a-table-column title="商品名称" data-index="productName" :width="200" />
+            <a-table-column title="入库数量" :width="120" align="right">
+              <template #cell="{ record }">
+                <strong>{{ record.quantity }}</strong>
+              </template>
             </a-table-column>
           </template>
         </a-table>
@@ -386,7 +403,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import { Message } from '@arco-design/web-vue'
-import PrdPanel from '@/components/PrdPanel/index.vue'
 
 const activeTab = ref('in')
 
@@ -415,7 +431,6 @@ const inList = ref([
     inNo: 'IN202403240001',
     inType: 'purchase',
     sourceNo: 'PO202403200001',
-    batchNo: 'B202403240001',
     warehouseName: '深圳湾科技园项目仓',
     supplierName: '华润水泥(深圳)有限公司',
     skuCount: 3,
@@ -424,12 +439,16 @@ const inList = ref([
     status: 2,
     creator: '张三',
     createdAt: '2024-03-24 10:30:00',
+    batches: [
+      { batchNo: 'B202403240001', skuCode: 'SKU001', productName: '普通硅酸盐水泥P.O42.5', quantity: 400 },
+      { batchNo: 'B202403240002', skuCode: 'SKU002', productName: 'HRB400螺纹钢Φ16', quantity: 350 },
+      { batchNo: 'B202403240003', skuCode: 'SKU003', productName: '中沙', quantity: 250 },
+    ],
   },
   {
     inNo: 'IN202403240002',
     inType: 'transfer',
     sourceNo: 'TF202403230001',
-    batchNo: '',
     warehouseName: '深圳湾科技园项目仓',
     supplierName: '福田CBD项目仓',
     skuCount: 2,
@@ -438,12 +457,15 @@ const inList = ref([
     status: 1,
     creator: '李四',
     createdAt: '2024-03-24 09:15:00',
+    batches: [
+      { batchNo: 'B202403240004', skuCode: 'SKU001', productName: '普通硅酸盐水泥P.O42.5', quantity: 300 },
+      { batchNo: 'B202403240005', skuCode: 'SKU002', productName: '碎石', quantity: 200 },
+    ],
   },
   {
     inNo: 'IN202403230003',
     inType: 'return',
     sourceNo: '',
-    batchNo: '',
     warehouseName: '深圳湾科技园项目仓',
     supplierName: '中建五局',
     skuCount: 1,
@@ -452,6 +474,9 @@ const inList = ref([
     status: 2,
     creator: '王五',
     createdAt: '2024-03-23 16:45:00',
+    batches: [
+      { batchNo: 'B202403230006', skuCode: 'SKU006', productName: '防水涂料', quantity: 50 },
+    ],
   },
 ])
 

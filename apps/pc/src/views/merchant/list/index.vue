@@ -1,6 +1,5 @@
 <template>
   <div class="page-container">
-    <PrdPanel :items="prdItems" />
     
     <a-card :bordered="false">
       <div class="table-actions">
@@ -150,7 +149,6 @@ import { getMerchantList, deleteMerchant, updateMerchantStatus } from '@gongchen
 import type { Merchant } from '@gongchengcang/types'
 import MerchantFormDrawer from './components/MerchantFormDrawer.vue'
 import MerchantDetailDrawer from './components/MerchantDetailDrawer.vue'
-import PrdPanel from '@/components/PrdPanel/index.vue'
 
 const prdItems = [
   {

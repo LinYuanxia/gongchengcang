@@ -1,6 +1,5 @@
 <template>
   <div class="page-container">
-    <PrdPanel :items="prdItems" />
     <a-row :gutter="16" class="stat-row">
       <a-col :span="6">
         <a-card>
@@ -172,7 +171,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import { Message } from '@arco-design/web-vue'
-import PrdPanel from '@/components/PrdPanel/index.vue'
 
 const prdItems = [
   {

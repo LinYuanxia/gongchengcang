@@ -1,6 +1,5 @@
 <template>
   <div class="page-container">
-    <PrdPanel :items="prdItems" />
     <a-card :bordered="false">
       <template #title>
         <span v-if="spuFilter">SKU列表 - {{ spuFilter.spuName }}</span>
@@ -255,8 +254,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { Message, Modal } from '@arco-design/web-vue'
 import type { Sku, ProductCategory, Spu, ProductAttr } from '@gongchengcang/types'
 import { getSkuList, getCategoryTree, getSpuList, updateSku, deleteSku, getAttrList } from '@gongchengcang/api'
-import PrdPanel from '@/components/PrdPanel/index.vue'
-
 const prdItems = [
   {
     reqId: 1,

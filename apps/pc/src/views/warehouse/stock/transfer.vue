@@ -1,6 +1,5 @@
 <template>
   <div class="stock-transfer">
-    <PrdPanel :items="prdModules" />
     
     <div class="page-header">
       <h2 class="page-title">🔄 库存调拨</h2>
@@ -108,7 +107,6 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
-import PrdPanel from '@/components/PrdPanel/index.vue'
 
 const pagination = reactive({
   current: 1,

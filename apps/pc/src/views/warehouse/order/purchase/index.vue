@@ -58,7 +58,6 @@
         <a-tab-pane key="receiving" title="待收货" />
         <a-tab-pane key="completed" title="已完成" />
         <a-tab-pane key="cancelled" title="已取消" />
-        <a-tab-pane key="refunded" title="已退款" />
       </a-tabs>
 
       <a-table :data="filteredOrders" :pagination="pagination" :row-key="(record: any) => record.id">
@@ -256,7 +255,7 @@
                   {{ record.shipQuantity }} {{ record.unit }}
                 </template>
               </a-table-column>
-              <a-table-column title="实收数量" :width="140" align="right">
+              <a-table-column title="实收数量" :width="120" align="right">
                 <template #cell="{ record }">
                   <a-input-number
                     v-model="record.receiveQuantity"
@@ -267,10 +266,21 @@
                   />
                 </template>
               </a-table-column>
+              <a-table-column title="货损数量" :width="120" align="right">
+                <template #cell="{ record }">
+                  <a-input-number
+                    v-model="record.damageQuantity"
+                    :min="0"
+                    :max="record.shipQuantity"
+                    :precision="0"
+                    style="width: 100%"
+                  />
+                </template>
+              </a-table-column>
               <a-table-column title="差异数量" :width="100" align="right">
                 <template #cell="{ record }">
-                  <span :class="record.shipQuantity - record.receiveQuantity !== 0 ? 'text-danger' : 'text-success'">
-                    {{ record.shipQuantity - record.receiveQuantity }}
+                  <span :class="record.shipQuantity - record.receiveQuantity - record.damageQuantity !== 0 ? 'text-danger' : 'text-success'">
+                    {{ record.shipQuantity - record.receiveQuantity - record.damageQuantity }}
                   </span>
                 </template>
               </a-table-column>
@@ -306,6 +316,45 @@
             :max-length="200"
           />
         </a-form-item>
+
+        <a-divider orientation="left">货损信息（选填）</a-divider>
+
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="货损证明">
+              <a-upload
+                :show-file-list="true"
+                :limit="3"
+                list-type="picture-card"
+                accept="image/*"
+              >
+                <a-icon-plus />
+              </a-upload>
+              <div class="upload-tip">支持上传3张图片，格式：jpg、png</div>
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="预计退款金额">
+              <a-input-number
+                v-model="receiveForm.expectedRefund"
+                :min="0"
+                :precision="2"
+                placeholder="请输入预计退款金额"
+                style="width: 100%"
+              >
+                <template #prefix>¥</template>
+              </a-input-number>
+            </a-form-item>
+            <a-form-item label="货损说明">
+              <a-textarea
+                v-model="receiveForm.damageRemark"
+                placeholder="请详细描述货损原因、情况等"
+                :max-length="500"
+                :auto-size="{ minRows: 4, maxRows: 6 }"
+              />
+            </a-form-item>
+          </a-col>
+        </a-row>
       </a-form>
     </a-modal>
   </div>
@@ -552,7 +601,10 @@ function cancelPay() {
 const receiveModalVisible = ref(false)
 const receiveForm = ref({
   items: [] as any[],
+  warehouse: '',
   remark: '',
+  damageRemark: '',
+  expectedRefund: 0,
 })
 
 const selectShipmentModalVisible = ref(false)
@@ -612,11 +664,14 @@ function handleSelectShipment(shipment: any) {
         ...item,
         shipQuantity: item.quantity,
         receiveQuantity: item.quantity,
+        damageQuantity: 0,
         batchNo: `B${dateStr}${random}`,
       }
     }),
     warehouse: '深圳湾科技园项目仓',
     remark: '',
+    damageRemark: '',
+    expectedRefund: 0,
   }
   receiveModalVisible.value = true
 }
@@ -651,14 +706,37 @@ function handleReceiveConfirm() {
       quantity: item.receiveQuantity,
       supplierName: currentOrder.value.supplierName,
       purchaseNo: currentOrder.value.orderNo,
-      remark: item.batchRemark,
     })
   })
 
-  Message.success(`收货成功，已生成 ${receivedItems.length} 个批次`)
+  const damageItems = receiveForm.value.items.filter((item: any) => item.damageQuantity > 0)
+  const hasDamageInfo = damageItems.length > 0 || receiveForm.value.damageRemark || receiveForm.value.expectedRefund > 0
+  
+  if (hasDamageInfo) {
+    const damageNo = `DA${dateStr}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`
+    const afterSalesRecord = {
+      id: damageNo,
+      afterNo: damageNo,
+      type: 'damage',
+      orderNo: currentOrder.value?.orderNo,
+      orderType: 'purchase',
+      supplierName: currentOrder.value?.supplierName,
+      damageItems: damageItems,
+      damageRemark: receiveForm.value.damageRemark,
+      expectedRefund: receiveForm.value.expectedRefund,
+      shipmentNo: currentShipmentBatch.value?.shipmentNo,
+      status: 'pending',
+      createTime: now.toISOString().slice(0, 19).replace('T', ' '),
+      creator: '仓管员',
+    }
+    console.log('生成货损售后记录:', afterSalesRecord)
+    Message.success(`收货成功，已生成 ${receivedItems.length} 个收货批次和 1 条货损售后记录`)
+  } else {
+    Message.success(`收货成功，已生成 ${receivedItems.length} 个批次`)
+  }
   
   const allReceived = receiveForm.value.items.every((item: any) => 
-    item.receiveQuantity >= item.pendingQuantity
+    item.receiveQuantity + item.damageQuantity >= item.shipQuantity
   )
   if (allReceived && currentOrder.value) {
     if (currentOrder.value.paymentStatus === 'paid') {
@@ -689,6 +767,12 @@ function handleLogistics(record: any) {
 
 .mt-16 {
   margin-top: 16px;
+}
+
+.upload-tip {
+  font-size: 12px;
+  color: var(--color-text-3);
+  margin-top: 4px;
 }
 
 .amount {

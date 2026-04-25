@@ -54,6 +54,11 @@
                 <template #icon><icon-mobile /></template>
               </a-button>
             </a-tooltip>
+            <a-tooltip content="产品需求文档">
+              <a-button type="text" @click="router.push('/prd')">
+                <template #icon><icon-file /></template>
+              </a-button>
+            </a-tooltip>
             <a-dropdown trigger="hover">
               <a-button type="text" class="platform-btn">
                 <template #icon><component :is="currentPlatformInfo.icon" /></template>

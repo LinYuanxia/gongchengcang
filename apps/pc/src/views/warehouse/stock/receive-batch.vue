@@ -1,6 +1,5 @@
 <template>
   <div class="receive-batch">
-    <PrdPanel :items="prdModules" />
     
     <div class="page-header">
       <h2 class="page-title">🧾 收货批次</h2>
@@ -286,7 +285,6 @@
 import { ref, reactive } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { IconPlus } from '@arco-design/web-vue/es/icon'
-import PrdPanel from '@/components/PrdPanel/index.vue'
 
 const searchForm = reactive({
   keyword: '',

@@ -1,6 +1,5 @@
 <template>
   <div class="stock-out">
-    <PrdPanel :items="prdModules" />
     
     <div class="page-header">
       <h2 class="page-title">📤 出库管理</h2>
@@ -116,7 +115,6 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
-import PrdPanel from '@/components/PrdPanel/index.vue'
 
 const searchForm = reactive({
   keyword: '',

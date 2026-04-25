@@ -1,6 +1,5 @@
 <template>
   <div class="stock-in">
-    <PrdPanel :items="prdModules" />
     
     <div class="page-header">
       <h2 class="page-title">📦 入库管理</h2>
@@ -80,6 +79,11 @@
               {{ record.skuCount }}
             </template>
           </a-table-column>
+          <a-table-column title="批次数量" :width="100" align="center">
+            <template #cell="{ record }">
+              <a-tag color="blue">{{ (record.batches || []).length }} 批</a-tag>
+            </template>
+          </a-table-column>
           <a-table-column title="总数量" :width="100" align="right">
             <template #cell="{ record }">
               <strong>{{ record.totalQty }}</strong>
@@ -102,7 +106,7 @@
           <a-table-column title="操作" :width="150" fixed="right">
             <template #cell="{ record }">
               <a-space>
-                <a-link>详情</a-link>
+                <a-link @click="handleDetail(record)">详情</a-link>
                 <a-link v-if="record.status === 'pending'">入库</a-link>
                 <a-link v-if="record.status === 'pending'">打印</a-link>
               </a-space>
@@ -111,12 +115,56 @@
         </template>
       </a-table>
     </a-card>
+
+    <a-modal v-model:visible="detailVisible" title="入库单详情" :width="1000" :footer="false">
+      <a-descriptions :column="3" bordered size="small">
+        <a-descriptions-item label="入库单号">{{ currentInOrder.inNo }}</a-descriptions-item>
+        <a-descriptions-item label="入库类型">
+          <a-tag :color="getTypeColor(currentInOrder.inType)">
+            {{ getTypeText(currentInOrder.inType) }}
+          </a-tag>
+        </a-descriptions-item>
+        <a-descriptions-item label="状态">
+          <a-tag :color="getStatusColor(currentInOrder.status)">
+            {{ getStatusText(currentInOrder.status) }}
+          </a-tag>
+        </a-descriptions-item>
+        <a-descriptions-item label="来源单据">{{ currentInOrder.sourceNo }}</a-descriptions-item>
+        <a-descriptions-item label="入库仓库">{{ currentInOrder.warehouseName }}</a-descriptions-item>
+        <a-descriptions-item label="供应商">{{ currentInOrder.supplierName }}</a-descriptions-item>
+        <a-descriptions-item label="商品种类">{{ currentInOrder.skuCount }} 种</a-descriptions-item>
+        <a-descriptions-item label="关联批次">{{ (currentInOrder.batches || []).length }} 批</a-descriptions-item>
+        <a-descriptions-item label="创建人">{{ currentInOrder.creator }}</a-descriptions-item>
+      </a-descriptions>
+
+      <a-divider>关联批次明细</a-divider>
+
+      <a-table :data="currentBatches" :pagination="false">
+        <template #columns>
+          <a-table-column title="批次号" data-index="batchNo" :width="150">
+            <template #cell="{ record }">
+              <a-tag color="blue">{{ record.batchNo }}</a-tag>
+            </template>
+          </a-table-column>
+          <a-table-column title="SKU编码" data-index="skuCode" :width="120" />
+          <a-table-column title="商品名称" data-index="productName" :width="180" />
+          <a-table-column title="供应商" data-index="supplierName" :width="150" />
+          <a-table-column title="入库数量" :width="100" align="right">
+            <template #cell="{ record }">
+              <strong>{{ record.quantity }}</strong>
+            </template>
+          </a-table-column>
+          <a-table-column title="所属仓库" data-index="warehouseName" :width="150" />
+          <a-table-column title="入库日期" data-index="inboundDate" :width="120" />
+          <a-table-column title="操作人" data-index="operator" :width="100" />
+        </template>
+      </a-table>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
-import PrdPanel from '@/components/PrdPanel/index.vue'
 
 const searchForm = reactive({
   keyword: '',
@@ -129,6 +177,10 @@ const pagination = reactive({
 })
 
 const inType = ref('all')
+
+const detailVisible = ref(false)
+const currentInOrder = ref<any>({})
+const currentBatches = ref<any[]>([])
 
 const inList = ref([
   {
@@ -143,6 +195,11 @@ const inList = ref([
     status: 'completed',
     creator: '仓管A',
     createTime: '2024-12-25 10:30:00',
+    batches: [
+      { batchNo: 'B202412250001', skuCode: 'SKU001', productName: '普通硅酸盐水泥P.O42.5', quantity: 300 },
+      { batchNo: 'B202412250002', skuCode: 'SKU002', productName: 'HRB400螺纹钢Φ16', quantity: 300 },
+      { batchNo: 'B202412250003', skuCode: 'SKU003', productName: '抛光砖 800×800mm', quantity: 200 },
+    ],
   },
   {
     inNo: 'IN202412250002',
@@ -156,6 +213,10 @@ const inList = ref([
     status: 'pending',
     creator: '仓管B',
     createTime: '2024-12-25 09:15:00',
+    batches: [
+      { batchNo: 'B202412250004', skuCode: 'SKU002', productName: 'HRB400螺纹钢Φ16', quantity: 100 },
+      { batchNo: 'B202412250005', skuCode: 'SKU005', productName: '细沙', quantity: 100 },
+    ],
   },
   {
     inNo: 'IN202412240003',
@@ -169,6 +230,9 @@ const inList = ref([
     status: 'completed',
     creator: '仓管C',
     createTime: '2024-12-24 16:45:00',
+    batches: [
+      { batchNo: 'B202412240001', skuCode: 'SKU001', productName: '普通硅酸盐水泥P.O42.5', quantity: 200 },
+    ],
   },
   {
     inNo: 'IN202412240004',
@@ -182,6 +246,9 @@ const inList = ref([
     status: 'completed',
     creator: '仓管A',
     createTime: '2024-12-24 14:20:00',
+    batches: [
+      { batchNo: 'B202412240002', skuCode: 'SKU006', productName: '防水涂料', quantity: 10 },
+    ],
   },
   {
     inNo: 'IN202412230005',
@@ -195,6 +262,10 @@ const inList = ref([
     status: 'completed',
     creator: '仓管B',
     createTime: '2024-12-23 11:30:00',
+    batches: [
+      { batchNo: 'B202412230001', skuCode: 'SKU001', productName: '普通硅酸盐水泥P.O42.5', quantity: 300 },
+      { batchNo: 'B202412230002', skuCode: 'SKU007', productName: '中沙', quantity: 200 },
+    ],
   },
   {
     inNo: 'IN202412230006',
@@ -208,6 +279,10 @@ const inList = ref([
     status: 'processing',
     creator: '仓管C',
     createTime: '2024-12-23 09:00:00',
+    batches: [
+      { batchNo: 'B202412230003', skuCode: 'SKU001', productName: '普通硅酸盐水泥P.O42.5', quantity: 75 },
+      { batchNo: 'B202412230004', skuCode: 'SKU002', productName: 'HRB400螺纹钢Φ16', quantity: 75 },
+    ],
   },
 ])
 
@@ -268,6 +343,28 @@ function getStatusText(status: string) {
   return map[status] || status
 }
 
+function handleDetail(record: any) {
+  currentInOrder.value = record
+  currentBatches.value = (record.batches || []).map((batch: any) => ({
+    ...batch,
+    supplierName: record.supplierName,
+    warehouseName: record.warehouseName,
+    inboundDate: record.createTime.split(' ')[0],
+    operator: record.creator,
+  }))
+  detailVisible.value = true
+}
+
+function getStatusText(status: string) {
+  const map: Record<string, string> = {
+    pending: '待入库',
+    processing: '入库中',
+    completed: '已完成',
+    cancelled: '已取消',
+  }
+  return map[status] || status
+}
+
 function handleSearch() {
   pagination.current = 1
 }
@@ -295,6 +392,13 @@ const prdModules = [
 <style scoped lang="less">
 .stock-in {
   padding: 16px;
+
+  .batch-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+  }
 
   .page-header {
     margin-bottom: 16px;

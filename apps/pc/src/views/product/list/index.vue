@@ -1,6 +1,5 @@
 <template>
   <div class="page-container">
-    <PrdPanel :items="prdItems" />
     <a-card :bordered="false">
       <div class="table-actions">
         <a-space>
@@ -76,7 +75,6 @@ import { ref, reactive, onMounted } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
 import { PRODUCT_STATUS_OPTIONS, PRODUCT_STATUS_MAP } from '@gongchengcang/constants'
 import type { Product } from '@gongchengcang/types'
-import PrdPanel from '@/components/PrdPanel/index.vue'
 
 const prdItems = [
   {

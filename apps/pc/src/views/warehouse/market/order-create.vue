@@ -197,36 +197,6 @@
           </div>
         </div>
       </div>
-
-      <div class="address-group" style="margin-top: 20px;">
-         <div class="group-title">
-           <span class="group-icon">📍</span>
-           <span>自定义地址</span>
-         </div>
-        <div class="address-list">
-          <div 
-            class="address-item"
-            :class="{ active: selectedAddress?.id === addr.id }"
-            v-for="addr in customAddressList"
-            :key="addr.id"
-            @click="handleConfirmAddress(addr)"
-          >
-            <div class="address-radio">
-              <icon-check v-if="selectedAddress?.id === addr.id" />
-            </div>
-            <div class="address-info">
-              <div class="address-header">
-                <span class="name">{{ addr.name }}</span>
-                <span class="phone">{{ addr.phone }}</span>
-              </div>
-              <div class="address-text">{{ addr.address }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <a-button type="primary" @click="handleAddAddress">新增自定义地址</a-button>
-      </template>
     </a-modal>
   </div>
 </template>

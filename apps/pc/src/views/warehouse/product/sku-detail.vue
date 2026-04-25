@@ -1,6 +1,5 @@
 <template>
   <div class="sku-detail">
-    <PrdPanel :items="prdModules" />
     <a-page-header title="SKU库存详情" @back="router.back()">
       <template #extra>
         <a-space>
@@ -178,19 +177,14 @@
                     <a-link size="small">{{ record.name }}</a-link>
                   </template>
                 </a-table-column>
-                <a-table-column title="累计供货" :width="100" align="right">
+                <a-table-column title="累计供货" :width="120" align="right">
                   <template #cell="{ record }">
                     {{ record.totalSupplyQty }}
                   </template>
                 </a-table-column>
-                <a-table-column title="当前库存" :width="100" align="right">
+                <a-table-column title="当前库存" :width="120" align="right">
                   <template #cell="{ record }">
                     <span class="text-success">{{ record.stockQty }}</span>
-                  </template>
-                </a-table-column>
-                <a-table-column title="状态" :width="80">
-                  <template #cell="{ record }">
-                    <a-dot :color="record.status === 'active' ? 'green' : 'grey'" />
                   </template>
                 </a-table-column>
               </template>
@@ -205,7 +199,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import PrdPanel from '@/components/PrdPanel/index.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -243,14 +236,12 @@ const supplierList = ref([
     name: '华润水泥',
     totalSupplyQty: 1200,
     stockQty: 500,
-    status: 'active',
   },
   {
     id: 's2',
     name: '海螺水泥',
     totalSupplyQty: 800,
     stockQty: 300,
-    status: 'active',
   },
 ])
 

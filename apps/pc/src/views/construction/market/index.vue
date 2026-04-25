@@ -2,14 +2,28 @@
   <div class="page-container">
     <a-card :bordered="false" class="search-card">
       <a-form :model="searchForm" layout="inline">
-        <a-form-item label="工程仓">
+        <a-form-item label="工程仓主体">
+          <a-select 
+            v-model="searchForm.projectId" 
+            placeholder="请选择工程仓主体" 
+            allow-clear 
+            style="width: 180px"
+          >
+            <a-option v-for="p in projectWarehouses" :key="p.projectId" :value="p.projectId">
+              {{ p.projectName }}
+            </a-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item label="所属仓库">
           <a-select 
             v-model="searchForm.warehouseId" 
-            placeholder="请选择工程仓" 
+            placeholder="请选择仓库" 
             allow-clear 
-            style="width: 200px"
+            style="width: 180px"
           >
-            <a-option v-for="w in warehouses" :key="w.id" :value="w.id">{{ w.name }}</a-option>
+            <a-option v-for="w in filteredWarehouses" :key="w.warehouseId" :value="w.warehouseId">
+              {{ w.warehouseName }}
+            </a-option>
           </a-select>
         </a-form-item>
         <a-form-item label="商品名称">
@@ -36,10 +50,6 @@
     <a-card :bordered="false" class="table-card">
       <template #title>
         <a-space>
-          <a-button type="primary" @click="handleAddProducts">
-            <template #icon><icon-plus /></template>
-            添加商品
-          </a-button>
           <a-button status="success" @click="handleBatchOnline" :disabled="!selectedKeys.length">
             <template #icon><icon-check /></template>
             批量上架
@@ -99,7 +109,8 @@
             </template>
           </a-table-column>
           <a-table-column title="规格" data-index="spec" :width="120" />
-          <a-table-column title="所属工程仓" data-index="warehouseName" :width="150" />
+          <a-table-column title="工程仓主体" data-index="projectName" :width="150" />
+          <a-table-column title="所属仓库" data-index="warehouseName" :width="140" />
           <a-table-column title="销售价" :width="100" align="right">
             <template #cell="{ record }">
               <span class="price">¥{{ record.salePrice }}</span>
@@ -121,33 +132,11 @@
               />
             </template>
           </a-table-column>
-          <a-table-column title="热门" :width="80" align="center">
-            <template #cell="{ record }">
-              <a-switch 
-                v-model="record.isHot" 
-                :disabled="record.status === 'offline'"
-                @change="handleHotChange(record)"
-              />
-            </template>
-          </a-table-column>
-          <a-table-column title="推荐" :width="80" align="center">
-            <template #cell="{ record }">
-              <a-switch 
-                v-model="record.isRecommend" 
-                :disabled="record.status === 'offline'"
-                @change="handleRecommendChange(record)"
-              />
-            </template>
-          </a-table-column>
           <a-table-column title="排序" data-index="sort" :width="80" align="center" />
-          <a-table-column title="操作" :width="150" fixed="right">
+          <a-table-column title="操作" :width="120" fixed="right">
             <template #cell="{ record }">
               <a-space>
                 <a-link @click="handleEditPrice(record)">调价</a-link>
-                <a-link @click="handleEditStock(record)">库存</a-link>
-                <a-popconfirm content="确定要移除该商品吗？" @ok="handleRemove(record)">
-                  <a-link status="danger">移除</a-link>
-                </a-popconfirm>
               </a-space>
             </template>
           </a-table-column>
@@ -157,22 +146,10 @@
       </div>
     </a-card>
     
-    <AddProductModal 
-      v-model:visible="addProductVisible" 
-      :warehouses="warehouses"
-      @success="handleAddSuccess"
-    />
-    
     <PriceEditDrawer 
       v-model:visible="priceEditVisible" 
       :product="currentProduct"
       @success="handlePriceSuccess"
-    />
-    
-    <StockEditDrawer 
-      v-model:visible="stockEditVisible" 
-      :product="currentProduct"
-      @success="handleStockSuccess"
     />
   </div>
 </template>
@@ -180,9 +157,7 @@
 <script setup lang="ts">
 import { ref, computed, reactive, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
-import AddProductModal from './components/AddProductModal.vue'
 import PriceEditDrawer from './components/PriceEditDrawer.vue'
-import StockEditDrawer from './components/StockEditDrawer.vue'
 
 interface ProductCategory {
   categoryId: string
@@ -199,6 +174,8 @@ interface MarketProduct {
   spuCode?: string
   categoryName?: string
   spec: string
+  projectId: string
+  projectName: string
   warehouseId: string
   warehouseName: string
   salePrice: number
@@ -206,12 +183,17 @@ interface MarketProduct {
   unit?: string
   stock: number
   status: 'online' | 'offline'
-  isHot: boolean
-  isRecommend: boolean
   sort: number
 }
 
+interface ProjectWarehouse {
+  projectId: string
+  projectName: string
+  warehouses: { warehouseId: string; warehouseName: string }[]
+}
+
 const searchForm = reactive({
+  projectId: '',
   warehouseId: '',
   productName: '',
   status: '',
@@ -311,9 +293,7 @@ function resetCategory() {
 }
 
 const selectedKeys = ref<string[]>([])
-const addProductVisible = ref(false)
 const priceEditVisible = ref(false)
-const stockEditVisible = ref(false)
 const currentProduct = ref<MarketProduct | null>(null)
 
 const pagination = reactive({
@@ -322,13 +302,40 @@ const pagination = reactive({
   total: 0,
 })
 
-const warehouses = ref([
-  { id: 'w001', name: '深圳湾科技园项目仓' },
-  { id: 'w002', name: '福田CBD项目仓' },
-  { id: 'w003', name: '宝安新安项目仓' },
-  { id: 'w004', name: '龙岗中心城项目仓' },
-  { id: 'w005', name: '南山科技园项目仓' },
+const projectWarehouses = ref<ProjectWarehouse[]>([
+  {
+    projectId: 'p001',
+    projectName: '中建一局深圳分公司',
+    warehouses: [
+      { warehouseId: 'w001', warehouseName: '深圳湾科技园一仓' },
+      { warehouseId: 'w002', warehouseName: '深圳湾科技园二仓' },
+    ],
+  },
+  {
+    projectId: 'p002',
+    projectName: '中建三局华南区域',
+    warehouses: [
+      { warehouseId: 'w003', warehouseName: '福田CBD中心仓' },
+      { warehouseId: 'w004', warehouseName: '宝安新安仓' },
+    ],
+  },
+  {
+    projectId: 'p003',
+    projectName: '中铁建工深圳项目部',
+    warehouses: [
+      { warehouseId: 'w005', warehouseName: '龙岗中心城仓' },
+      { warehouseId: 'w006', warehouseName: '南山科技园仓' },
+    ],
+  },
 ])
+
+const filteredWarehouses = computed(() => {
+  if (!searchForm.projectId) {
+    return projectWarehouses.value.flatMap(p => p.warehouses)
+  }
+  const project = projectWarehouses.value.find(p => p.projectId === searchForm.projectId)
+  return project ? project.warehouses : []
+})
 
 const products = ref<MarketProduct[]>([
   {
@@ -339,15 +346,15 @@ const products = ref<MarketProduct[]>([
     spuCode: 'SPU-SN-001',
     categoryName: '水泥',
     spec: '50kg/袋',
+    projectId: 'p001',
+    projectName: '中建一局深圳分公司',
     warehouseId: 'w001',
-    warehouseName: '深圳湾科技园项目仓',
+    warehouseName: '深圳湾科技园一仓',
     salePrice: 450,
     saleStock: 500,
     unit: '吨',
     stock: 500,
     status: 'online',
-    isHot: true,
-    isRecommend: true,
     sort: 1,
   },
   {
@@ -358,15 +365,15 @@ const products = ref<MarketProduct[]>([
     spuCode: 'SPU-LG-001',
     categoryName: '钢材',
     spec: '16mm',
+    projectId: 'p001',
+    projectName: '中建一局深圳分公司',
     warehouseId: 'w001',
-    warehouseName: '深圳湾科技园项目仓',
+    warehouseName: '深圳湾科技园一仓',
     salePrice: 4280,
     saleStock: 200,
     unit: '吨',
     stock: 200,
     status: 'online',
-    isHot: false,
-    isRecommend: true,
     sort: 2,
   },
   {
@@ -377,15 +384,15 @@ const products = ref<MarketProduct[]>([
     spuCode: 'SPU-HS-001',
     categoryName: '砂石',
     spec: '中砂',
+    projectId: 'p001',
+    projectName: '中建一局深圳分公司',
     warehouseId: 'w002',
-    warehouseName: '福田CBD项目仓',
+    warehouseName: '深圳湾科技园二仓',
     salePrice: 95,
     saleStock: 1000,
     unit: '方',
     stock: 1000,
     status: 'offline',
-    isHot: false,
-    isRecommend: false,
     sort: 3,
   },
   {
@@ -395,15 +402,15 @@ const products = ref<MarketProduct[]>([
     spuName: '普通硅酸盐水泥',
     spuCode: 'SPU-SN-001',
     spec: '50kg/袋',
+    projectId: 'p001',
+    projectName: '中建一局深圳分公司',
     warehouseId: 'w001',
-    warehouseName: '深圳湾科技园项目仓',
+    warehouseName: '深圳湾科技园一仓',
     salePrice: 520,
     saleStock: 300,
     unit: '吨',
     stock: 300,
     status: 'online',
-    isHot: true,
-    isRecommend: false,
     sort: 4,
   },
   {
@@ -413,15 +420,15 @@ const products = ref<MarketProduct[]>([
     spuName: '螺纹钢',
     spuCode: 'SPU-LG-001',
     spec: '20mm',
+    projectId: 'p001',
+    projectName: '中建一局深圳分公司',
     warehouseId: 'w002',
-    warehouseName: '福田CBD项目仓',
+    warehouseName: '深圳湾科技园二仓',
     salePrice: 4150,
     saleStock: 150,
     unit: '吨',
     stock: 150,
     status: 'online',
-    isHot: false,
-    isRecommend: true,
     sort: 5,
   },
   {
@@ -431,15 +438,15 @@ const products = ref<MarketProduct[]>([
     spuName: '商品混凝土',
     spuCode: 'SPU-HNT-001',
     spec: 'C30',
+    projectId: 'p002',
+    projectName: '中建三局华南区域',
     warehouseId: 'w003',
-    warehouseName: '宝安新安项目仓',
+    warehouseName: '福田CBD中心仓',
     salePrice: 420,
     saleStock: 800,
     unit: '方',
     stock: 800,
     status: 'online',
-    isHot: true,
-    isRecommend: true,
     sort: 6,
   },
   {
@@ -449,15 +456,15 @@ const products = ref<MarketProduct[]>([
     spuName: '商品混凝土',
     spuCode: 'SPU-HNT-001',
     spec: 'C40',
-    warehouseId: 'w003',
-    warehouseName: '宝安新安项目仓',
+    projectId: 'p002',
+    projectName: '中建三局华南区域',
+    warehouseId: 'w004',
+    warehouseName: '宝安新安仓',
     salePrice: 480,
     saleStock: 600,
     unit: '方',
     stock: 600,
     status: 'online',
-    isHot: false,
-    isRecommend: false,
     sort: 7,
   },
   {
@@ -467,15 +474,15 @@ const products = ref<MarketProduct[]>([
     spuName: '防水涂料',
     spuCode: 'SPU-FS-001',
     spec: '20kg/桶',
-    warehouseId: 'w001',
-    warehouseName: '深圳湾科技园项目仓',
+    projectId: 'p002',
+    projectName: '中建三局华南区域',
+    warehouseId: 'w004',
+    warehouseName: '宝安新安仓',
     salePrice: 380,
     saleStock: 200,
     unit: '桶',
     stock: 200,
     status: 'online',
-    isHot: false,
-    isRecommend: true,
     sort: 8,
   },
   {
@@ -492,8 +499,6 @@ const products = ref<MarketProduct[]>([
     unit: '根',
     stock: 5000,
     status: 'online',
-    isHot: false,
-    isRecommend: false,
     sort: 9,
   },
   {
@@ -510,8 +515,6 @@ const products = ref<MarketProduct[]>([
     unit: '张',
     stock: 2000,
     status: 'online',
-    isHot: true,
-    isRecommend: true,
     sort: 10,
   },
   {
@@ -528,8 +531,6 @@ const products = ref<MarketProduct[]>([
     unit: '卷',
     stock: 800,
     status: 'online',
-    isHot: true,
-    isRecommend: false,
     sort: 11,
   },
   {
@@ -546,8 +547,6 @@ const products = ref<MarketProduct[]>([
     unit: '卷',
     stock: 500,
     status: 'online',
-    isHot: false,
-    isRecommend: true,
     sort: 12,
   },
   {
@@ -557,15 +556,15 @@ const products = ref<MarketProduct[]>([
     spuName: 'PPR水管',
     spuCode: 'SPU-SG-001',
     spec: '20mm',
-    warehouseId: 'w002',
-    warehouseName: '福田CBD项目仓',
+    projectId: 'p003',
+    projectName: '中铁建工深圳项目部',
+    warehouseId: 'w005',
+    warehouseName: '龙岗中心城仓',
     salePrice: 15,
     saleStock: 3000,
     unit: '根',
     stock: 3000,
     status: 'online',
-    isHot: false,
-    isRecommend: false,
     sort: 13,
   },
   {
@@ -575,15 +574,15 @@ const products = ref<MarketProduct[]>([
     spuName: '瓷砖胶',
     spuCode: 'SPU-ZBJ-001',
     spec: '25kg/袋',
+    projectId: 'p002',
+    projectName: '中建三局华南区域',
     warehouseId: 'w003',
-    warehouseName: '宝安新安项目仓',
+    warehouseName: '福田CBD中心仓',
     salePrice: 65,
     saleStock: 400,
     unit: '袋',
     stock: 400,
     status: 'online',
-    isHot: true,
-    isRecommend: true,
     sort: 14,
   },
   {
@@ -593,15 +592,15 @@ const products = ref<MarketProduct[]>([
     spuName: '螺纹钢',
     spuCode: 'SPU-LG-001',
     spec: '25mm',
-    warehouseId: 'w001',
-    warehouseName: '深圳湾科技园项目仓',
+    projectId: 'p002',
+    projectName: '中建三局华南区域',
+    warehouseId: 'w004',
+    warehouseName: '宝安新安仓',
     salePrice: 4050,
     saleStock: 100,
     unit: '吨',
     stock: 100,
     status: 'offline',
-    isHot: false,
-    isRecommend: false,
     sort: 15,
   },
 ])
@@ -615,8 +614,16 @@ const rowSelection = computed(() => ({
   },
 }))
 
+watch(() => searchForm.projectId, () => {
+  searchForm.warehouseId = ''
+})
+
 const filteredProducts = computed(() => {
   let result = products.value
+  
+  if (searchForm.projectId) {
+    result = result.filter(p => p.projectId === searchForm.projectId)
+  }
   
   if (searchForm.warehouseId) {
     result = result.filter(p => p.warehouseId === searchForm.warehouseId)
@@ -642,6 +649,7 @@ function handleSearch() {
 }
 
 function handleReset() {
+  searchForm.projectId = ''
   searchForm.warehouseId = ''
   searchForm.productName = ''
   searchForm.status = ''
@@ -650,10 +658,6 @@ function handleReset() {
 
 function handlePageChange(page: number) {
   pagination.current = page
-}
-
-function handleAddProducts() {
-  addProductVisible.value = true
 }
 
 function handleBatchOnline() {
@@ -672,8 +676,6 @@ function handleBatchOffline() {
     const product = products.value.find(p => p.id === key)
     if (product) {
       product.status = 'offline'
-      product.isHot = false
-      product.isRecommend = false
     }
   })
   selectedKeys.value = []
@@ -681,19 +683,7 @@ function handleBatchOffline() {
 }
 
 function handleStatusChange(record: MarketProduct) {
-  if (record.status === 'offline') {
-    record.isHot = false
-    record.isRecommend = false
-  }
   Message.success(`${record.status === 'online' ? '上架' : '下架'}成功`)
-}
-
-function handleHotChange(record: MarketProduct) {
-  Message.success(record.isHot ? '已设为热门' : '已取消热门')
-}
-
-function handleRecommendChange(record: MarketProduct) {
-  Message.success(record.isRecommend ? '已设为推荐' : '已取消推荐')
 }
 
 function handleEditPrice(record: MarketProduct) {
@@ -701,32 +691,9 @@ function handleEditPrice(record: MarketProduct) {
   priceEditVisible.value = true
 }
 
-function handleEditStock(record: MarketProduct) {
-  currentProduct.value = { ...record }
-  stockEditVisible.value = true
-}
-
-function handleRemove(record: MarketProduct) {
-  const index = products.value.findIndex(p => p.id === record.id)
-  if (index > -1) {
-    products.value.splice(index, 1)
-    Message.success('移除成功')
-  }
-}
-
-function handleAddSuccess() {
-  addProductVisible.value = false
-  Message.success('添加成功')
-}
-
 function handlePriceSuccess() {
   priceEditVisible.value = false
   Message.success('调价成功')
-}
-
-function handleStockSuccess() {
-  stockEditVisible.value = false
-  Message.success('库存更新成功')
 }
 </script>
 

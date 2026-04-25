@@ -18,11 +18,14 @@
     "@gongchengcang/types": "workspace:*",
     "@gongchengcang/utils": "workspace:*",
     "dayjs": "^1.11.10",
+    "marked": "^18.0.2",
+    "mermaid": "^11.14.0",
     "pinia": "^2.1.7",
     "vue": "^3.4.21",
     "vue-router": "^4.3.0"
   },
   "devDependencies": {
+    "@types/marked": "^6.0.0",
     "@types/node": "^20.11.24",
     "@vitejs/plugin-vue": "^5.0.4",
     "@vue/tsconfig": "^0.5.1",
