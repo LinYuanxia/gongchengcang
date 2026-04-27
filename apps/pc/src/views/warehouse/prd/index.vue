@@ -251,9 +251,9 @@
               <a-form-item label="同步到目录">
                 <a-select
                   v-model="yuqueConfig.parentUuid"
-                  placeholder="点击加载目录..."
+                  placeholder="点击下拉选择目录，支持搜索..."
                   :loading="yuqueDirLoading"
-                  @focus="loadYuqueDirectories"
+                  @popupVisible="(v) => v && loadYuqueDirectories()"
                   style="width: 100%"
                   allow-clear
                   filterable
@@ -364,6 +364,13 @@ watch(showYuqueModal, (open) => {
   if (open) {
     // 打开弹窗时，已配置好token的话直接切到同步页
     yuqueActiveTab.value = yuqueConfig.value.token ? 'sync' : 'config'
+  }
+})
+
+watch(yuqueActiveTab, (tab) => {
+  // 切到同步页时自动加载目录
+  if (tab === 'sync') {
+    setTimeout(() => loadYuqueDirectories(), 100)
   }
 })
 const docRef = ref<HTMLElement | null>(null)
@@ -529,6 +536,7 @@ async function loadYuqueDirectories() {
   if (!yuqueConfig.value.token || !yuqueConfig.value.repoId) {
     return
   }
+  // 已有目录也重新加载，确保最新
   if (yuqueDirectories.value.length > 0) {
     return
   }
