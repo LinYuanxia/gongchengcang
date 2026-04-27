@@ -28,9 +28,10 @@ export interface TreeDocNode {
 }
 
 /** 支持的端 */
-export type PrdSource = 'warehouse' | 'platform' | 'supplier' | 'construction' | 'project' | 'manual' | 'archive'
+export type PrdSource = 'warehouse' | 'platform' | 'supplier' | 'construction' | 'project' | 'manual' | 'archive' | 'release'
 
 export const sourceOptions: { label: string; value: PrdSource }[] = [
+  { label: '🏷️ 按版本期数', value: 'release' },
   { label: '📌 项目总览', value: 'project' },
   { label: '工程仓端', value: 'warehouse' },
   { label: '平台端', value: 'platform' },
@@ -745,11 +746,105 @@ export const docTreeModule: PrdModule = {
 }
 
 
+/** 26.4.1期 - 版本概览模块 */
+export const releaseOverviewModule: PrdModule = {
+  id: '2641-overview',
+  name: '版本概览',
+  docFile: '版本概览.md',
+  docUrl: '/gongchengcang/prd-docs/releases/26.4.1-0-1搭建/版本概览.md',
+  icon: 'icon-file',
+  priority: '总纲',
+  description: '26.4.1期 - 系统0-1搭建，包含版本范围、核心目标、四端功能全景、下版本路标',
+}
+
 /** 树形目录导航数据 - 按 docs/ 层级组织 */
 export const prdDocTree: TreeDocNode[] = [
   {
+    key: 'release-section',
+    title: '🏷️ 按版本期数',
+    children: [
+      {
+        key: 'release-2641',
+        title: '26.4.1期 - 0-1搭建',
+        selectable: false,
+        children: [
+          {
+            key: 'release-2641-overview',
+            title: '版本概览',
+            isLeaf: true,
+            module: releaseOverviewModule,
+          },
+          {
+            key: 'release-2641-project',
+            title: '项目总览',
+            children: [
+              ...projectPrdModules.slice(0, 3).map(m => ({
+                key: `2641-project-${m.id}`,
+                title: m.name,
+                isLeaf: true,
+                module: m,
+              })),
+              {
+                key: '2641-project-crossdept',
+                title: '跨部门协同PRD',
+                isLeaf: true,
+                module: crossDeptPrdModule,
+              },
+            ],
+          },
+          {
+            key: 'release-2641-warehouse',
+            title: '工程仓端',
+            children: prdModules.map(m => ({
+              key: `2641-warehouse-${m.id}`,
+              title: m.name,
+              isLeaf: true,
+              module: m,
+            })),
+          },
+          {
+            key: 'release-2641-platform',
+            title: '平台端',
+            children: platformPrdModules.map(m => ({
+              key: `2641-platform-${m.id}`,
+              title: m.name,
+              isLeaf: true,
+              module: m,
+            })),
+          },
+          {
+            key: 'release-2641-supplier',
+            title: '供应商端',
+            children: supplierPrdModules.map(m => ({
+              key: `2641-supplier-${m.id}`,
+              title: m.name,
+              isLeaf: true,
+              module: m,
+            })),
+          },
+          {
+            key: 'release-2641-construction',
+            title: '施工方端',
+            children: constructionPrdModules.map(m => ({
+              key: `2641-construction-${m.id}`,
+              title: m.name,
+              isLeaf: true,
+              module: m,
+            })),
+          },
+          {
+            key: 'release-2641-changelog',
+            title: '总更新日志',
+            isLeaf: true,
+            module: changelogModule,
+          },
+        ],
+      },
+    ],
+  },
+  {
     key: 'project-section',
-    title: '项目总览',
+    title: '📌 项目总览',
     children: [
       ...projectPrdModules.slice(0, 3).map(m => ({
         key: `project-${m.id}`,
