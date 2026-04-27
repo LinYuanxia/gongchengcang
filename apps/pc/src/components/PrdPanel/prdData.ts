@@ -28,10 +28,9 @@ export interface TreeDocNode {
 }
 
 /** 支持的端 */
-export type PrdSource = 'warehouse' | 'platform' | 'supplier' | 'construction' | 'project' | 'manual' | 'archive' | 'release'
+export type PrdSource = 'warehouse' | 'platform' | 'supplier' | 'construction' | 'project' | 'manual' | 'archive'
 
 export const sourceOptions: { label: string; value: PrdSource }[] = [
-  { label: '🏷️ 按版本期数', value: 'release' },
   { label: '📌 项目总览', value: 'project' },
   { label: '工程仓端', value: 'warehouse' },
   { label: '平台端', value: 'platform' },
@@ -760,12 +759,36 @@ export const releaseOverviewModule: PrdModule = {
 /** 树形目录导航数据 - 按 docs/ 层级组织 */
 export const prdDocTree: TreeDocNode[] = [
   {
-    key: 'release-section',
-    title: '🏷️ 按版本期数',
+    key: 'project-section',
+    title: '📌 项目总览',
+    children: [
+      ...projectPrdModules.slice(0, 3).map(m => ({
+        key: `project-${m.id}`,
+        title: m.name,
+        isLeaf: true,
+        module: m,
+      })),
+      {
+        key: 'project-crossdept',
+        title: '跨部门协同PRD',
+        isLeaf: true,
+        module: crossDeptPrdModule,
+      },
+      {
+        key: 'project-doctree',
+        title: '文档目录架构与口径说明',
+        isLeaf: true,
+        module: docTreeModule,
+      },
+    ],
+  },
+  {
+    key: 'prd-section',
+    title: 'PRD文档',
     children: [
       {
         key: 'release-2641',
-        title: '26.4.1期 - 0-1搭建',
+        title: '🏷️ 26.4.1期 - 0-1搭建',
         selectable: false,
         children: [
           {
@@ -840,36 +863,6 @@ export const prdDocTree: TreeDocNode[] = [
           },
         ],
       },
-    ],
-  },
-  {
-    key: 'project-section',
-    title: '📌 项目总览',
-    children: [
-      ...projectPrdModules.slice(0, 3).map(m => ({
-        key: `project-${m.id}`,
-        title: m.name,
-        isLeaf: true,
-        module: m,
-      })),
-      {
-        key: 'project-crossdept',
-        title: '跨部门协同PRD',
-        isLeaf: true,
-        module: crossDeptPrdModule,
-      },
-      {
-        key: 'project-doctree',
-        title: '文档目录架构与口径说明',
-        isLeaf: true,
-        module: docTreeModule,
-      },
-    ],
-  },
-  {
-    key: 'prd-section',
-    title: 'PRD文档',
-    children: [
       {
         key: 'changelog',
         title: '总更新日志',
