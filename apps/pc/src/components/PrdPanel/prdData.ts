@@ -769,16 +769,16 @@ export const prdDocTree: TreeDocNode[] = [
         module: m,
       })),
       {
-        key: 'project-doctree',
-        title: '文档目录架构与口径说明',
-        isLeaf: true,
-        module: docTreeModule,
-      },
-      {
         key: 'project-crossdept-prd',
         title: '跨部门协同PRD',
         isLeaf: true,
         module: crossDeptPrdModule,
+      },
+      {
+        key: 'project-doctree',
+        title: '文档目录架构与口径说明',
+        isLeaf: true,
+        module: docTreeModule,
       },
     ],
   },
