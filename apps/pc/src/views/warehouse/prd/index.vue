@@ -794,6 +794,7 @@ onUnmounted(() => {
   .content-area {
     padding: 24px 32px 48px;
     max-width: 960px;
+    margin: 0 auto;
   }
 
   .content-header {
@@ -827,6 +828,13 @@ onUnmounted(() => {
   top: 0;
   align-self: flex-start;
   max-height: 100vh;
+
+  // 隐藏滚动条但保留滚动功能
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 
   .toc-header {
     padding: 0 16px 12px;
