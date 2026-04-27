@@ -206,6 +206,13 @@
   >
     <div class="yuque-config">
       <a-form layout="vertical">
+        <a-form-item label="同步模式">
+          <a-radio-group v-model="yuqueConfig.syncMode">
+            <a-radio value="current">📄 仅同步当前文档</a-radio>
+            <a-radio value="all">🌲 同步全部（按目录结构创建分组）</a-radio>
+          </a-radio-group>
+        </a-form-item>
+
         <a-form-item label="语雀 Token">
           <a-input
             v-model="yuqueConfig.token"
@@ -306,6 +313,7 @@ const yuqueSyncResult = ref<{ title: string; status: 'success' | 'fail'; url?: s
 const yuqueConfig = ref({
   token: localStorage.getItem('yuque_token') || '',
   repoId: localStorage.getItem('yuque_repoId') || '',
+  syncMode: 'all' as 'current' | 'all',
 })
 const docRef = ref<HTMLElement | null>(null)
 
@@ -431,6 +439,27 @@ function toggleTreeNode(node: TreeDocNode) {
 }
 
 // ------ 语雀同步功能 ------
+interface SyncItem {
+  type: 'folder' | 'doc'
+  title: string
+  depth: number
+  module?: PrdModule
+}
+
+/** 递归遍历目录树，生成待同步列表（文件夹 + 文档） */
+function collectSyncItems(nodes: TreeDocNode[], depth = 0): SyncItem[] {
+  const items: SyncItem[] = []
+  for (const node of nodes) {
+    if (node.isLeaf && node.module) {
+      items.push({ type: 'doc', title: node.title, depth, module: node.module })
+    } else if (node.children && node.children.length) {
+      items.push({ type: 'folder', title: node.title, depth })
+      items.push(...collectSyncItems(node.children, depth + 1))
+    }
+  }
+  return items
+}
+
 async function startYuqueSync() {
   if (!yuqueConfig.value.token || !yuqueConfig.value.repoId) {
     Message.warning('请填写语雀 Token 和知识库 ID')
@@ -441,21 +470,45 @@ async function startYuqueSync() {
   localStorage.setItem('yuque_token', yuqueConfig.value.token)
   localStorage.setItem('yuque_repoId', yuqueConfig.value.repoId)
 
-  // 收集所有文档
-  const allModules = collectAllLeafModules()
   yuqueSyncResult.value = []
   yuqueSyncedCount.value = 0
-  yuqueTotalCount.value = allModules.length
   yuqueSyncing.value = true
 
-  // 逐个同步
-  for (let i = 0; i < allModules.length; i++) {
-    const mod = allModules[i]
-    yuqueCurrentFile.value = mod.name
-    yuqueProgress.value = Math.round(((i + 1) / allModules.length) * 100)
+  let syncItems: SyncItem[] = []
 
+  if (yuqueConfig.value.syncMode === 'current' && activeModule.value) {
+    // 仅同步当前文档
+    syncItems = [{
+      type: 'doc',
+      title: activeModule.value.name,
+      depth: 0,
+      module: activeModule.value,
+    }]
+  } else {
+    // 按目录结构全部同步（先建文件夹，再建文档）
+    syncItems = collectSyncItems(prdDocTree)
+  }
+
+  yuqueTotalCount.value = syncItems.filter(i => i.type === 'doc').length
+
+  // 逐个同步
+  for (let i = 0; i < syncItems.length; i++) {
+    const item = syncItems[i]
+    yuqueCurrentFile.value = `${item.type === 'folder' ? '📁' : '📄'} ${item.title}`
+    yuqueProgress.value = Math.round(((i + 1) / syncItems.length) * 100)
+
+    if (item.type === 'folder') {
+      // 文件夹：在结果里记录（语雀没有专门的文件夹API，靠人工后续整理）
+      yuqueSyncResult.value.push({
+        title: `[目录] ${item.title}`,
+        status: 'success',
+      })
+      continue
+    }
+
+    // 文档：正常上传
     try {
-      // 加载markdown内容
+      const mod = item.module!
       const res = await fetch(mod.docUrl)
       const content = await res.text()
 
@@ -481,22 +534,22 @@ async function startYuqueSync() {
           status: 'success',
           url: `https://www.yuque.com/${yuqueConfig.value.repoId}/${result.data.slug}`,
         })
+        yuqueSyncedCount.value++
       } else {
         throw new Error(result.message || result.errors?.[0]?.message || 'API调用失败')
       }
     } catch (e) {
       yuqueSyncResult.value.push({
-        title: mod.name,
+        title: item.title,
         status: 'fail',
       })
     }
 
-    yuqueSyncedCount.value = i + 1
-    await new Promise(r => setTimeout(r, 500)) // 语雀API限速
+    await new Promise(r => setTimeout(r, 600)) // 语雀API限速
   }
 
   yuqueSyncing.value = false
-  Message.success(`同步完成！成功 ${yuqueSyncResult.value.filter(r => r.status === 'success').length} 个文档`)
+  Message.success(`同步完成！成功上传 ${yuqueSyncedCount.value} 个文档，请在语雀中手动整理目录结构`)
 }
 
 // ------ PRD在线编辑功能 ------
