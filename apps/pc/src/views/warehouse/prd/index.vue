@@ -230,7 +230,17 @@
             placeholder="例如：linyuanxia/gongchengcang-prd"
           />
           <div class="form-tip">
-            💡 知识库 URL 格式：https://www.yuque.com/用户名/知识库ID
+            💡 知识库 URL：https://www.yuque.com/用户名/知识库ID
+          </div>
+        </a-form-item>
+
+        <a-form-item label="父目录 UUID（可选）">
+          <a-input
+            v-model="yuqueConfig.parentUuid"
+            placeholder="例如：ZzzzXxYy"
+          />
+          <div class="form-tip">
+            💡 点击语雀目录看地址栏：https://www.yuque.com/xxx/xxx/<b>这串就是UUID</b>
           </div>
         </a-form-item>
       </a-form>
@@ -313,6 +323,7 @@ const yuqueSyncResult = ref<{ title: string; status: 'success' | 'fail'; url?: s
 const yuqueConfig = ref({
   token: localStorage.getItem('yuque_token') || '',
   repoId: localStorage.getItem('yuque_repoId') || '',
+  parentUuid: localStorage.getItem('yuque_parentUuid') || '',
   syncMode: 'all' as 'current' | 'all',
 })
 const docRef = ref<HTMLElement | null>(null)
@@ -469,6 +480,7 @@ async function startYuqueSync() {
   // 保存配置
   localStorage.setItem('yuque_token', yuqueConfig.value.token)
   localStorage.setItem('yuque_repoId', yuqueConfig.value.repoId)
+  localStorage.setItem('yuque_parentUuid', yuqueConfig.value.parentUuid)
 
   yuqueSyncResult.value = []
   yuqueSyncedCount.value = 0
@@ -523,6 +535,7 @@ async function startYuqueSync() {
           title: mod.name,
           body: content,
           format: 'markdown',
+          parent_uuid: yuqueConfig.value.parentUuid || undefined,
         }),
       })
 
