@@ -856,7 +856,9 @@ onUnmounted(() => {
     color: var(--color-text-2);
     transition: all 0.15s ease;
     line-height: 1.4;
-    border-left: 2px solid transparent;
+    border-left: none;
+    border-radius: 0 4px 4px 0;
+    margin: 0 4px;
 
     &:hover {
       color: var(--color-primary-6);
@@ -867,7 +869,6 @@ onUnmounted(() => {
       color: var(--color-primary-6);
       font-weight: 600;
       background: var(--color-primary-light-1);
-      border-left-color: var(--color-primary-6);
     }
 
     &.level-2 { font-size: 13px; }
