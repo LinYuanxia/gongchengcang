@@ -820,7 +820,7 @@ onUnmounted(() => {
 .prd-toc {
   width: 220px;
   min-width: 220px;
-  border-left: 1px solid var(--color-border);
+  border-left: none;
   overflow-y: auto;
   background: var(--color-bg-2);
   padding: 16px 0;
@@ -837,12 +837,12 @@ onUnmounted(() => {
   }
 
   .toc-header {
-    padding: 0 16px 12px;
+    padding: 0 20px 12px;
     font-size: 14px;
     font-weight: 600;
     color: var(--color-text-1);
-    border-bottom: 1px solid var(--color-border);
-    margin-bottom: 8px;
+    border-bottom: none;
+    margin-bottom: 4px;
   }
 
   .toc-list {
