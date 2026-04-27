@@ -874,34 +874,7 @@ export const prdDocTree: TreeDocNode[] = [
   {
     key: 'archive-section',
     title: '历史归档',
-    children: [
-      {
-        key: 'archive-q4',
-        title: '2025 Q4 旧版详细设计',
-        isLeaf: true,
-        module: archivePrdModules[0],
-      },
-      {
-        key: 'archive-q1',
-        title: '2026 Q1 PM纯净版备份',
-        children: archivePrdModules.slice(2, 6).map(m => ({
-          key: `archive-${m.id}`,
-          title: m.name.replace(/^▶ /, ''),
-          isLeaf: true,
-          module: m,
-        })),
-      },
-      {
-        key: 'archive-old',
-        title: '旧资料归档',
-        children: archivePrdModules.slice(7).map(m => ({
-          key: `archive-${m.id}`,
-          title: m.name.replace(/^▶ /, ''),
-          isLeaf: true,
-          module: m,
-        })),
-      },
-    ],
+    children: [],
   },
 ]
 
