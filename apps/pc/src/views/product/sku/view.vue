@@ -150,6 +150,8 @@
       </a-spin>
     </div>
   </div>
+
+  <SkuFormDrawer v-model:visible="editDrawerVisible" :sku="editSkuData" @success="loadSkuDetail" />
 </template>
 
 <script setup lang="ts">
@@ -159,6 +161,7 @@ import { Message } from '@arco-design/web-vue'
 import type { Sku, SplitRule } from '@gongchengcang/types'
 import { SPLIT_RULE_CATEGORY_OPTIONS } from '@gongchengcang/types'
 import { getSkuDetail, getSplitRulesBySkuId } from '@gongchengcang/api'
+import SkuFormDrawer from './components/SkuFormDrawer.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -168,6 +171,10 @@ const skuId = computed(() => route.params.id as string)
 const loading = ref(false)
 const skuData = ref<Partial<Sku>>({})
 const splitRules = ref<SplitRule[]>([])
+
+// 编辑弹窗
+const editDrawerVisible = ref(false)
+const editSkuData = ref<Sku | null>(null)
 
 const supplierList = ref([
   {
@@ -226,7 +233,8 @@ function handleBack() {
 }
 
 function handleEdit() {
-  router.push(`/product/sku/edit/${skuId.value}`)
+  editSkuData.value = skuData.value as Sku
+  editDrawerVisible.value = true
 }
 
 function handleViewSpu() {

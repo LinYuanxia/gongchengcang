@@ -96,35 +96,6 @@
           </a-col>
         </a-row>
 
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-form-item field="costPrice" label="成本价">
-              <a-input-number
-                v-model="formData.costPrice"
-                placeholder="请输入成本价"
-                :min="0"
-                :precision="2"
-                style="width: 100%"
-              >
-                <template #prefix>¥</template>
-              </a-input-number>
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item field="marketPrice" label="市场价">
-              <a-input-number
-                v-model="formData.marketPrice"
-                placeholder="请输入市场价"
-                :min="0"
-                :precision="2"
-                style="width: 100%"
-              >
-                <template #prefix>¥</template>
-              </a-input-number>
-            </a-form-item>
-          </a-col>
-        </a-row>
-
         <a-divider orientation="left">图片信息</a-divider>
 
         <a-form-item field="mainImage" label="主图">
@@ -140,24 +111,6 @@
               <div class="upload-btn">
                 <icon-plus />
                 <div class="upload-text">上传主图</div>
-              </div>
-            </template>
-          </a-upload>
-        </a-form-item>
-
-        <a-form-item field="images" label="商品相册">
-          <a-upload
-            list-type="picture-card"
-            :file-list="imagesFileList"
-            :limit="9"
-            accept="image/*"
-            :auto-upload="false"
-            @change="handleImagesChange"
-          >
-            <template #upload-button>
-              <div class="upload-btn">
-                <icon-plus />
-                <div class="upload-text">上传图片</div>
               </div>
             </template>
           </a-upload>
@@ -193,7 +146,7 @@
                 <a-select
                   v-if="attr.isCustom"
                   v-model="attr.attrName"
-                  placeholder="选择规格属性"
+                  placeholder="输入或选择规格属性"
                   style="width: 140px"
                   allow-clear
                   allow-search
@@ -206,7 +159,18 @@
                   >
                     {{ a.attrName }}
                   </a-option>
+                  <a-option v-if="!getAvailableAttrs(attr).length" :value="attr.attrName" disabled>
+                    无可用属性，请直接输入
+                  </a-option>
                 </a-select>
+                <a-input
+                  v-if="attr.isCustom && !getAvailableAttrs(attr).length"
+                  v-model="attr.attrName"
+                  placeholder="输入自定义规格名称"
+                  style="width: 140px"
+                  allow-clear
+                  @input="handleCustomNameInput(attr)"
+                />
                 <a-select
                   v-if="!attr.isCustom || (attr.isCustom && attr.optionValues && attr.optionValues.length > 0)"
                   v-model="formData.specs[attr.attrName || attr.key]"
@@ -224,10 +188,11 @@
                 </a-select>
                 <a-input
                   v-if="attr.isCustom && (!attr.optionValues || attr.optionValues.length === 0)"
-                  v-model="formData.specs[attr.key]"
+                  :model-value="formData.specs[attr.attrName || attr.key]"
                   placeholder="请输入规格值"
                   style="width: 100%"
                   allow-clear
+                  @input="(val: string) => { const key = attr.attrName || attr.key; if (key) formData.specs[key] = val }"
                 />
               </a-input-group>
             </a-form-item>
@@ -322,15 +287,11 @@ const formData = reactive({
   unit: '',
   supplyPrice: undefined,
   salePrice: undefined,
-  costPrice: undefined,
-  marketPrice: undefined,
   mainImage: '',
-  images: [] as string[],
   specs: {} as Record<string, string>,
 })
 
 const mainImageFileList = ref<any[]>([])
-const imagesFileList = ref<any[]>([])
 
 const rules = {
   spuId: [{ required: true, message: '请选择所属SPU' }],
@@ -364,14 +325,10 @@ function resetForm() {
     unit: '',
     supplyPrice: undefined,
     salePrice: undefined,
-    costPrice: undefined,
-    marketPrice: undefined,
     mainImage: '',
-    images: [],
     specs: {},
   })
   mainImageFileList.value = []
-  imagesFileList.value = []
   selectedSpu.value = null
   attrList.value = []
   customSpecs.value = []
@@ -389,10 +346,7 @@ async function loadSkuDetail() {
     unit: props.sku.unit,
     supplyPrice: props.sku.supplyPrice,
     salePrice: props.sku.salePrice,
-    costPrice: props.sku.costPrice,
-    marketPrice: props.sku.marketPrice,
     mainImage: props.sku.mainImage || '',
-    images: props.sku.images || [],
     specs: props.sku.specs,
   })
   
@@ -402,14 +356,6 @@ async function loadSkuDetail() {
       name: 'mainImage',
       url: props.sku.mainImage,
     }]
-  }
-  
-  if (props.sku.images && props.sku.images.length > 0) {
-    imagesFileList.value = props.sku.images.map((url, index) => ({
-      uid: `-${index}`,
-      name: `image-${index}`,
-      url,
-    }))
   }
   
   await loadAttrList(props.sku.spuId)
@@ -521,6 +467,14 @@ function handleCustomAttrChange(attr: any) {
   updateCustomSpecKey(attr)
 }
 
+function handleCustomNameInput(attr: any) {
+  if (attr.attrName && attr.key) {
+    const oldValue = formData.specs[attr.key]
+    delete formData.specs[attr.key]
+    formData.specs[attr.attrName] = oldValue
+  }
+}
+
 function updateCustomSpecKey(attr: any) {
   if (attr.attrName && attr.key) {
     const oldValue = formData.specs[attr.key]
@@ -558,8 +512,9 @@ function prepareFinalSpecs() {
   displayAttrList.value.forEach(attr => {
     if (attr.isCustom) {
       const specKey = attr.attrName || attr.key
-      if (specKey && formData.specs[attr.key]) {
-        finalSpecs[specKey] = formData.specs[attr.key]
+      const specValue = formData.specs[attr.key] || formData.specs[attr.attrName || '']
+      if (specKey && specValue) {
+        finalSpecs[specKey] = specValue
       }
     } else {
       if (formData.specs[attr.attrName]) {
@@ -583,13 +538,6 @@ function handleMainImageChange(fileList: any[]) {
   } else {
     formData.mainImage = ''
   }
-}
-
-function handleImagesChange(fileList: any[]) {
-  imagesFileList.value = fileList
-  formData.images = fileList
-    .map(file => file.url || (file.file ? URL.createObjectURL(file.file) : ''))
-    .filter(Boolean)
 }
 
 function handleCancel() {
@@ -617,11 +565,8 @@ async function handleOk() {
         barcode: formData.barcode,
         unit: formData.unit,
         mainImage: formData.mainImage,
-        images: formData.images,
         supplyPrice: formData.supplyPrice,
         salePrice: formData.salePrice,
-        costPrice: formData.costPrice,
-        marketPrice: formData.marketPrice,
       })
       Message.success('编辑成功')
     } else {
@@ -633,11 +578,8 @@ async function handleOk() {
         barcode: formData.barcode,
         unit: formData.unit,
         mainImage: formData.mainImage,
-        images: formData.images,
         supplyPrice: formData.supplyPrice,
         salePrice: formData.salePrice,
-        costPrice: formData.costPrice,
-        marketPrice: formData.marketPrice,
       })
       Message.success('新增成功')
     }

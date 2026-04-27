@@ -16,14 +16,28 @@ export interface PrdModule {
   description: string
 }
 
+/** 树形目录节点 */
+export interface TreeDocNode {
+  key: string
+  title: string
+  icon?: string
+  isLeaf?: boolean
+  selectable?: boolean
+  children?: TreeDocNode[]
+  module?: PrdModule
+}
+
 /** 支持的端 */
-export type PrdSource = 'warehouse' | 'platform' | 'supplier' | 'construction'
+export type PrdSource = 'warehouse' | 'platform' | 'supplier' | 'construction' | 'project' | 'manual' | 'archive'
 
 export const sourceOptions: { label: string; value: PrdSource }[] = [
+  { label: '📌 项目总览', value: 'project' },
   { label: '工程仓端', value: 'warehouse' },
   { label: '平台端', value: 'platform' },
   { label: '供应商端', value: 'supplier' },
   { label: '施工方端', value: 'construction' },
+  { label: '📖 系统操作手册', value: 'manual' },
+  { label: '📦 历史归档', value: 'archive' },
 ]
 
 /** 全部PRD模块列表 - 工程仓端 */
@@ -54,15 +68,6 @@ export const prdModules: PrdModule[] = [
     icon: 'icon-file',
     priority: 'P0',
     description: '工程仓端核心业务流程，包括双交易链路（采购链路+销售链路）、状态流转规则、关键流程说明',
-  },
-  {
-    id: '03',
-    name: '数据模型与表结构',
-    docFile: '03-数据模型与表结构.md',
-    docUrl: '/gongchengcang/prd-docs/03-数据模型与表结构.md',
-    icon: 'icon-list',
-    priority: 'P0',
-    description: '工程仓端核心数据表结构设计，共18张核心表，包含字段规范、索引策略、并发控制',
   },
   {
     id: '04',
@@ -202,15 +207,6 @@ export const platformPrdModules: PrdModule[] = [
     description: '平台端核心业务流程，包括商户入驻审核、商品全生命周期、全平台订单监控、供应商供货管理4条主线',
   },
   {
-    id: '03',
-    name: '数据模型与表结构',
-    docFile: '03-数据模型与表结构.md',
-    docUrl: '/gongchengcang/prd-docs/platform/03-数据模型与表结构.md',
-    icon: 'icon-list',
-    priority: 'P0',
-    description: '平台端核心数据表结构设计，共6张核心表（商户/分类/属性/SPU/SKU/供货），包含DDL、索引策略、ER图',
-  },
-  {
     id: '04',
     name: '领域模型设计',
     docFile: '04-领域模型设计.md',
@@ -339,15 +335,6 @@ export const supplierPrdModules: PrdModule[] = [
     description: '供应商端核心业务流程，包含订单履约、商品上架审核、售后补发、发票管理4条主线',
   },
   {
-    id: '03',
-    name: '数据模型与表结构',
-    docFile: '03-数据模型与表结构.md',
-    docUrl: '/gongchengcang/prd-docs/supplier/03-数据模型与表结构.md',
-    icon: 'icon-list',
-    priority: 'P0',
-    description: '供应商端核心数据表结构设计，共8张核心表，包含DDL、字段约束、主外键、索引策略',
-  },
-  {
     id: '04',
     name: '领域模型设计',
     docFile: '04-领域模型设计.md',
@@ -410,6 +397,15 @@ export const supplierPrdModules: PrdModule[] = [
     priority: 'P1',
     description: '供应商端30个页面索引+路由配置+导航关系Mermaid图+页面跳转交互规则',
   },
+  {
+    id: '11',
+    name: '📖 操作手册',
+    docFile: '11-操作手册.md',
+    docUrl: '/gongchengcang/prd-docs/supplier/11-操作手册.md',
+    icon: 'icon-file',
+    priority: '操作手册',
+    description: '供应商端系统操作手册，面向最终用户的完整使用指南，覆盖工作台/商品/订单/财务/系统设置五大模块',
+  },
 ]
 
 /** 按优先级分组的模块索引 - 供应商端 */
@@ -447,15 +443,6 @@ export const constructionPrdModules: PrdModule[] = [
     icon: 'icon-file',
     priority: 'P0',
     description: '施工方端核心业务流程，包含商品采购、购物车结算、订单跟踪、售后处理4条主线',
-  },
-  {
-    id: '03',
-    name: '数据模型与表结构',
-    docFile: '03-数据模型与表结构.md',
-    docUrl: '/gongchengcang/prd-docs/construction/03-数据模型与表结构.md',
-    icon: 'icon-list',
-    priority: 'P0',
-    description: '施工方端核心数据表结构设计，共6张核心表，包含DDL、字段约束、主外键、索引策略',
   },
   {
     id: '04',
@@ -527,4 +514,392 @@ export const constructionPrdModulesByPriority = {
   P0: constructionPrdModules.filter(m => m.priority === 'P0'),
   P1: constructionPrdModules.filter(m => m.priority === 'P1'),
   P2: constructionPrdModules.filter(m => m.priority === 'P2'),
+}
+
+/** 全部PRD模块列表 - 项目视角 */
+export const projectPrdModules: PrdModule[] = [
+  {
+    id: '00',
+    name: '项目总览',
+    docFile: '项目总览.md',
+    docUrl: '/gongchengcang/prd-docs/项目总览.md',
+    icon: 'icon-home',
+    priority: '总纲',
+    description: '工程项目管理系统全景总览，一句话说清项目是什么、四端角色分工、核心概念、功能规模统计',
+  },
+  {
+    id: '01',
+    name: '系统功能说明书',
+    docFile: '系统功能说明书.md',
+    docUrl: '/gongchengcang/prd-docs/系统功能说明书.md',
+    icon: 'icon-list',
+    priority: 'P0',
+    description: '四端系统详细功能说明，按系统逐模块列出所有功能点和操作说明',
+  },
+  {
+    id: '02',
+    name: '版本迭代记录',
+    docFile: '版本迭代记录.md',
+    docUrl: '/gongchengcang/prd-docs/版本迭代记录.md',
+    icon: 'icon-file',
+    priority: 'P0',
+    description: '产品发布版本历史记录，按版本号倒序排列，含各版本核心能力说明',
+  },
+  {
+    id: '03',
+    name: '📖 操作手册',
+    docFile: '供应商端/11-操作手册.md',
+    docUrl: '/gongchengcang/prd-docs/supplier/11-操作手册.md',
+    icon: 'icon-file',
+    priority: '操作手册',
+    description: '供应商端系统操作手册（示例），面向最终用户的完整使用指南',
+  },
+]
+
+/** 全部PRD模块列表 - 系统操作手册 */
+export const manualPrdModules: PrdModule[] = [
+  {
+    id: '01',
+    name: '平台端操作手册',
+    docFile: 'manuals/platform.md',
+    docUrl: '/gongchengcang/prd-docs/manuals/platform.md',
+    icon: 'icon-file',
+    priority: '操作手册',
+    description: '平台端PC管理后台操作指南，面向平台运营/管理员',
+  },
+  {
+    id: '02',
+    name: '供应商端操作手册',
+    docFile: 'manuals/supplier.md',
+    docUrl: '/gongchengcang/prd-docs/manuals/supplier.md',
+    icon: 'icon-file',
+    priority: '操作手册',
+    description: '供应商门户操作指南，面向供应商',
+  },
+  {
+    id: '03',
+    name: '工程仓端操作手册',
+    docFile: 'manuals/warehouse.md',
+    docUrl: '/gongchengcang/prd-docs/manuals/warehouse.md',
+    icon: 'icon-file',
+    priority: '操作手册',
+    description: '工程仓小程序操作指南，面向仓库管理员',
+  },
+]
+
+/** 全部PRD模块列表 - 历史归档 */
+export const archivePrdModules: PrdModule[] = [
+  {
+    id: 'q4',
+    name: '2025 Q4 旧版详细设计',
+    docFile: 'archives/2025_Q4/索引.md',
+    docUrl: '/gongchengcang/prd-docs/archives/2025_Q4/索引.md',
+    icon: 'icon-file',
+    priority: '2025 Q4',
+    description: '2025年Q4旧版PRD详细设计文档归档，共26个文件',
+  },
+
+  {
+    id: 'q1',
+    name: '2026 Q1 PM纯净版备份',
+    docFile: 'archives/2026_Q1/索引.md',
+    docUrl: '/gongchengcang/prd-docs/archives/2026_Q1/索引.md',
+    icon: 'icon-file',
+    priority: '2026 Q1',
+    description: '2026年Q1 PM纯净版PRD备份归档，四端总纲快照',
+  },
+  {
+    id: 'q1-p',
+    name: '▶ 平台端 - PM纯净版备份',
+    docFile: 'archives/2026_Q1/pm-platform.md',
+    docUrl: '/gongchengcang/prd-docs/archives/2026_Q1/pm-platform.md',
+    icon: 'icon-file',
+    priority: '2026 Q1',
+    description: '平台端PM纯净版PRD总纲历史快照',
+  },
+  {
+    id: 'q1-s',
+    name: '▶ 供应商端 - PM纯净版备份',
+    docFile: 'archives/2026_Q1/pm-supplier.md',
+    docUrl: '/gongchengcang/prd-docs/archives/2026_Q1/pm-supplier.md',
+    icon: 'icon-file',
+    priority: '2026 Q1',
+    description: '供应商端PM纯净版PRD总纲历史快照',
+  },
+  {
+    id: 'q1-w',
+    name: '▶ 工程仓端 - PM纯净版备份',
+    docFile: 'archives/2026_Q1/pm-warehouse.md',
+    docUrl: '/gongchengcang/prd-docs/archives/2026_Q1/pm-warehouse.md',
+    icon: 'icon-file',
+    priority: '2026 Q1',
+    description: '工程仓端PM纯净版PRD总纲历史快照',
+  },
+  {
+    id: 'q1-c',
+    name: '▶ 施工方端 - PM纯净版备份',
+    docFile: 'archives/2026_Q1/pm-construction.md',
+    docUrl: '/gongchengcang/prd-docs/archives/2026_Q1/pm-construction.md',
+    icon: 'icon-file',
+    priority: '2026 Q1',
+    description: '施工方端PM纯净版PRD总纲历史快照',
+  },
+  {
+    id: 'old',
+    name: '旧资料归档',
+    docFile: 'archives/old/索引.md',
+    docUrl: '/gongchengcang/prd-docs/archives/old/索引.md',
+    icon: 'icon-file',
+    priority: '旧资料',
+    description: '早期供应商端完整PRD文档和项目规划资料',
+  },
+  {
+    id: 'old-1',
+    name: '▶ 供应商端完整PRD（旧版）',
+    docFile: 'archives/old/供应商端_产品PRD完整版.md',
+    docUrl: '/gongchengcang/prd-docs/archives/old/供应商端_产品PRD完整版.md',
+    icon: 'icon-file',
+    priority: '旧资料',
+    description: '供应商端早期完整PRD文档',
+  },
+  {
+    id: 'old-2',
+    name: '▶ 供应商端PRD最终版',
+    docFile: 'archives/old/供应商端_产品PRD_最终版.md',
+    docUrl: '/gongchengcang/prd-docs/archives/old/供应商端_产品PRD_最终版.md',
+    icon: 'icon-file',
+    priority: '旧资料',
+    description: '供应商端PRD最终版本',
+  },
+  {
+    id: 'old-3',
+    name: '▶ 供应商端核心业务流程图',
+    docFile: 'archives/old/供应商端_核心业务流程图.md',
+    docUrl: '/gongchengcang/prd-docs/archives/old/供应商端_核心业务流程图.md',
+    icon: 'icon-file',
+    priority: '旧资料',
+    description: '供应商端核心业务流程Mermaid图',
+  },
+  {
+    id: 'old-4',
+    name: '▶ 完整交互推演复盘',
+    docFile: 'archives/old/完整交互推演复盘.md',
+    docUrl: '/gongchengcang/prd-docs/archives/old/完整交互推演复盘.md',
+    icon: 'icon-file',
+    priority: '旧资料',
+    description: '完整交互流程推演与复盘文档',
+  },
+  {
+    id: 'old-5',
+    name: '▶ 订单与售后状态核心逻辑',
+    docFile: 'archives/old/订单状态_售后状态_核心逻辑设计.md',
+    docUrl: '/gongchengcang/prd-docs/archives/old/订单状态_售后状态_核心逻辑设计.md',
+    icon: 'icon-file',
+    priority: '旧资料',
+    description: '订单与售后状态机核心逻辑设计',
+  },
+]
+
+/** 全局更新日志模块 */
+export const changelogModule: PrdModule = {
+  id: 'changelog',
+  name: '总更新日志',
+  docFile: '更新日志.md',
+  docUrl: '/gongchengcang/prd-docs/更新日志.md',
+  icon: 'icon-file',
+  priority: '总纲',
+  description: 'PRD文档全局更新日志，记录每次版本发布涉及的文档变更',
+}
+
+/** 跨部门协同PRD（项目总览 - 全局协同架构） */
+export const crossDeptPrdModule: PrdModule = {
+  id: 'crossdept-overview',
+  name: '跨部门协同PRD',
+  docFile: '跨部门协同PRD.md',
+  docUrl: '/gongchengcang/prd-docs/跨部门协同PRD.md',
+  icon: 'icon-file',
+  priority: '总纲',
+  description: '工程项目管理系统四端跨系统协同总体架构，涵盖协作全景、数据流向和通信规则',
+}
+
+/** 跨部门协同（PRD文档 - 当前版本） */
+export const crossDeptModule: PrdModule = {
+  id: 'crossdept',
+  name: '跨部门协同',
+  docFile: '跨部门协同.md',
+  docUrl: '/gongchengcang/prd-docs/跨部门协同.md',
+  icon: 'icon-file',
+  priority: '总纲',
+  description: '当前版本四端跨部门协同功能设计，聚焦本期迭代涉及的协同场景和接口规范',
+}
+
+
+/** 树形目录导航数据 - 按 docs/ 层级组织 */
+export const prdDocTree: TreeDocNode[] = [
+  {
+    key: 'project-section',
+    title: '项目总览',
+    children: [
+      ...projectPrdModules.slice(0, 3).map(m => ({
+        key: `project-${m.id}`,
+        title: m.name,
+        isLeaf: true,
+        module: m,
+      })),
+      {
+        key: 'project-crossdept',
+        title: '跨部门协同PRD',
+        isLeaf: true,
+        module: crossDeptPrdModule,
+      },
+    ],
+  },
+  {
+    key: 'prd-section',
+    title: 'PRD文档',
+    children: [
+      {
+        key: 'changelog',
+        title: '总更新日志',
+        isLeaf: true,
+        module: changelogModule,
+      },
+      {
+        key: 'crossdept',
+        title: '跨部门协同',
+        isLeaf: true,
+        module: crossDeptModule,
+      },
+      {
+        key: 'warehouse',
+        title: '工程仓端',
+        children: prdModules.map(m => ({
+          key: `warehouse-${m.id}`,
+          title: m.name,
+          isLeaf: true,
+          module: m,
+        })),
+      },
+      {
+        key: 'platform',
+        title: '平台端',
+        children: platformPrdModules.map(m => ({
+          key: `platform-${m.id}`,
+          title: m.name,
+          isLeaf: true,
+          module: m,
+        })),
+      },
+      {
+        key: 'supplier',
+        title: '供应商端',
+        children: supplierPrdModules.map(m => ({
+          key: `supplier-${m.id}`,
+          title: m.name,
+          isLeaf: true,
+          module: m,
+        })),
+      },
+      {
+        key: 'construction',
+        title: '施工方端',
+        children: constructionPrdModules.map(m => ({
+          key: `construction-${m.id}`,
+          title: m.name,
+          isLeaf: true,
+          module: m,
+        })),
+      },
+    ],
+  },
+  {
+    key: 'manual-section',
+    title: '系统操作手册',
+    children: manualPrdModules.map(m => ({
+      key: `manual-${m.id}`,
+      title: m.name,
+      isLeaf: true,
+      module: m,
+    })),
+  },
+  {
+    key: 'archive-section',
+    title: '历史归档',
+    children: [
+      {
+        key: 'archive-q4',
+        title: '2025 Q4 旧版详细设计',
+        isLeaf: true,
+        module: archivePrdModules[0],
+      },
+      {
+        key: 'archive-q1',
+        title: '2026 Q1 PM纯净版备份',
+        children: archivePrdModules.slice(2, 6).map(m => ({
+          key: `archive-${m.id}`,
+          title: m.name.replace(/^▶ /, ''),
+          isLeaf: true,
+          module: m,
+        })),
+      },
+      {
+        key: 'archive-old',
+        title: '旧资料归档',
+        children: archivePrdModules.slice(7).map(m => ({
+          key: `archive-${m.id}`,
+          title: m.name.replace(/^▶ /, ''),
+          isLeaf: true,
+          module: m,
+        })),
+      },
+    ],
+  },
+]
+
+/** 收集所有叶子节点的模块 */
+export function collectAllLeafModules(): PrdModule[] {
+  const result: PrdModule[] = []
+  function walk(nodes: TreeDocNode[]) {
+    for (const node of nodes) {
+      if (node.isLeaf && node.module) result.push(node.module)
+      if (node.children) walk(node.children)
+    }
+  }
+  walk(prdDocTree)
+  return result
+}
+
+/** 收集所有节点key */
+export function collectAllKeys(nodes: TreeDocNode[] = prdDocTree): string[] {
+  const keys: string[] = []
+  for (const node of nodes) {
+    keys.push(node.key)
+    if (node.children) keys.push(...collectAllKeys(node.children))
+  }
+  return keys
+}
+
+/** 查找第一个叶子节点 */
+export function findFirstLeaf(nodes?: TreeDocNode[]): TreeDocNode | null {
+  if (!nodes) nodes = prdDocTree
+  for (const node of nodes) {
+    if (node.isLeaf) return node
+    if (node.children) {
+      const found = findFirstLeaf(node.children)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+/** 根据模块id查找树节点key */
+export function findTreeNodeKey(nodes: TreeDocNode[], moduleId: string): string | null {
+  for (const node of nodes) {
+    if (node.isLeaf && node.module?.id === moduleId) return node.key
+    if (node.children) {
+      const found = findTreeNodeKey(node.children, moduleId)
+      if (found) return found
+    }
+  }
+  return null
 }

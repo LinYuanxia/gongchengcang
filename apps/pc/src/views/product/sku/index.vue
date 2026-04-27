@@ -106,17 +106,20 @@
       </a-table>
     </a-card>
 
-    <!-- 新增SKU弹窗 -->
-    <a-modal v-model:visible="addSkuModalVisible" title="新增SKU" :width="700" @ok="handleAddSkuConfirm" @cancel="addSkuModalVisible = false">
+    <!-- SKU编辑弹窗（新增/编辑共用） -->
+    <a-modal v-model:visible="addSkuModalVisible" :title="addSkuIsEdit ? '编辑SKU' : '新增SKU'" :width="700" @ok="handleAddSkuConfirm" @cancel="addSkuModalVisible = false">
       <a-form :model="addSkuForm" layout="vertical">
         <a-form-item label="所属SPU" :rules="[{ required: true, message: '请选择所属SPU' }]">
           <a-select
+            v-if="!addSkuIsEdit"
             v-model="addSkuForm.spuId"
             :options="spuSelectOptions"
             placeholder="请选择所属SPU"
             allow-search
+            allow-clear
             style="width: 100%"
           />
+          <a-input v-else :model-value="addSkuForm.spuName" disabled style="width: 100%" />
         </a-form-item>
         <a-form-item label="主图">
           <a-upload
@@ -149,9 +152,11 @@
         </a-row>
         <a-form-item label="SKU规格属性">
           <template #extra>
-            <a-button type="text" size="small" @click="handleAddSkuCustomSpec">
-              <icon-plus /> 新增规格属性
-            </a-button>
+            <a-space>
+              <a-button type="text" size="small" @click="handleAddSkuCustomSpec">
+                <icon-plus /> 新增规格属性
+              </a-button>
+            </a-space>
           </template>
           
           <div v-if="addSkuSpecList.length === 0" class="empty-spec-tip">
@@ -253,7 +258,7 @@ import { ref, reactive, onMounted, watch, computed, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Message, Modal } from '@arco-design/web-vue'
 import type { Sku, ProductCategory, Spu, ProductAttr } from '@gongchengcang/types'
-import { getSkuList, getCategoryTree, getSpuList, updateSku, deleteSku, getAttrList } from '@gongchengcang/api'
+import { getSkuList, getCategoryTree, getSpuList, updateSku, deleteSku, getAttrList, getSkuListBySpu, createSku } from '@gongchengcang/api'
 const prdItems = [
   {
     reqId: 1,
@@ -598,7 +603,44 @@ function handleView(record: Sku) {
 }
 
 function handleEdit(record: Sku) {
-  router.push(`/product/sku/edit/${record.skuId}`)
+  addSkuIsEdit.value = true
+  editSkuId.value = record.skuId
+  
+  addSkuForm.value = {
+    skuId: record.skuId,
+    spuId: record.spuId,
+    spuName: record.spuName || '',
+    categoryId: record.categoryId || '',
+    categoryName: record.categoryName || '',
+    unit: record.unit || '个',
+    skuCode: record.skuCode || '',
+    skuName: record.skuName || '',
+    specInfo: '',
+    mainImage: record.mainImage || '',
+    supplyPrice: record.supplyPrice,
+    salePrice: record.salePrice,
+  }
+  
+  // 从已有规格填充到编辑列表
+  const existingSpecs = record.specs || {}
+  addSkuSpecList.value = Object.entries(existingSpecs).map(([name, value], index) => ({
+    key: `spec_${index}`,
+    name,
+    selectedValue: value,
+    optionValues: [],
+    isCustom: false,
+  }))
+  existingSkuSpecKeys.value = Object.keys(existingSpecs)
+  addSkuSpecCounter.value = addSkuSpecList.value.length
+  
+  // 主图回显
+  if (record.mainImage) {
+    addSkuMainImageList.value = [{ url: record.mainImage, status: 'done' }]
+  } else {
+    addSkuMainImageList.value = []
+  }
+  
+  addSkuModalVisible.value = true
 }
 
 function handleStatusChange(record: Sku) {
@@ -619,18 +661,28 @@ function handleStatusChange(record: Sku) {
   })
 }
 
+const addSkuIsEdit = ref(false)
+const editSkuId = ref('')
+
 const addSkuModalVisible = ref(false)
 const addSkuMainImageList = ref<any[]>([])
 const addSkuSpecList = ref<any[]>([])
 const addSkuSpecCounter = ref(0)
 const addSkuForm = ref({
+  skuId: '',
   spuId: '',
+  spuName: '',
+  categoryId: '',
+  categoryName: '',
+  unit: '个',
   skuCode: '',
   skuName: '',
   specInfo: '',
+  mainImage: '',
   supplyPrice: undefined as number | undefined,
   salePrice: undefined as number | undefined,
 })
+const existingSkuSpecKeys = ref<string[]>([])
 
 watchEffect(() => {
   addSkuSpecList.value.forEach(spec => {
@@ -643,62 +695,85 @@ watchEffect(() => {
   })
 })
 
+// 当选择的SPU变化时，自动加载已有SKU的规格维度
 watch(
   () => addSkuForm.value.spuId,
-  (spuId) => {
-    if (spuId) {
-      const spu = spuList.value.find(s => s.spuId === spuId)
-      if (spu && spu.specList) {
-        addSkuSpecList.value = (spu.specList as any[]).map((spec: any, index: number) => ({
+  async (spuId) => {
+    if (!spuId) {
+      addSkuSpecList.value = []
+      existingSkuSpecKeys.value = []
+      return
+    }
+    
+    const spu = spuList.value.find(s => s.spuId === spuId)
+    if (!spu) return
+    
+    addSkuForm.value.spuName = spu.spuName
+    addSkuForm.value.categoryId = spu.categoryId
+    addSkuForm.value.categoryName = spu.categoryName || ''
+    addSkuForm.value.unit = spu.unit || '个'
+    
+    // 编辑模式下不自动覆盖已填充的规格
+    if (addSkuIsEdit.value) return
+    
+    // 自动继承已有SKU的规格维度
+    try {
+      const existingSkus = await getSkuListBySpu(spuId)
+      if (existingSkus.length > 0) {
+        const specKeys = new Set<string>()
+        existingSkus.forEach((sku: Sku) => {
+          if (sku.specs) {
+            Object.keys(sku.specs).forEach(key => specKeys.add(key))
+          }
+        })
+        existingSkuSpecKeys.value = Array.from(specKeys)
+        addSkuSpecList.value = Array.from(specKeys).map((name, index) => ({
           key: `spec_${index}`,
-          name: spec.name,
-          optionValues: spec.values || [],
+          name,
+          optionValues: [],
           selectedValue: '',
           isCustom: false,
         }))
-        addSkuSpecCounter.value = (spu.specList as any[]).length
+      } else {
+        existingSkuSpecKeys.value = []
+        addSkuSpecList.value = []
       }
-    } else {
+    } catch (error) {
+      console.error('查询已有SKU失败:', error)
+      existingSkuSpecKeys.value = []
       addSkuSpecList.value = []
-      addSkuSpecCounter.value = 0
     }
+    
+    addSkuSpecCounter.value = addSkuSpecList.value.length
   }
 )
 
 function openAddSkuModal() {
+  addSkuIsEdit.value = false
+  editSkuId.value = ''
+  
   const timestamp = Date.now().toString().slice(-6)
   const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
   const spuId = spuFilter?.value?.spuId || ''
   
   addSkuForm.value = {
+    skuId: '',
     spuId,
+    spuName: '',
+    categoryId: '',
+    categoryName: '',
+    unit: '个',
     skuCode: `SKU-MANUAL-${timestamp}${random}`,
     skuName: '',
     specInfo: '',
+    mainImage: '',
     supplyPrice: undefined,
     salePrice: undefined,
   }
   addSkuMainImageList.value = []
-  
-  if (spuId) {
-    const spu = spuList.value.find(s => s.spuId === spuId)
-    if (spu && spu.specList) {
-      addSkuSpecList.value = (spu.specList as any[]).map((spec: any, index: number) => ({
-        key: `spec_${index}`,
-        name: spec.name,
-        optionValues: spec.values || [],
-        selectedValue: '',
-        isCustom: false,
-      }))
-      addSkuSpecCounter.value = (spu.specList as any[]).length
-    } else {
-      addSkuSpecList.value = []
-      addSkuSpecCounter.value = 0
-    }
-  } else {
-    addSkuSpecList.value = []
-    addSkuSpecCounter.value = 0
-  }
+  addSkuSpecList.value = []
+  existingSkuSpecKeys.value = []
+  addSkuSpecCounter.value = 0
   
   addSkuModalVisible.value = true
 }
@@ -769,8 +844,6 @@ async function handleAddSkuConfirm() {
     Message.warning('请输入销售价')
     return
   }
-
-  const selectedSpu = addSkuForm.value.spuId ? (spuList.value as any[]).find((s: any) => s.spuId === addSkuForm.value.spuId) : null
   
   const specs: Record<string, string> = {}
   addSkuSpecList.value.forEach(spec => {
@@ -784,31 +857,36 @@ async function handleAddSkuConfirm() {
     specs['规格'] = '标准款'
   }
   
-  const mainImage = addSkuMainImageList.value[0]?.url || addSkuMainImageList.value[0]?.response || selectedSpu?.mainImage || ''
+  const mainImage = addSkuMainImageList.value[0]?.url || addSkuMainImageList.value[0]?.response || ''
 
-  const newSku = {
-    skuId: 'SKU' + Date.now(),
-    spuId: addSkuForm.value.spuId,
-    spuName: selectedSpu?.spuName || '',
+  const submitData: any = {
     skuCode: addSkuForm.value.skuCode || ('SKU' + Date.now()),
     skuName: addSkuForm.value.skuName,
-    categoryId: selectedSpu?.categoryId,
-    categoryName: selectedSpu?.categoryName,
-    mainImage,
+    spuId: addSkuForm.value.spuId,
+    spuName: addSkuForm.value.spuName,
+    categoryId: addSkuForm.value.categoryId || undefined,
+    categoryName: addSkuForm.value.categoryName || undefined,
     specs,
-    unit: selectedSpu?.unit || '个',
+    unit: addSkuForm.value.unit || '个',
+    mainImage,
     supplyPrice: addSkuForm.value.supplyPrice,
     salePrice: addSkuForm.value.salePrice,
-    stock: 0,
-    status: 'on_shelf' as const,
-    source: 'manual',
-    createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
   }
 
-  tableData.value.unshift(newSku as unknown as Sku)
-  pagination.total += 1
-  addSkuModalVisible.value = false
-  Message.success('SKU新增成功')
+  try {
+    if (addSkuIsEdit.value && editSkuId.value) {
+      await updateSku(editSkuId.value, submitData)
+      addSkuModalVisible.value = false
+      Message.success('SKU编辑成功')
+    } else {
+      await createSku(submitData)
+      addSkuModalVisible.value = false
+      Message.success('SKU新增成功')
+    }
+    loadData()
+  } catch (error: any) {
+    Message.error(error.message || (addSkuIsEdit.value ? '编辑SKU失败' : '新增SKU失败'))
+  }
 }
 
 function handleDelete(record: Sku) {

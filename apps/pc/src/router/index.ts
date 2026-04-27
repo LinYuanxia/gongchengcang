@@ -31,7 +31,7 @@ const routes: RouteRecordRaw[] = [
         path: 'prd',
         name: 'Prd',
         component: () => import('@/views/warehouse/prd/index.vue'),
-        meta: { title: '产品需求文档', icon: 'icon-list', requiresAuth: false },
+        meta: { title: '产品需求文档', icon: 'icon-list', requiresAuth: false, hideInMenu: true },
       },
       {
         path: 'merchant',
@@ -766,6 +766,12 @@ const routes: RouteRecordRaw[] = [
         ],
       },
     ],
+  },
+  {
+    path: '/prd-viewer',
+    name: 'PrdViewer',
+    component: () => import('@/views/warehouse/prd/index.vue'),
+    meta: { title: '产品需求文档', requiresAuth: false },
   },
   {
     path: '/:pathMatch(.*)*',

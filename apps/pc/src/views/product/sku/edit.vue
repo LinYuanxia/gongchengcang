@@ -50,10 +50,25 @@
             <a-row :gutter="24">
               <a-col :span="24">
                 <a-form-item label="规格属性">
-                  <div class="spec-form">
-                    <div v-for="(value, key) in formData.specs" :key="key" class="spec-item">
-                      <span class="spec-label">{{ key }}</span>
-                      <span class="spec-value">{{ value }}</span>
+                  <template #extra>
+                    <a-button type="text" size="small" @click="handleAddEditSpec">
+                      <icon-plus /> 新增规格属性
+                    </a-button>
+                  </template>
+                  <div v-if="editSpecList.length === 0" class="empty-spec-tip">
+                    <a-empty description="暂无规格属性" />
+                  </div>
+                  <div v-else class="spec-form">
+                    <div v-for="spec in editSpecList" :key="spec.key" class="spec-item">
+                      <a-form-item :label="spec.name">
+                        <template #label>
+                          <span class="spec-label">{{ spec.name }}</span>
+                          <a-button type="text" size="small" class="delete-btn" @click="handleRemoveEditSpec(spec)">
+                            <icon-close />
+                          </a-button>
+                        </template>
+                        <a-input v-model="spec.value" placeholder="请输入规格值" style="width: 100%" allow-clear />
+                      </a-form-item>
                     </div>
                   </div>
                 </a-form-item>
@@ -154,6 +169,9 @@ const formData = ref<UpdateSkuParams & { skuId?: string; spuId?: string }>({
   spuId: '',
 })
 
+const editSpecList = ref<{ key: string; name: string; value: string }[]>([])
+const editSpecCounter = ref(0)
+
 onMounted(async () => {
   await loadSpuList()
   await loadSkuDetail()
@@ -189,6 +207,8 @@ async function loadSkuDetail() {
       if (formData.value.mainImage) {
         mainImageFileList.value = [{ uid: '1', url: formData.value.mainImage, name: 'main' }]
       }
+      
+      initEditSpecList()
     }
   } catch (error: any) {
     Message.error(error.message || '获取SKU详情失败')
@@ -211,6 +231,37 @@ function handleMainImageChange(fileList: any[]) {
   }
 }
 
+function initEditSpecList() {
+  editSpecCounter.value = 0
+  editSpecList.value = []
+  if (formData.value.specs) {
+    Object.entries(formData.value.specs).forEach(([name, value]) => {
+      editSpecCounter.value++
+      editSpecList.value.push({
+        key: `spec_${editSpecCounter.value}`,
+        name,
+        value: value || '',
+      })
+    })
+  }
+}
+
+function handleAddEditSpec() {
+  editSpecCounter.value++
+  editSpecList.value.push({
+    key: `custom_${editSpecCounter.value}`,
+    name: '',
+    value: '',
+  })
+}
+
+function handleRemoveEditSpec(spec: { key: string }) {
+  const index = editSpecList.value.findIndex(item => item.key === spec.key)
+  if (index > -1) {
+    editSpecList.value.splice(index, 1)
+  }
+}
+
 function handleBack() {
   router.push('/product/sku')
 }
@@ -224,7 +275,15 @@ async function handleSave() {
 
   submitting.value = true
   try {
-    await updateSku(skuId, formData.value)
+    // 将可编辑规格列表转为 Record<string, string>
+    const specs: Record<string, string> = {}
+    editSpecList.value.forEach(spec => {
+      if (spec.name && spec.value) {
+        specs[spec.name] = spec.value
+      }
+    })
+    
+    await updateSku(skuId, { ...formData.value, specs })
     Message.success('保存成功')
     handleBack()
   } catch (error: any) {
@@ -255,27 +314,35 @@ export default {
   margin-bottom: 16px;
 }
 
+.empty-spec-tip {
+  padding: 20px 0;
+}
+
 .spec-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-
   .spec-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    position: relative;
 
-    .spec-label {
-      min-width: 80px;
-      color: var(--color-text-2);
+    :deep(.arco-form-item-label) {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
     }
+  }
+}
 
-    .spec-value {
-      padding: 4px 12px;
-      background: var(--color-bg-2);
-      border-radius: 4px;
-      color: var(--color-text-1);
-    }
+.spec-label {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.delete-btn {
+  margin-left: 8px;
+  padding: 0 4px;
+  color: var(--color-text-3);
+  
+  &:hover {
+    color: #f53f3f;
   }
 }
 

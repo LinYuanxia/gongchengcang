@@ -55,7 +55,7 @@
               </a-button>
             </a-tooltip>
             <a-tooltip content="产品需求文档">
-              <a-button type="text" @click="router.push('/prd')">
+              <a-button type="text" @click="handleOpenPrd">
                 <template #icon><icon-file /></template>
               </a-button>
             </a-tooltip>
@@ -240,6 +240,10 @@ function handleSwitchPlatform(platform: string) {
 
 function handleOpenMpPreview() {
   router.push('/mp-preview?role=construction')
+}
+
+function handleOpenPrd() {
+  window.open('/gongchengcang/#/prd-viewer', '_blank')
 }
 
 function handleLogout() {

@@ -18,5 +18,8 @@
     "warehouse"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "sass-embedded": "^1.99.0"
+  }
 }

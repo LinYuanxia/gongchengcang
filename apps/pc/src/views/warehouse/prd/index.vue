@@ -8,22 +8,12 @@
   <div class="prd-viewer">
     <!-- 左侧导航 -->
     <div class="prd-sidebar">
-      <!-- 端切换 - 下拉 -->
-      <div class="sidebar-source">
-        <a-select
-          :model-value="currentSource"
-          :options="sourceOptions"
-          size="small"
-          @change="switchSource"
-        />
-      </div>
+      <!-- 移除端切换下拉，改用树形导航 -->
 
       <!-- 标题 -->
       <div class="sidebar-header">
-        <h3>📋 产品需求文档</h3>
-        <div class="sidebar-header-right">
-          <span class="module-count">{{ activeModules.length }}个模块</span>
-        </div>
+        <h3>📋 目录</h3>
+        <span class="module-count">{{ totalModules }} 个文档</span>
       </div>
 
       <!-- 搜索栏 -->
@@ -67,27 +57,21 @@
         </template>
       </div>
 
-      <!-- 模块列表 -->
+      <!-- 树形导航（按 docs/ 目录层级） -->
       <template v-else>
-        <div v-for="(modules, priority) in moduleGroups" :key="priority" class="priority-group">
-          <div class="priority-label" :class="`priority-${String(priority).toLowerCase()}`">
-            {{ priority }}
-            <span class="count-badge">{{ modules.length }}</span>
-          </div>
-          <div
-            v-for="mod in modules"
-            :key="mod.id"
-            class="module-item"
-            :class="{ active: activeModule?.id === mod.id }"
-            @click="selectModule(mod)"
-          >
-            <span class="module-icon">{{ getIcon(mod.icon) }}</span>
-            <div class="module-info">
-              <span class="module-name">{{ mod.name }}</span>
-              <span class="module-desc">{{ mod.description }}</span>
-            </div>
-          </div>
-        </div>
+        <a-tree
+          :data="prdDocTree"
+          :default-expanded-keys="allKeys"
+          :selected-keys="selectedKeys"
+          @select="onTreeSelect"
+        >
+          <template #title="nodeData">
+            <span class="tree-node-title">
+              <span class="tree-node-icon">{{ getTreeNodeIcon(nodeData) }}</span>
+              {{ nodeData.title }}
+            </span>
+          </template>
+        </a-tree>
       </template>
     </div>
 
@@ -116,7 +100,6 @@
               <div class="header-top">
                 <h2>{{ getIcon(activeModule.icon) }} {{ activeModule.name }}</h2>
                 <div class="header-tags">
-                  <a-tag :color="activeModule.priority === 'P0' ? 'red' : 'blue'">{{ activeModule.priority }}</a-tag>
                   <a-tag color="arcoblue">{{ activeModule.docFile }}</a-tag>
                 </div>
               </div>
@@ -171,40 +154,7 @@
     </div>
   </a-modal>
 
-  <!-- 更新日志悬浮按钮 -->
-  <div class="changelog-float-btn" @click="openChangelog">
-    <span class="changelog-float-icon">📋</span>
-    <span class="changelog-float-text">更新日志</span>
-  </div>
 
-  <!-- 更新日志弹窗 -->
-  <a-modal
-    v-model:visible="showChangelog"
-    title="📋 PRD 更新日志"
-    :width="'85vw'"
-    :footer="false"
-    :mask-closable="true"
-    :modal-style="{ maxWidth: '95vw', minWidth: '800px' }"
-    :body-style="{ maxHeight: '82vh', minHeight: '400px' }"
-  >
-    <div v-if="changelogLoading" class="changelog-loading">⏳ 加载中...</div>
-    <div v-else-if="changelogError" class="changelog-error">{{ changelogError }}</div>
-    <div v-else class="changelog-body">
-      <div class="changelog-content markdown-body" ref="changelogContentRef" v-html="changelogHtml"></div>
-      <div class="changelog-toc" v-if="changelogToc.length">
-        <div class="changelog-toc-header">📑 目录</div>
-        <div class="changelog-toc-list">
-          <div
-            v-for="item in changelogToc"
-            :key="item.id"
-            class="changelog-toc-item"
-            :class="[`level-${item.level}`, { active: activeChangelogTocId === item.id }]"
-            @click="scrollChangelogToc(item.id)"
-          >{{ item.text }}</div>
-        </div>
-      </div>
-    </div>
-  </a-modal>
 </template>
 
 <script setup lang="ts">
@@ -212,8 +162,8 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { marked } from 'marked'
 import mermaid from 'mermaid'
-import { prdModules, platformPrdModules, supplierPrdModules, constructionPrdModules, sourceOptions } from '@/components/PrdPanel/prdData'
-import type { PrdModule, PrdSource } from '@/components/PrdPanel/prdData'
+import { prdDocTree, collectAllLeafModules, collectAllKeys, findFirstLeaf, findTreeNodeKey } from '@/components/PrdPanel/prdData'
+import type { PrdModule, TreeDocNode } from '@/components/PrdPanel/prdData'
 
 // ------ 全局Mermaid渲染计数器（避免ID冲突）-----
 let mermaidRenderCounter = 0
@@ -236,7 +186,8 @@ mermaid.initialize({
 const route = useRoute()
 const router = useRouter()
 const activeModule = ref<PrdModule | null>(null)
-const currentSource = ref<PrdSource>('warehouse')
+const selectedKeys = ref<string[]>([])
+const allKeys = ref<string[]>(collectAllKeys())
 const loading = ref(false)
 const loadError = ref('')
 const renderedHtml = ref('')
@@ -256,81 +207,6 @@ let tocObserver: IntersectionObserver | null = null
 // ------ Mermaid弹窗状态 ------
 const mermaidModalVisible = ref(false)
 const currentMermaidDef = ref('')
-
-// ------ 更新日志 ------
-const showChangelog = ref(false)
-const changelogHtml = ref('')
-const changelogLoading = ref(false)
-const changelogError = ref('')
-const changelogContentRef = ref<HTMLElement | null>(null)
-
-interface ChangelogTocItem {
-  id: string
-  text: string
-  level: number
-}
-const changelogToc = ref<ChangelogTocItem[]>([])
-const activeChangelogTocId = ref('')
-let changelogTocObserver: IntersectionObserver | null = null
-
-async function openChangelog() {
-  showChangelog.value = true
-  if (changelogHtml.value) {
-    await rebuildChangelogToc()
-    return
-  }
-  changelogLoading.value = true
-  changelogError.value = ''
-  try {
-    const response = await fetch('/gongchengcang/prd-docs/更新日志.md')
-    if (!response.ok) throw new Error(`HTTP ${response.status}`)
-    const md = await response.text()
-    changelogHtml.value = marked.parse(md) as string
-    // 先关闭加载状态，v-else 渲染 DOM 后再建 TOC
-    changelogLoading.value = false
-    await nextTick()
-    rebuildChangelogToc()
-  } catch (err: any) {
-    changelogError.value = err.message || String(err)
-  } finally {
-    changelogLoading.value = false
-  }
-}
-
-function rebuildChangelogToc() {
-  // 重建目录索引
-  changelogTocObserver?.disconnect()
-  const container = changelogContentRef.value
-  if (!container) { changelogToc.value = []; return }
-  const headings = container.querySelectorAll('h1, h2, h3, h4')
-  const items: ChangelogTocItem[] = []
-  headings.forEach(h => {
-    if (!h.id) return
-    const level = parseInt(h.tagName.substring(1), 10)
-    items.push({ id: h.id, text: (h.textContent || '').trim(), level })
-  })
-  changelogToc.value = items
-  // 用 IntersectionObserver 追踪当前标题
-  if (!items.length) return
-  const scrollContainer = container.parentElement
-  changelogTocObserver = new IntersectionObserver(entries => {
-    for (const entry of entries) {
-      if (entry.isIntersecting) {
-        activeChangelogTocId.value = entry.target.id
-        break
-      }
-    }
-  }, { root: scrollContainer, rootMargin: '-60px 0px -70% 0px', threshold: 0 })
-  headings.forEach(h => changelogTocObserver?.observe(h))
-}
-
-function scrollChangelogToc(id: string) {
-  const el = document.getElementById(id)
-  if (el) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    activeChangelogTocId.value = id
-  }
-}
 
 // ------ 全文搜索 ------
 interface SearchResult {
@@ -385,29 +261,32 @@ marked.setOptions({
   renderer: createHeadingRenderer(),
 })
 
-// ------ 按优先级分组 ------
-const priorityOrder = ['总纲', 'P0', 'P1', 'P2'] as const
+// ------ 文档总数 ------
+const totalModules = computed(() => collectAllLeafModules().length)
 
-/** 当前端的模块列表 */
-const activeModules = computed(() => {
-  switch (currentSource.value) {
-    case 'platform': return platformPrdModules
-    case 'supplier': return supplierPrdModules
-    case 'construction': return constructionPrdModules
-    default: return prdModules
-  }
-})
+// ------ 树形导航：图标映射 ------
+const sectionIconMap: Record<string, string> = {
+  'project-section': '📌',
+  'prd-section': '📋',
+  'manual-section': '📖',
+  'archive-section': '📦',
+}
 
-const moduleGroups = computed(() => {
-  const groups: Record<string, PrdModule[]> = {}
-  for (const p of priorityOrder) {
-    const list = activeModules.value.filter(m => m.priority === p)
-    if (list.length) groups[p] = list
+function getTreeNodeIcon(node: TreeDocNode): string {
+  if (!node.isLeaf) {
+    return sectionIconMap[node.key] || '📁'
   }
-  const other = activeModules.value.filter(m => !(priorityOrder as readonly string[]).includes(m.priority))
-  if (other.length) groups['其他'] = other
-  return groups
-})
+  return getIcon(node.icon || 'icon-file')
+}
+
+// ------ 树形导航：选中处理 ------
+function onTreeSelect(keys: (string | number)[], data: { node: TreeDocNode }) {
+  const node = data.node
+  if (node.isLeaf && node.module) {
+    selectedKeys.value = [node.key]
+    selectModule(node.module)
+  }
+}
 
 // ------ 图标映射 ------
 const iconMap: Record<string, string> = {
@@ -737,8 +616,8 @@ async function performSearch(keyword: string) {
   isSearching.value = true
   try {
     const allResults: SearchResult[] = []
-    const modules = activeModules.value
-    for (const mod of modules) {
+    const allModules = collectAllLeafModules()
+    for (const mod of allModules) {
       const content = await getMdContent(mod)
       if (!content) continue
       const res = searchInMd(mod, content, keyword)
@@ -773,7 +652,7 @@ function focusSearch() {
 // ------ 模块选择 ------
 async function selectModule(mod: PrdModule) {
   activeModule.value = mod
-  router.replace({ query: { module: mod.id, source: currentSource.value } })
+  router.replace({ query: { module: mod.id } })
   tocItems.value = []
   activeTocId.value = ''
   await loadAndRenderModule(mod)
@@ -782,7 +661,8 @@ async function selectModule(mod: PrdModule) {
 /** 选择搜索结果 → 跳转到文档 */
 async function selectSearchResult(r: SearchResult) {
   clearSearch()
-  const mod = activeModules.value.find(m => m.id === r.docId)
+  const allModules = collectAllLeafModules()
+  const mod = allModules.find(m => m.id === r.docId)
   if (!mod) return
 
   if (activeModule.value?.id !== r.docId) {
@@ -797,34 +677,21 @@ async function selectSearchResult(r: SearchResult) {
   }
 }
 
-/** 切换端 */
-function switchSource(source: PrdSource) {
-  if (source === currentSource.value) return
-  currentSource.value = source
-  searchCache.value = {} // 清空搜索缓存
-  clearSearch()
-  activeModule.value = null
-  tocItems.value = []
-  activeTocId.value = ''
-  // 自动选新端的第一个模块
-  const modules = activeModules.value
-  if (modules.length > 0) {
-    selectModule(modules[0])
-  }
-}
+
 
 // ------ 初始化恢复 ------
 onMounted(async () => {
   const moduleId = route.query.module as string
-  const source = (route.query.source as PrdSource) || 'warehouse'
-  currentSource.value = source
-  const modules = activeModules.value
-  let target = moduleId ? modules.find(m => m.id === moduleId) : null
-  if (!target && modules.length > 0) {
-    target = modules[0]
+  const allModules = collectAllLeafModules()
+  let target = moduleId ? allModules.find(m => m.id === moduleId) : null
+  if (!target) {
+    const firstLeaf = findFirstLeaf()
+    target = firstLeaf?.module || null
   }
   if (target) {
     activeModule.value = target
+    const foundKey = findTreeNodeKey(prdDocTree, target.id)
+    if (foundKey) selectedKeys.value = [foundKey]
     await loadAndRenderModule(target)
   }
 
@@ -843,17 +710,16 @@ function onSearchKeydown(e: KeyboardEvent) {
 onUnmounted(() => {
   tocObserver?.disconnect()
   tocObserver = null
-  changelogTocObserver?.disconnect()
-  changelogTocObserver = null
   window.removeEventListener('keydown', onSearchKeydown)
   if (searchTimer) clearTimeout(searchTimer)
 })
+
 </script>
 
 <style scoped lang="less">
 .prd-viewer {
   display: flex;
-  height: calc(100vh - 48px - 40px);
+  height: 100vh;
   background: var(--color-bg-1);
   overflow: hidden;
 }
@@ -865,12 +731,6 @@ onUnmounted(() => {
   border-right: 1px solid var(--color-border);
   overflow-y: auto;
   background: var(--color-bg-2);
-
-  .sidebar-source {
-    padding: 12px 20px 0;
-    display: flex;
-    justify-content: center;
-  }
 
   .sidebar-header {
     padding: 16px 20px;
@@ -886,39 +746,36 @@ onUnmounted(() => {
     }
   }
 
-  .priority-group {
-    padding: 8px 0;
-    .priority-label {
-      padding: 4px 20px; font-size: 11px; font-weight: 600;
-      text-transform: uppercase; letter-spacing: 1px;
-      display: flex; align-items: center; gap: 6px;
-      &.priority-总纲 { color: #722ED1; }
-      &.priority-p0 { color: #f53f3f; }
-      &.priority-p1 { color: #165DFF; }
-      &.priority-p2 { color: #00B42A; }
-      .count-badge {
-        font-size: 10px; background: var(--color-fill-2);
-        padding: 0 5px; border-radius: 8px; font-weight: normal;
-      }
+  // ====== 树形导航 ======
+  :deep(.arco-tree) {
+    padding: 4px 0;
+  }
+
+  :deep(.arco-tree-node) {
+    padding-left: 8px;
+  }
+
+  :deep(.arco-tree-node-title) {
+    font-size: 13px;
+  }
+
+  :deep(.arco-tree-node-selected) {
+    .arco-tree-node-title {
+      color: var(--color-primary-6);
+      font-weight: 600;
     }
-    .module-item {
-      display: flex; align-items: flex-start; gap: 10px;
-      padding: 10px 20px; cursor: pointer; transition: all 0.2s;
-      border-left: 3px solid transparent;
-      &:hover { background: var(--color-fill-2); }
-      &.active {
-        background: var(--color-primary-light-1);
-        border-left-color: var(--color-primary-6);
-        .module-name { color: var(--color-primary-6); font-weight: 600; }
-      }
-      .module-icon { font-size: 18px; line-height: 1.4; flex-shrink: 0; }
-      .module-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-      .module-name { font-size: 13px; font-weight: 500; color: var(--color-text-1); }
-      .module-desc {
-        font-size: 11px; color: var(--color-text-3); line-height: 1.4;
-        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-      }
-    }
+  }
+
+  .tree-node-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1.6;
+  }
+
+  .tree-node-icon {
+    font-size: 14px;
+    flex-shrink: 0;
   }
 }
 
@@ -969,7 +826,7 @@ onUnmounted(() => {
   position: sticky;
   top: 0;
   align-self: flex-start;
-  max-height: calc(100vh - 48px - 40px);
+  max-height: 100vh;
 
   .toc-header {
     padding: 0 16px 12px;
@@ -1162,11 +1019,7 @@ onUnmounted(() => {
 }
 
 // ====== 搜索栏 ======
-.sidebar-header-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+
 
 .sidebar-search {
   position: relative;
@@ -1325,142 +1178,5 @@ onUnmounted(() => {
   }
 }
 
-// ====== 更新日志悬浮按钮 ======
-.changelog-float-btn {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: #fff;
-  color: var(--color-text-1);
-  border: 1px solid var(--color-border-2);
-  padding: 10px 18px;
-  border-radius: 24px;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: all 0.2s ease;
-  font-size: 13px;
-  line-height: 1;
-  user-select: none;
 
-  &:hover {
-    background: var(--color-fill-2);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-    transform: translateY(-2px);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-
-  .changelog-float-icon { font-size: 16px; }
-}
-
-// ====== 更新日志弹窗 ======
-.changelog-loading, .changelog-error {
-  text-align: center;
-  padding: 60px 0;
-  color: var(--color-text-3);
-  font-size: 14px;
-}
-
-.changelog-body {
-  display: flex;
-  gap: 0;
-  max-height: 70vh;
-  overflow: hidden;
-}
-
-.changelog-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px 16px 16px 4px;
-
-  :deep(*) { color: var(--color-text-1); }
-
-  :deep(table) {
-    width: 100%; border-collapse: collapse; font-size: 13px; margin: 16px 0;
-    th, td {
-      padding: 8px 12px; border: 1px solid var(--color-border); text-align: left;
-    }
-    th {
-      background: var(--color-fill-2); font-weight: 600; white-space: nowrap;
-    }
-    tr:nth-child(even) td { background: var(--color-fill-1); }
-  }
-
-  :deep(h2) {
-    font-size: 20px; font-weight: 600; margin: 28px 0 12px;
-    padding-bottom: 6px; border-bottom: 2px solid var(--color-primary-6);
-  }
-  :deep(h3) { font-size: 17px; font-weight: 600; margin: 24px 0 10px; }
-  :deep(h4) { font-size: 15px; font-weight: 600; margin: 20px 0 8px; }
-  :deep(p) { margin: 0 0 12px; line-height: 1.8; }
-  :deep(blockquote) {
-    border-left: 4px solid var(--color-primary-6);
-    padding: 12px 16px; margin: 16px 0;
-    background: var(--color-primary-light-1);
-    border-radius: 0 4px 4px 0;
-    font-size: 13px;
-  }
-  :deep(code) {
-    background: var(--color-fill-2); padding: 2px 6px; border-radius: 3px;
-    font-family: 'SF Mono', 'Monaco', 'Menlo', monospace; font-size: 13px;
-  }
-  :deep(strong) { font-weight: 600; }
-  :deep(ul), :deep(ol) { padding-left: 20px; margin: 8px 0; }
-  :deep(li) { margin: 4px 0; }
-}
-
-// ====== 更新日志右侧目录索引 ======
-.changelog-toc {
-  width: 180px;
-  min-width: 180px;
-  border-left: 1px solid var(--color-border);
-  overflow-y: auto;
-  padding: 12px 0;
-
-  .changelog-toc-header {
-    padding: 0 12px 10px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--color-text-1);
-    border-bottom: 1px solid var(--color-border);
-    margin-bottom: 6px;
-  }
-
-  .changelog-toc-list {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .changelog-toc-item {
-    padding: 5px 12px;
-    cursor: pointer;
-    color: var(--color-text-2);
-    transition: all 0.15s ease;
-    line-height: 1.4;
-    font-size: 12px;
-    border-left: 2px solid transparent;
-
-    &:hover {
-      color: var(--color-primary-6);
-      background: var(--color-primary-light-1);
-    }
-
-    &.active {
-      color: var(--color-primary-6);
-      font-weight: 600;
-      background: var(--color-primary-light-1);
-      border-left-color: var(--color-primary-6);
-    }
-
-    &.level-2 { font-size: 13px; }
-    &.level-3 { font-size: 12px; padding-left: 20px; }
-    &.level-4 { font-size: 11px; padding-left: 28px; }
-  }
-}
 </style>
