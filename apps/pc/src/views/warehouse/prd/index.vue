@@ -228,19 +228,33 @@
           <a-input
             v-model="yuqueConfig.repoId"
             placeholder="例如：linyuanxia/gongchengcang-prd"
+            @blur="loadYuqueDirectories"
           />
           <div class="form-tip">
             💡 知识库 URL：https://www.yuque.com/用户名/知识库ID
           </div>
         </a-form-item>
 
-        <a-form-item label="父目录 UUID（可选）">
-          <a-input
+        <a-form-item label="同步到目录（可选）">
+          <a-select
             v-model="yuqueConfig.parentUuid"
-            placeholder="例如：ZzzzXxYy"
-          />
+            placeholder="点击加载知识库目录列表..."
+            :loading="yuqueDirLoading"
+            @focus="loadYuqueDirectories"
+            style="width: 100%"
+            allow-clear
+          >
+            <a-option value="">📦 知识库根目录</a-option>
+            <a-option
+              v-for="dir in yuqueDirectories"
+              :key="dir.uuid"
+              :value="dir.uuid"
+            >
+              {{ '　'.repeat(dir.depth) }}📁 {{ dir.name }}
+            </a-option>
+          </a-select>
           <div class="form-tip">
-            💡 点击语雀目录看地址栏：https://www.yuque.com/xxx/xxx/<b>这串就是UUID</b>
+            💡 点击输入框自动加载目录，选择要同步到的目录
           </div>
         </a-form-item>
       </a-form>
@@ -326,6 +340,8 @@ const yuqueConfig = ref({
   parentUuid: localStorage.getItem('yuque_parentUuid') || '',
   syncMode: 'all' as 'current' | 'all',
 })
+const yuqueDirLoading = ref(false)
+const yuqueDirectories = ref<{ uuid: string; name: string; depth: number }[]>([])
 const docRef = ref<HTMLElement | null>(null)
 
 // ------ 目录索引(TOC) ------
@@ -455,6 +471,44 @@ interface SyncItem {
   title: string
   depth: number
   module?: PrdModule
+}
+
+/** 递归拉平语雀目录树 */
+function flattenYuqueTocs(tocs: any[], depth = 0): { uuid: string; name: string; depth: number }[] {
+  const result: { uuid: string; name: string; depth: number }[] = []
+  for (const toc of tocs) {
+    if (toc.type === 'TITLE') {
+      result.push({ uuid: toc.uuid, name: toc.title, depth })
+      if (toc.children && toc.children.length) {
+        result.push(...flattenYuqueTocs(toc.children, depth + 1))
+      }
+    }
+  }
+  return result
+}
+
+/** 加载语雀知识库目录列表 */
+async function loadYuqueDirectories() {
+  if (!yuqueConfig.value.token || !yuqueConfig.value.repoId) {
+    return
+  }
+  if (yuqueDirectories.value.length > 0) {
+    return
+  }
+
+  yuqueDirLoading.value = true
+  try {
+    const res = await fetch(`/api/yuque/repos/${yuqueConfig.value.repoId}/tocs`, {
+      headers: { 'X-Auth-Token': yuqueConfig.value.token },
+    })
+    const result = await res.json()
+    if (res.ok && result.data) {
+      yuqueDirectories.value = flattenYuqueTocs(result.data)
+    }
+  } catch (e) {
+    console.log('加载目录失败:', e)
+  }
+  yuqueDirLoading.value = false
 }
 
 /** 递归遍历目录树，生成待同步列表（文件夹 + 文档） */
