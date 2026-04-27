@@ -61,12 +61,16 @@
       <template v-else>
         <a-tree
           :data="prdDocTree"
-          :default-expanded-keys="allKeys"
+          :expanded-keys="expandedKeys"
           :selected-keys="selectedKeys"
           @select="onTreeSelect"
+          @expand="onTreeExpand"
         >
           <template #title="nodeData">
-            <span class="tree-node-title">
+            <span
+              class="tree-node-title"
+              @click.stop="toggleTreeNode(nodeData)"
+            >
               <span class="tree-node-icon">{{ getTreeNodeIcon(nodeData) }}</span>
               {{ nodeData.title }}
             </span>
@@ -188,6 +192,7 @@ const router = useRouter()
 const activeModule = ref<PrdModule | null>(null)
 const selectedKeys = ref<string[]>([])
 const allKeys = ref<string[]>(collectAllKeys())
+const expandedKeys = ref<string[]>(collectAllKeys())
 const loading = ref(false)
 const loadError = ref('')
 const renderedHtml = ref('')
@@ -286,6 +291,32 @@ function onTreeSelect(keys: (string | number)[], data: { node: TreeDocNode }) {
     selectedKeys.value = [node.key]
     selectModule(node.module)
   }
+}
+
+// ------ 树形目录展开/收起交互 ------
+function onTreeExpand(keys: (string | number)[]) {
+  expandedKeys.value = keys as string[]
+}
+
+/** 点击节点标题也能切换展开/收起（有子节点的才切换，叶子节点正常选文档） */
+function toggleTreeNode(node: TreeDocNode) {
+  if (node.isLeaf || !node.children) {
+    // 叶子节点正常选文档
+    if (node.module) {
+      selectedKeys.value = [node.key]
+      selectModule(node.module)
+    }
+    return
+  }
+  // 有子节点的节点：切换展开收起
+  const key = node.key
+  const idx = expandedKeys.value.indexOf(key)
+  if (idx > -1) {
+    expandedKeys.value.splice(idx, 1)
+  } else {
+    expandedKeys.value.push(key)
+  }
+  expandedKeys.value = [...expandedKeys.value]
 }
 
 // ------ 图标映射 ------
@@ -771,6 +802,8 @@ onUnmounted(() => {
     align-items: center;
     gap: 6px;
     line-height: 1.6;
+    cursor: pointer;
+    width: 100%;
   }
 
   .tree-node-icon {
