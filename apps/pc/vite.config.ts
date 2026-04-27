@@ -69,6 +69,16 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
+        bypass(req) {
+          if (req.url?.startsWith('/api/save-prd-doc') || req.url?.startsWith('/api/yuque')) {
+            return req.url
+          }
+        },
+      },
+      '/api/yuque': {
+        target: 'https://www.yuque.com/api/v2',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/api\/yuque/, ''),
       },
     },
   },

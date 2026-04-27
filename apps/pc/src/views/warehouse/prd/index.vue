@@ -106,6 +106,11 @@
                 <div class="header-tags">
                   <a-tag color="arcoblue">{{ activeModule.docFile }}</a-tag>
                   <a-button
+                    size="small"
+                    @click="showYuqueModal = true"
+                    style="margin-left: 8px"
+                  >🐦 同步到语雀</a-button>
+                  <a-button
                     v-if="!editMode"
                     type="primary"
                     size="small"
@@ -189,6 +194,63 @@
     </div>
   </a-modal>
 
+  <!-- 同步到语雀弹窗 -->
+  <a-modal
+    v-model:visible="showYuqueModal"
+    title="🐦 同步PRD文档到语雀"
+    :width="600"
+    @ok="startYuqueSync"
+    :ok-loading="yuqueSyncing"
+    ok-text="开始同步"
+    cancel-text="取消"
+  >
+    <div class="yuque-config">
+      <a-form layout="vertical">
+        <a-form-item label="语雀 Token">
+          <a-input
+            v-model="yuqueConfig.token"
+            placeholder="请输入语雀个人访问令牌"
+            type="password"
+          />
+          <div class="form-tip">
+            💡 获取方式：<a href="https://www.yuque.com/settings/tokens" target="_blank">语雀设置 → 个人Token</a>，勾选 doc.write 权限
+          </div>
+        </a-form-item>
+
+        <a-form-item label="知识库 ID">
+          <a-input
+            v-model="yuqueConfig.repoId"
+            placeholder="例如：linyuanxia/gongchengcang-prd"
+          />
+          <div class="form-tip">
+            💡 知识库 URL 格式：https://www.yuque.com/用户名/知识库ID
+          </div>
+        </a-form-item>
+      </a-form>
+
+      <!-- 同步进度 -->
+      <div v-if="yuqueSyncing" class="sync-progress">
+        <a-progress :percent="yuqueProgress" />
+        <div class="progress-text">
+          正在同步：{{ yuqueCurrentFile }} ({{ yuqueSyncedCount }}/{{ yuqueTotalCount }})
+        </div>
+      </div>
+
+      <!-- 同步结果 -->
+      <div v-if="yuqueSyncResult.length" class="sync-result">
+        <h4>同步结果：</h4>
+        <div
+          v-for="(item, idx) in yuqueSyncResult"
+          :key="idx"
+          class="result-item"
+        >
+          <span class="status">{{ item.status === 'success' ? '✅' : '❌' }}</span>
+          <span class="title">{{ item.title }}</span>
+          <a v-if="item.url" :href="item.url" target="_blank" class="link">查看</a>
+        </div>
+      </div>
+    </div>
+  </a-modal>
 
 </template>
 
@@ -232,6 +294,19 @@ const rawMarkdown = ref('')
 const editMode = ref(false)
 const saving = ref(false)
 const editContent = ref('')
+
+// ------ 语雀同步 ------
+const showYuqueModal = ref(false)
+const yuqueSyncing = ref(false)
+const yuqueProgress = ref(0)
+const yuqueCurrentFile = ref('准备中...')
+const yuqueSyncedCount = ref(0)
+const yuqueTotalCount = ref(0)
+const yuqueSyncResult = ref<{ title: string; status: 'success' | 'fail'; url?: string }[]>([])
+const yuqueConfig = ref({
+  token: localStorage.getItem('yuque_token') || '',
+  repoId: localStorage.getItem('yuque_repoId') || '',
+})
 const docRef = ref<HTMLElement | null>(null)
 
 // ------ 目录索引(TOC) ------
@@ -353,6 +428,75 @@ function toggleTreeNode(node: TreeDocNode) {
     expandedKeys.value.push(key)
   }
   expandedKeys.value = [...expandedKeys.value]
+}
+
+// ------ 语雀同步功能 ------
+async function startYuqueSync() {
+  if (!yuqueConfig.value.token || !yuqueConfig.value.repoId) {
+    Message.warning('请填写语雀 Token 和知识库 ID')
+    return
+  }
+
+  // 保存配置
+  localStorage.setItem('yuque_token', yuqueConfig.value.token)
+  localStorage.setItem('yuque_repoId', yuqueConfig.value.repoId)
+
+  // 收集所有文档
+  const allModules = collectAllLeafModules()
+  yuqueSyncResult.value = []
+  yuqueSyncedCount.value = 0
+  yuqueTotalCount.value = allModules.length
+  yuqueSyncing.value = true
+
+  // 逐个同步
+  for (let i = 0; i < allModules.length; i++) {
+    const mod = allModules[i]
+    yuqueCurrentFile.value = mod.name
+    yuqueProgress.value = Math.round(((i + 1) / allModules.length) * 100)
+
+    try {
+      // 加载markdown内容
+      const res = await fetch(mod.docUrl)
+      const content = await res.text()
+
+      // 调用语雀API创建文档
+      const apiRes = await fetch(`/api/yuque/repos/${yuqueConfig.value.repoId}/docs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Auth-Token': yuqueConfig.value.token,
+        },
+        body: JSON.stringify({
+          title: mod.name,
+          body: content,
+          format: 'markdown',
+        }),
+      })
+
+      const result = await apiRes.json()
+
+      if (apiRes.ok && result.data) {
+        yuqueSyncResult.value.push({
+          title: mod.name,
+          status: 'success',
+          url: `https://www.yuque.com/${yuqueConfig.value.repoId}/${result.data.slug}`,
+        })
+      } else {
+        throw new Error(result.message || result.errors?.[0]?.message || 'API调用失败')
+      }
+    } catch (e) {
+      yuqueSyncResult.value.push({
+        title: mod.name,
+        status: 'fail',
+      })
+    }
+
+    yuqueSyncedCount.value = i + 1
+    await new Promise(r => setTimeout(r, 500)) // 语雀API限速
+  }
+
+  yuqueSyncing.value = false
+  Message.success(`同步完成！成功 ${yuqueSyncResult.value.filter(r => r.status === 'success').length} 个文档`)
 }
 
 // ------ PRD在线编辑功能 ------
@@ -1011,6 +1155,59 @@ onUnmounted(() => {
     &:focus {
       border-color: var(--color-primary-6);
       box-shadow: 0 0 0 2px var(--color-primary-light-3);
+    }
+  }
+}
+
+// ====== 语雀同步弹窗 ======
+.yuque-config {
+  .form-tip {
+    font-size: 12px;
+    color: var(--color-text-3);
+    margin-top: 4px;
+
+    a {
+      color: var(--color-primary-6);
+    }
+  }
+
+  .sync-progress {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-border);
+
+    .progress-text {
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--color-text-2);
+    }
+  }
+
+  .sync-result {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-border);
+
+    h4 {
+      margin: 0 0 12px;
+      font-size: 14px;
+    }
+
+    .result-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 0;
+      font-size: 13px;
+
+      .title {
+        flex: 1;
+      }
+
+      .link {
+        color: var(--color-primary-6);
+        font-size: 12px;
+      }
     }
   }
 }
