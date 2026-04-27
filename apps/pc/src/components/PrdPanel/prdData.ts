@@ -762,18 +762,12 @@ export const prdDocTree: TreeDocNode[] = [
     key: 'project-section',
     title: '📌 项目总览',
     children: [
-      ...projectPrdModules.slice(0, 3).map(m => ({
+      ...projectPrdModules.map(m => ({
         key: `project-${m.id}`,
         title: m.name,
         isLeaf: true,
         module: m,
       })),
-      {
-        key: 'project-crossdept',
-        title: '跨部门协同PRD',
-        isLeaf: true,
-        module: crossDeptPrdModule,
-      },
       {
         key: 'project-doctree',
         title: '文档目录架构与口径说明',
@@ -796,12 +790,6 @@ export const prdDocTree: TreeDocNode[] = [
             title: '版本概览',
             isLeaf: true,
             module: releaseOverviewModule,
-          },
-          {
-            key: 'release-2641-crossdept-prd',
-            title: '跨部门协同PRD',
-            isLeaf: true,
-            module: crossDeptPrdModule,
           },
           {
             key: 'release-2641-crossdept',
