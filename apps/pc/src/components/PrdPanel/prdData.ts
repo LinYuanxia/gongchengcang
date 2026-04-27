@@ -787,6 +787,36 @@ export const prdDocTree: TreeDocNode[] = [
     title: 'PRD文档',
     children: [
       {
+        key: 'prd-project',
+        title: '项目总览',
+        children: [
+          ...projectPrdModules.slice(0, 3).map(m => ({
+            key: `prd-project-${m.id}`,
+            title: m.name,
+            isLeaf: true,
+            module: m,
+          })),
+        ],
+      },
+      {
+        key: 'prd-crossdept-prd',
+        title: '跨部门协同PRD',
+        isLeaf: true,
+        module: crossDeptPrdModule,
+      },
+      {
+        key: 'prd-crossdept',
+        title: '跨部门协同',
+        isLeaf: true,
+        module: crossDeptModule,
+      },
+      {
+        key: 'prd-changelog',
+        title: '更新日志',
+        isLeaf: true,
+        module: changelogModule,
+      },
+      {
         key: 'release-2641',
         title: '26.4.1期 - 0-1搭建',
         selectable: false,
@@ -796,30 +826,6 @@ export const prdDocTree: TreeDocNode[] = [
             title: '版本概览',
             isLeaf: true,
             module: releaseOverviewModule,
-          },
-          {
-            key: 'release-2641-project',
-            title: '项目总览',
-            children: [
-              ...projectPrdModules.slice(0, 3).map(m => ({
-                key: `2641-project-${m.id}`,
-                title: m.name,
-                isLeaf: true,
-                module: m,
-              })),
-              {
-                key: '2641-crossdept',
-                title: '跨部门协同',
-                isLeaf: true,
-                module: crossDeptModule,
-              },
-              {
-                key: '2641-crossdept-prd',
-                title: '跨部门协同PRD',
-                isLeaf: true,
-                module: crossDeptPrdModule,
-              },
-            ],
           },
           {
             key: 'release-2641-warehouse',
@@ -860,12 +866,6 @@ export const prdDocTree: TreeDocNode[] = [
               isLeaf: true,
               module: m,
             })),
-          },
-          {
-            key: 'release-2641-changelog',
-            title: '更新日志',
-            isLeaf: true,
-            module: changelogModule,
           },
         ],
       },
