@@ -232,6 +232,10 @@
                   💡 知识库 URL：https://www.yuque.com/用户名/知识库ID
                 </div>
               </a-form-item>
+
+              <a-form-item>
+                <a-button type="primary" @click="saveYuqueConfig">💾 保存配置</a-button>
+              </a-form-item>
             </a-form>
           </a-tab-pane>
 
@@ -505,6 +509,19 @@ function flattenYuqueTocs(tocs: any[], depth = 0): { uuid: string; name: string;
     }
   }
   return result
+}
+
+/** 保存语雀配置 */
+function saveYuqueConfig() {
+  if (!yuqueConfig.value.token || !yuqueConfig.value.repoId) {
+    Message.warning('请填写完整的 Token 和知识库 ID')
+    return
+  }
+  localStorage.setItem('yuque_token', yuqueConfig.value.token)
+  localStorage.setItem('yuque_repoId', yuqueConfig.value.repoId)
+  Message.success('✅ 配置已保存！点击「开始同步」继续吧')
+  yuqueActiveTab.value = 'sync'
+  setTimeout(() => loadYuqueDirectories(), 300)
 }
 
 /** 加载语雀知识库目录列表 */
