@@ -106,12 +106,13 @@
                 <div class="header-tags">
                   <a-tag color="arcoblue">{{ activeModule.docFile }}</a-tag>
                   <a-button
+                    v-if="isDevEnv"
                     size="small"
                     @click="showYuqueModal = true"
                     style="margin-left: 8px"
                   >🐦 同步到语雀</a-button>
                   <a-button
-                    v-if="!editMode"
+                    v-if="isDevEnv && !editMode"
                     type="primary"
                     size="small"
                     @click="enterEditMode"
@@ -194,8 +195,9 @@
     </div>
   </a-modal>
 
-  <!-- 同步到语雀弹窗 -->
+  <!-- 同步到语雀弹窗（仅开发环境） -->
   <a-modal
+    v-if="isDevEnv"
     v-model:visible="showYuqueModal"
     title="🐦 同步PRD文档到语雀"
     :width="600"
@@ -381,6 +383,12 @@ const yuqueConfig = ref({
 const yuqueDirLoading = ref(false)
 const yuqueDirectories = ref<{ uuid: string; name: string; depth: number }[]>([])
 const yuqueActiveTab = ref('sync')
+
+// ====== 环境控制：仅本地开发环境显示编辑/语雀同步功能 ======
+const isDevEnv = computed(() => {
+  const host = window.location.hostname
+  return host === 'localhost' || host === '127.0.0.1'
+})
 
 watch(showYuqueModal, (open) => {
   if (open) {

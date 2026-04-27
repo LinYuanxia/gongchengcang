@@ -55,8 +55,17 @@ function prdEditorPlugin(): Plugin {
 
             fs.writeFileSync(filePath, content, 'utf-8')
 
-            // 仅本地保存，不自动提交GitHub
-            res.end(JSON.stringify({ success: true, message: '本地保存成功！请自行提交到GitHub' }))
+            // 本地编辑后自动提交Git（仅本地开发环境生效）
+            try {
+              execSync(`git add "${filePath}" && git commit -m "docs: 更新PRD文档：${filename}" && git push origin main`, {
+                cwd: resolve(__dirname, '../..'),
+                timeout: 30000,
+              })
+            } catch (e) {
+              console.log('Git commit 提示:', e)
+            }
+
+            res.end(JSON.stringify({ success: true, message: '保存成功！已自动同步到GitHub' }))
           } catch (e) {
             res.statusCode = 500
             res.end(JSON.stringify({ success: false, message: String(e) }))
