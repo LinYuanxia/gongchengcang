@@ -733,6 +733,17 @@ export const crossDeptModule: PrdModule = {
   description: '当前版本四端跨部门协同功能设计，聚焦本期迭代涉及的协同场景和接口规范',
 }
 
+/** 文档目录架构与口径说明 */
+export const docTreeModule: PrdModule = {
+  id: 'doctree',
+  name: '文档目录架构与口径说明',
+  docFile: '文档目录架构与口径说明.md',
+  docUrl: '/gongchengcang/prd-docs/文档目录架构与口径说明.md',
+  icon: 'icon-file',
+  priority: '总纲',
+  description: '产品文档目录架构与口径说明，帮助读者快速了解文档体系结构和各模块覆盖范围',
+}
+
 
 /** 树形目录导航数据 - 按 docs/ 层级组织 */
 export const prdDocTree: TreeDocNode[] = [
@@ -751,6 +762,12 @@ export const prdDocTree: TreeDocNode[] = [
         title: '跨部门协同PRD',
         isLeaf: true,
         module: crossDeptPrdModule,
+      },
+      {
+        key: 'project-doctree',
+        title: '文档目录架构与口径说明',
+        isLeaf: true,
+        module: docTreeModule,
       },
     ],
   },
