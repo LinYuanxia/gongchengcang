@@ -105,6 +105,27 @@
                 <h2>{{ getIcon(activeModule.icon) }} {{ activeModule.name }}</h2>
                 <div class="header-tags">
                   <a-tag color="arcoblue">{{ activeModule.docFile }}</a-tag>
+                  <a-button
+                    v-if="!editMode"
+                    type="primary"
+                    size="small"
+                    @click="enterEditMode"
+                    style="margin-left: 8px"
+                  >✏️ 编辑文档</a-button>
+                  <template v-else>
+                    <a-button
+                      size="small"
+                      @click="exitEditMode"
+                      style="margin-left: 8px"
+                    >取消</a-button>
+                    <a-button
+                      type="primary"
+                      size="small"
+                      :loading="saving"
+                      @click="saveDocument"
+                      style="margin-left: 8px"
+                    >💾 保存</a-button>
+                  </template>
                 </div>
               </div>
               <p class="header-desc">{{ activeModule.description }}</p>
@@ -119,8 +140,18 @@
               </template>
             </a-alert>
 
-            <!-- 文档内容（渲染后） -->
-            <div v-if="!loadError" class="prd-document" ref="docRef" @click="handleDocClick">
+            <!-- 编辑模式 -->
+            <div v-if="editMode && !loadError" class="prd-editor">
+              <textarea
+                v-model="editContent"
+                class="editor-textarea"
+                placeholder="在此编辑Markdown内容..."
+                spellcheck="false"
+              ></textarea>
+            </div>
+
+            <!-- 预览模式（渲染后） -->
+            <div v-if="!editMode && !loadError" class="prd-document" ref="docRef" @click="handleDocClick">
               <div class="markdown-body" v-html="renderedHtml"></div>
             </div>
           </div>
@@ -166,6 +197,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { marked } from 'marked'
 import mermaid from 'mermaid'
+import { Message } from '@arco-design/web-vue'
 import { prdDocTree, collectAllLeafModules, collectAllKeys, findFirstLeaf, findTreeNodeKey } from '@/components/PrdPanel/prdData'
 import type { PrdModule, TreeDocNode } from '@/components/PrdPanel/prdData'
 
@@ -196,6 +228,10 @@ const expandedKeys = ref<string[]>(collectAllKeys())
 const loading = ref(false)
 const loadError = ref('')
 const renderedHtml = ref('')
+const rawMarkdown = ref('')
+const editMode = ref(false)
+const saving = ref(false)
+const editContent = ref('')
 const docRef = ref<HTMLElement | null>(null)
 
 // ------ 目录索引(TOC) ------
@@ -319,6 +355,48 @@ function toggleTreeNode(node: TreeDocNode) {
   expandedKeys.value = [...expandedKeys.value]
 }
 
+// ------ PRD在线编辑功能 ------
+function enterEditMode() {
+  editContent.value = rawMarkdown.value
+  editMode.value = true
+}
+
+function exitEditMode() {
+  editMode.value = false
+  editContent.value = ''
+}
+
+async function saveDocument() {
+  if (!activeModule.value) return
+
+  saving.value = true
+  try {
+    const res = await fetch('/api/save-prd-doc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        filename: activeModule.value.docFile,
+        content: editContent.value,
+      }),
+    })
+
+    const result = await res.json()
+    if (!result.success) throw new Error(result.message)
+
+    // 保存成功：退出编辑模式，重新加载文档
+    editMode.value = false
+    rawMarkdown.value = editContent.value
+    editContent.value = ''
+    await loadAndRenderModule(activeModule.value)
+
+    Message.success('✅ 保存成功！已自动提交到Git')
+  } catch (e) {
+    Message.error(`❌ 保存失败：${String(e)}`)
+  } finally {
+    saving.value = false
+  }
+}
+
 // ------ 图标映射 ------
 const iconMap: Record<string, string> = {
   'icon-home': '🏠',
@@ -427,6 +505,7 @@ async function loadAndRenderModule(mod: PrdModule) {
     const response = await fetch(mod.docUrl)
     if (!response.ok) throw new Error(`HTTP ${response.status}: 文件${mod.docFile}加载失败`)
     const mdContent = await response.text()
+    rawMarkdown.value = mdContent
 
     // 2. 解析MD中的mermaid块
     const parts = parseMarkdownWithMermaid(mdContent)
@@ -686,6 +765,7 @@ async function selectModule(mod: PrdModule) {
   router.replace({ query: { module: mod.id } })
   tocItems.value = []
   activeTocId.value = ''
+  exitEditMode()
   await loadAndRenderModule(mod)
 }
 
@@ -911,6 +991,30 @@ onUnmounted(() => {
 }
 
 // ====== PRD文档渲染 ======
+// ====== 编辑模式 ======
+.prd-editor {
+  .editor-textarea {
+    width: 100%;
+    min-height: 800px;
+    padding: 16px 20px;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--color-text-1);
+    background: var(--color-bg-1);
+    resize: vertical;
+    outline: none;
+    transition: all 0.2s;
+
+    &:focus {
+      border-color: var(--color-primary-6);
+      box-shadow: 0 0 0 2px var(--color-primary-light-3);
+    }
+  }
+}
+
 .prd-document {
   :deep(.markdown-body) {
     font-size: 14px;
