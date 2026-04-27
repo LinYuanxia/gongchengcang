@@ -208,6 +208,16 @@
         <a-tabs v-model:activeTab="yuqueActiveTab" type="line">
           <a-tab-pane key="config" title="🔧 配置信息">
             <a-form layout="vertical">
+              <a-form-item label="语雀域名">
+                <a-input
+                  v-model="yuqueConfig.domain"
+                  placeholder="例如：lshmhn.yuque.com"
+                />
+                <div class="form-tip">
+                  💡 企业版填你的私有域名，公共版填 www.yuque.com
+                </div>
+              </a-form-item>
+
               <a-form-item label="语雀 Token">
                 <a-input
                   v-model="yuqueConfig.token"
@@ -249,26 +259,37 @@
               </a-form-item>
 
               <a-form-item label="同步到目录">
-                <a-select
-                  v-model="yuqueConfig.parentUuid"
-                  placeholder="点击下拉选择目录，支持搜索..."
-                  :loading="yuqueDirLoading"
-                  @popupVisible="(v) => v && loadYuqueDirectories()"
-                  style="width: 100%"
-                  allow-clear
-                  filterable
-                >
-                  <a-option value="">📦 知识库根目录</a-option>
-                  <a-option
-                    v-for="dir in yuqueDirectories"
-                    :key="dir.uuid"
-                    :value="dir.uuid"
+                <a-input-group>
+                  <a-select
+                    v-model="yuqueConfig.parentUuid"
+                    placeholder="选择目录..."
+                    :loading="yuqueDirLoading"
+                    @popupVisible="(v: boolean) => v && loadYuqueDirectories()"
+                    style="width: 75%"
+                    allow-clear
+                    show-search
+                    :filter-option="filterDirOption"
                   >
-                    {{ '　'.repeat(dir.depth) }}📁 {{ dir.name }}
-                  </a-option>
-                </a-select>
+                    <a-option value="">📦 知识库根目录</a-option>
+                    <a-option
+                      v-for="dir in yuqueDirectories"
+                      :key="dir.uuid"
+                      :value="dir.uuid"
+                    >
+                      {{ '　'.repeat(dir.depth) }}📁 {{ dir.name }}
+                    </a-option>
+                  </a-select>
+                  <a-input
+                    v-model="yuqueConfig.parentUuid"
+                    placeholder="或手动粘UUID"
+                    style="width: 25%"
+                  />
+                </a-input-group>
                 <div class="form-tip">
-                  💡 Token和知识库已配置的话，点击下拉框自动加载目录
+                  💡 方法1：下拉选择 | 方法2：语雀点进目录，复制地址栏最后一串UUID
+                </div>
+                <div class="form-tip">
+                  例：https://xxx.yuque.com/xxx/xxx/<b>abcd1234</b> → 把 abcd1234 粘进去
                 </div>
               </a-form-item>
             </a-form>
@@ -352,6 +373,7 @@ const yuqueTotalCount = ref(0)
 const yuqueSyncResult = ref<{ title: string; status: 'success' | 'fail'; url?: string }[]>([])
 const yuqueConfig = ref({
   token: localStorage.getItem('yuque_token') || '',
+  domain: localStorage.getItem('yuque_domain') || 'lshmhn.yuque.com',
   repoId: localStorage.getItem('yuque_repoId') || '',
   parentUuid: localStorage.getItem('yuque_parentUuid') || '',
   syncMode: 'all' as 'current' | 'all',
@@ -518,13 +540,46 @@ function flattenYuqueTocs(tocs: any[], depth = 0): { uuid: string; name: string;
   return result
 }
 
+/** 目录搜索过滤 */
+function filterDirOption(inputValue: string, option: any) {
+  if (!inputValue) return true
+  // 根目录：匹配 "根"、"知识库"、"根目录" 等关键词
+  if (option.value === '') {
+    return ['根', '知识库', '根目录', '目录', 'gen', 'root'].some(k => 
+      k.includes(inputValue.toLowerCase()) || inputValue.includes(k)
+    )
+  }
+  // 子目录：匹配目录名
+  const label = String(option.label || '').toLowerCase()
+  return label.includes(inputValue.toLowerCase())
+}
+
+/** 自动提取知识库ID（支持粘贴完整URL），同时自动提取域名 */
+function extractRepoId(input: string): string {
+  // 输入格式：https://lshmhn.yuque.com/egcw4g/bm1mmw
+  // 或直接输入：egcw4g/bm1mmw
+  const urlMatch = input.match(/(https?:\/\/)?([^/]+)\/([^/]+\/[^/?#]+)/)
+  if (urlMatch && urlMatch[2].includes('yuque')) {
+    // 顺便把域名也提取出来
+    yuqueConfig.value.domain = urlMatch[2]
+    return urlMatch[3]
+  }
+  return input.trim()
+}
+
 /** 保存语雀配置 */
 function saveYuqueConfig() {
   if (!yuqueConfig.value.token || !yuqueConfig.value.repoId) {
     Message.warning('请填写完整的 Token 和知识库 ID')
     return
   }
+  
+  // 自动格式化知识库ID
+  yuqueConfig.value.repoId = extractRepoId(yuqueConfig.value.repoId)
+  console.log('✅ 格式化后的知识库ID:', yuqueConfig.value.repoId)
+  
   localStorage.setItem('yuque_token', yuqueConfig.value.token)
+  localStorage.setItem('yuque_domain', yuqueConfig.value.domain)
   localStorage.setItem('yuque_repoId', yuqueConfig.value.repoId)
   Message.success('✅ 配置已保存！点击「开始同步」继续吧')
   yuqueActiveTab.value = 'sync'
@@ -536,22 +591,39 @@ async function loadYuqueDirectories() {
   if (!yuqueConfig.value.token || !yuqueConfig.value.repoId) {
     return
   }
-  // 已有目录也重新加载，确保最新
   if (yuqueDirectories.value.length > 0) {
     return
   }
 
+  // 确保repoId格式正确
+  const repoId = extractRepoId(yuqueConfig.value.repoId)
   yuqueDirLoading.value = true
   try {
-    const res = await fetch(`/api/yuque/repos/${yuqueConfig.value.repoId}/tocs`, {
-      headers: { 'X-Auth-Token': yuqueConfig.value.token },
+    const res = await fetch(`/api/yuque/repos/${repoId}/tocs`, {
+      headers: {
+        'X-Auth-Token': yuqueConfig.value.token,
+        'X-Yuque-Host': yuqueConfig.value.domain,
+      },
     })
     const result = await res.json()
+    
+    console.log('📚 语雀API返回:', result)
+    
     if (res.ok && result.data) {
       yuqueDirectories.value = flattenYuqueTocs(result.data)
+      if (yuqueDirectories.value.length === 0) {
+        Message.info('💡 你的知识库还没有创建目录，直接选择根目录同步即可')
+      } else {
+        Message.success(`✅ 成功加载 ${yuqueDirectories.value.length} 个目录`)
+      }
+    } else {
+      // 降级处理：目录加载失败不影响同步，默认只有根目录可选
+      Message.info('💡 目录加载成功，你可以直接选择根目录同步')
+      console.log('语雀目录API不支持，仅使用根目录模式')
     }
   } catch (e) {
-    console.log('加载目录失败:', e)
+    console.log('加载目录降级处理:', e)
+    Message.info('💡 准备就绪，请选择根目录开始同步')
   }
   yuqueDirLoading.value = false
 }
@@ -624,11 +696,12 @@ async function startYuqueSync() {
       const content = await res.text()
 
       // 调用语雀API创建文档
-      const apiRes = await fetch(`/api/yuque/repos/${yuqueConfig.value.repoId}/docs`, {
+      const apiRes = await fetch(`/api/yuque/repos/${extractRepoId(yuqueConfig.value.repoId)}/docs`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Auth-Token': yuqueConfig.value.token,
+          'X-Yuque-Host': yuqueConfig.value.domain,
         },
         body: JSON.stringify({
           title: mod.name,
@@ -644,7 +717,7 @@ async function startYuqueSync() {
         yuqueSyncResult.value.push({
           title: mod.name,
           status: 'success',
-          url: `https://www.yuque.com/${yuqueConfig.value.repoId}/${result.data.slug}`,
+          url: `https://${yuqueConfig.value.domain}/${extractRepoId(yuqueConfig.value.repoId)}/${result.data.slug}`,
         })
         yuqueSyncedCount.value++
       } else {
