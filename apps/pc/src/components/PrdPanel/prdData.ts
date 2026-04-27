@@ -788,7 +788,7 @@ export const prdDocTree: TreeDocNode[] = [
     children: [
       {
         key: 'release-2641',
-        title: '🏷️ 26.4.1期 - 0-1搭建',
+        title: '26.4.1期 - 0-1搭建',
         selectable: false,
         children: [
           {
@@ -808,7 +808,13 @@ export const prdDocTree: TreeDocNode[] = [
                 module: m,
               })),
               {
-                key: '2641-project-crossdept',
+                key: '2641-crossdept',
+                title: '跨部门协同',
+                isLeaf: true,
+                module: crossDeptModule,
+              },
+              {
+                key: '2641-crossdept-prd',
                 title: '跨部门协同PRD',
                 isLeaf: true,
                 module: crossDeptPrdModule,
@@ -857,63 +863,11 @@ export const prdDocTree: TreeDocNode[] = [
           },
           {
             key: 'release-2641-changelog',
-            title: '总更新日志',
+            title: '更新日志',
             isLeaf: true,
             module: changelogModule,
           },
         ],
-      },
-      {
-        key: 'changelog',
-        title: '总更新日志',
-        isLeaf: true,
-        module: changelogModule,
-      },
-      {
-        key: 'crossdept',
-        title: '跨部门协同',
-        isLeaf: true,
-        module: crossDeptModule,
-      },
-      {
-        key: 'warehouse',
-        title: '工程仓端',
-        children: prdModules.map(m => ({
-          key: `warehouse-${m.id}`,
-          title: m.name,
-          isLeaf: true,
-          module: m,
-        })),
-      },
-      {
-        key: 'platform',
-        title: '平台端',
-        children: platformPrdModules.map(m => ({
-          key: `platform-${m.id}`,
-          title: m.name,
-          isLeaf: true,
-          module: m,
-        })),
-      },
-      {
-        key: 'supplier',
-        title: '供应商端',
-        children: supplierPrdModules.map(m => ({
-          key: `supplier-${m.id}`,
-          title: m.name,
-          isLeaf: true,
-          module: m,
-        })),
-      },
-      {
-        key: 'construction',
-        title: '施工方端',
-        children: constructionPrdModules.map(m => ({
-          key: `construction-${m.id}`,
-          title: m.name,
-          isLeaf: true,
-          module: m,
-        })),
       },
     ],
   },
