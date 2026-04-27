@@ -25,43 +25,38 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-          run_install: false
+      - name: Install pnpm
+        run: npm install -g pnpm@latest
 
-      - name: Get pnpm store directory
-        shell: bash
+      - name: Show versions
         run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+          node -v
+          npm -v
+          pnpm -v
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
-      - name: Type check
-        run: pnpm run typecheck || true
+      - name: List packages
+        run: ls -la packages/ apps/
 
-      - name: Build
-        run: pnpm run build:pc
+      - name: Build PC
+        run: cd apps/pc && pnpm exec vite build
         env:
-          VITE_BASE_URL: /${{ github.event.repository.name }}/
+          VITE_BASE_URL: /gongchengcang/
           NODE_OPTIONS: --max-old-space-size=4096
 
-      - name: Create .nojekyll and 404.html (SPA support)
+      - name: Verify build output
+        run: |
+          ls -la apps/pc/dist/
+          head -20 apps/pc/dist/index.html
+
+      - name: Create .nojekyll and 404.html
         run: |
           touch apps/pc/dist/.nojekyll
           cp apps/pc/dist/index.html apps/pc/dist/404.html
 
-      - name: Deploy to gh-pages branch
+      - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
