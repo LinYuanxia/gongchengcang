@@ -205,60 +205,71 @@
     cancel-text="取消"
   >
     <div class="yuque-config">
-      <a-form layout="vertical">
-        <a-form-item label="同步模式">
-          <a-radio-group v-model="yuqueConfig.syncMode">
-            <a-radio value="current">📄 仅同步当前文档</a-radio>
-            <a-radio value="all">🌲 同步全部（按目录结构创建分组）</a-radio>
-          </a-radio-group>
-        </a-form-item>
+        <a-tabs v-model:activeTab="yuqueActiveTab" type="line">
+          <a-tab-pane key="config" title="🔧 配置信息">
+            <a-form layout="vertical">
+              <a-form-item label="语雀 Token">
+                <a-input
+                  v-model="yuqueConfig.token"
+                  placeholder="请输入语雀个人访问令牌"
+                  type="password"
+                />
+                <div class="form-tip">
+                  💡 一次配置永久保存，无需每次填写
+                </div>
+                <div class="form-tip">
+                  👉 <a href="https://www.yuque.com/settings/tokens" target="_blank">语雀设置 → 个人Token</a>，勾选 doc.write 权限
+                </div>
+              </a-form-item>
 
-        <a-form-item label="语雀 Token">
-          <a-input
-            v-model="yuqueConfig.token"
-            placeholder="请输入语雀个人访问令牌"
-            type="password"
-          />
-          <div class="form-tip">
-            💡 获取方式：<a href="https://www.yuque.com/settings/tokens" target="_blank">语雀设置 → 个人Token</a>，勾选 doc.write 权限
-          </div>
-        </a-form-item>
+              <a-form-item label="知识库 ID">
+                <a-input
+                  v-model="yuqueConfig.repoId"
+                  placeholder="例如：linyuanxia/gongchengcang-prd"
+                  @blur="loadYuqueDirectories"
+                />
+                <div class="form-tip">
+                  💡 知识库 URL：https://www.yuque.com/用户名/知识库ID
+                </div>
+              </a-form-item>
+            </a-form>
+          </a-tab-pane>
 
-        <a-form-item label="知识库 ID">
-          <a-input
-            v-model="yuqueConfig.repoId"
-            placeholder="例如：linyuanxia/gongchengcang-prd"
-            @blur="loadYuqueDirectories"
-          />
-          <div class="form-tip">
-            💡 知识库 URL：https://www.yuque.com/用户名/知识库ID
-          </div>
-        </a-form-item>
+          <a-tab-pane key="sync" title="🚀 开始同步">
+            <a-form layout="vertical">
+              <a-form-item label="同步模式">
+                <a-radio-group v-model="yuqueConfig.syncMode">
+                  <a-radio value="current">📄 仅同步当前文档</a-radio>
+                  <a-radio value="all">🌲 同步全部文档</a-radio>
+                </a-radio-group>
+              </a-form-item>
 
-        <a-form-item label="同步到目录（可选）">
-          <a-select
-            v-model="yuqueConfig.parentUuid"
-            placeholder="输入关键词搜索目录..."
-            :loading="yuqueDirLoading"
-            @focus="loadYuqueDirectories"
-            style="width: 100%"
-            allow-clear
-            filterable
-          >
-            <a-option value="">📦 知识库根目录</a-option>
-            <a-option
-              v-for="dir in yuqueDirectories"
-              :key="dir.uuid"
-              :value="dir.uuid"
-            >
-              {{ '　'.repeat(dir.depth) }}📁 {{ dir.name }}
-            </a-option>
-          </a-select>
-          <div class="form-tip">
-            💡 支持输入关键词搜索目录，选「📦 知识库根目录」直接放到根下
-          </div>
-        </a-form-item>
-      </a-form>
+              <a-form-item label="同步到目录">
+                <a-select
+                  v-model="yuqueConfig.parentUuid"
+                  placeholder="点击加载目录..."
+                  :loading="yuqueDirLoading"
+                  @focus="loadYuqueDirectories"
+                  style="width: 100%"
+                  allow-clear
+                  filterable
+                >
+                  <a-option value="">📦 知识库根目录</a-option>
+                  <a-option
+                    v-for="dir in yuqueDirectories"
+                    :key="dir.uuid"
+                    :value="dir.uuid"
+                  >
+                    {{ '　'.repeat(dir.depth) }}📁 {{ dir.name }}
+                  </a-option>
+                </a-select>
+                <div class="form-tip">
+                  💡 Token和知识库已配置的话，点击下拉框自动加载目录
+                </div>
+              </a-form-item>
+            </a-form>
+          </a-tab-pane>
+        </a-tabs>
 
       <!-- 同步进度 -->
       <div v-if="yuqueSyncing" class="sync-progress">
@@ -287,7 +298,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { marked } from 'marked'
 import mermaid from 'mermaid'
@@ -343,6 +354,14 @@ const yuqueConfig = ref({
 })
 const yuqueDirLoading = ref(false)
 const yuqueDirectories = ref<{ uuid: string; name: string; depth: number }[]>([])
+const yuqueActiveTab = ref('sync')
+
+watch(showYuqueModal, (open) => {
+  if (open) {
+    // 打开弹窗时，已配置好token的话直接切到同步页
+    yuqueActiveTab.value = yuqueConfig.value.token ? 'sync' : 'config'
+  }
+})
 const docRef = ref<HTMLElement | null>(null)
 
 // ------ 目录索引(TOC) ------
