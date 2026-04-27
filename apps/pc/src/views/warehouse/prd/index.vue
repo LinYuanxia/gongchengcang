@@ -238,11 +238,12 @@
         <a-form-item label="同步到目录（可选）">
           <a-select
             v-model="yuqueConfig.parentUuid"
-            placeholder="点击加载知识库目录列表..."
+            placeholder="输入关键词搜索目录..."
             :loading="yuqueDirLoading"
             @focus="loadYuqueDirectories"
             style="width: 100%"
             allow-clear
+            filterable
           >
             <a-option value="">📦 知识库根目录</a-option>
             <a-option
@@ -254,7 +255,7 @@
             </a-option>
           </a-select>
           <div class="form-tip">
-            💡 点击输入框自动加载目录，选择要同步到的目录
+            💡 支持输入关键词搜索目录，选「📦 知识库根目录」直接放到根下
           </div>
         </a-form-item>
       </a-form>
@@ -589,7 +590,7 @@ async function startYuqueSync() {
           title: mod.name,
           body: content,
           format: 'markdown',
-          parent_uuid: yuqueConfig.value.parentUuid || undefined,
+          parent_uuid: yuqueConfig.value.parentUuid || null,
         }),
       })
 
