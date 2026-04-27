@@ -769,10 +769,10 @@ export const prdDocTree: TreeDocNode[] = [
         module: m,
       })),
       {
-        key: 'project-doctree',
-        title: '文档目录架构与口径说明',
+        key: 'project-crossdept-prd',
+        title: '跨部门协同PRD',
         isLeaf: true,
-        module: docTreeModule,
+        module: crossDeptPrdModule,
       },
     ],
   },
@@ -850,12 +850,20 @@ export const prdDocTree: TreeDocNode[] = [
   {
     key: 'manual-section',
     title: '系统操作手册',
-    children: manualPrdModules.map(m => ({
-      key: `manual-${m.id}`,
-      title: m.name,
-      isLeaf: true,
-      module: m,
-    })),
+    children: [
+      {
+        key: 'manual-doctree',
+        title: '文档目录架构与口径说明',
+        isLeaf: true,
+        module: docTreeModule,
+      },
+      ...manualPrdModules.map(m => ({
+        key: `manual-${m.id}`,
+        title: m.name,
+        isLeaf: true,
+        module: m,
+      })),
+    ],
   },
   {
     key: 'archive-section',
