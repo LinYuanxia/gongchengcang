@@ -1,0 +1,2 @@
+import{d as u,r as o}from"./index-93qNuSZS.js";const p=u("app",()=>{const t=o(!1),s=o(!1),a=o("light");function n(){t.value=!t.value}function l(e){t.value=e}function c(e){s.value=e}function r(e){a.value=e,document.body.setAttribute("arco-theme",e)}return{collapsed:t,loading:s,theme:a,toggleCollapsed:n,setCollapsed:l,setLoading:c,setTheme:r}}),g="/gongchengcang/assets/avatar-B8GQRXNY.png";export{g as _,p as u};
+//# sourceMappingURL=avatar-Cwn4DbcS.js.map

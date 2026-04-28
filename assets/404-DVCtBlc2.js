@@ -1,0 +1,2 @@
+import{a6 as c,N as p,O as e,P as o,Q as s,M as u,ac as l,aj as m,_ as i}from"./index-93qNuSZS.js";const d={class:"error-page"},f=c({__name:"404",setup(x){const a=m();function n(){a.push("/")}return(b,t)=>{const r=s("a-button"),_=s("a-result");return u(),p("div",d,[e(_,{status:"404",subtitle:"抱歉，您访问的页面不存在"},{extra:o(()=>[e(r,{type:"primary",onClick:n},{default:o(()=>[...t[0]||(t[0]=[l("返回首页",-1)])]),_:1})]),_:1})])}}}),k=i(f,[["__scopeId","data-v-e90f0bb6"]]);export{k as default};
+//# sourceMappingURL=404-DVCtBlc2.js.map
