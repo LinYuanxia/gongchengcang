@@ -20,6 +20,19 @@
       </div>
     </div>
     
+    <div class="quick-entry">
+      <div class="entry-card" @click="$emit('navigate', 'offline-record')">
+        <div class="entry-icon">
+          <icon-upload />
+        </div>
+        <div class="entry-content">
+          <div class="entry-title">线下转正记录</div>
+          <div class="entry-desc">查看转账凭证审核状态</div>
+        </div>
+        <icon-arrow-right class="entry-arrow" />
+      </div>
+    </div>
+    
     <div class="transaction-list">
       <div class="date-group" v-for="group in groupedTransactions" :key="group.date">
         <div class="date-header">{{ group.date }}</div>
@@ -147,8 +160,53 @@ const groupedTransactions = computed(() => {
   }
 }
 
+.quick-entry {
+  padding: 100px 12px 0;
+  
+  .entry-card {
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, #165dff, #4080ff);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    
+    .entry-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      margin-right: 12px;
+    }
+    
+    .entry-content {
+      flex: 1;
+      
+      .entry-title {
+        font-size: 14px;
+        font-weight: 500;
+        color: #fff;
+        margin-bottom: 4px;
+      }
+      
+      .entry-desc {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.8);
+      }
+    }
+    
+    .entry-arrow {
+      color: rgba(255, 255, 255, 0.8);
+    }
+  }
+}
+
 .transaction-list {
-  padding: 100px 12px 12px;
+  padding: 0 12px 12px;
 }
 
 .date-group {

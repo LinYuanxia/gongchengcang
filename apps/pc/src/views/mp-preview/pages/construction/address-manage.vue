@@ -65,7 +65,7 @@
             <div class="region-picker" @click="showRegionPicker = true">
               <span v-if="formData.province">{{ formData.province }} {{ formData.city }} {{ formData.district }}</span>
               <span class="placeholder" v-else>请选择省市区</span>
-              <icon-right class="picker-arrow" />
+              <icon-arrow-right class="picker-arrow" />
             </div>
           </div>
           <div class="form-item">

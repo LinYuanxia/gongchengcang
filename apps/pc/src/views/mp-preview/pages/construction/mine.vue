@@ -2,9 +2,6 @@
   <div class="mp-page mine">
     <div class="page-header">
       <div class="header-title">我的</div>
-      <div class="header-action" @click="$emit('navigate', 'settings')">
-        <icon-settings />
-      </div>
     </div>
     
     <div class="user-card" @click="$emit('navigate', 'merchant-info')">
@@ -17,28 +14,7 @@
           <div class="user-phone">{{ userInfo.phone }}</div>
         </div>
       </div>
-      <icon-right class="arrow-icon" />
-    </div>
-    
-    <div class="merchant-card" @click="$emit('navigate', 'merchant-info')">
-      <div class="merchant-header">
-        <icon-building class="merchant-icon" />
-        <span class="merchant-title">商户信息</span>
-      </div>
-      <div class="merchant-info">
-        <div class="info-row">
-          <span class="label">商户名称</span>
-          <span class="value">{{ merchantInfo.name }}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">门店名称</span>
-          <span class="value">{{ merchantInfo.storeName }}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">门店编码</span>
-          <span class="value">{{ merchantInfo.storeCode }}</span>
-        </div>
-      </div>
+      <icon-arrow-right class="arrow-icon" />
     </div>
     
     <div class="menu-section">
@@ -47,12 +23,12 @@
         <div class="menu-item" @click="$emit('navigate', 'transaction')">
           <icon-file-text class="menu-icon" />
           <span class="menu-text">支付记录</span>
-          <icon-right class="menu-arrow" />
+          <icon-arrow-right class="menu-arrow" />
         </div>
         <div class="menu-item" @click="$emit('navigate', 'invoice-manage')">
           <icon-file class="menu-icon" />
           <span class="menu-text">发票管理</span>
-          <icon-right class="menu-arrow" />
+          <icon-arrow-right class="menu-arrow" />
         </div>
       </div>
     </div>
@@ -63,12 +39,12 @@
         <div class="menu-item" @click="$emit('navigate', 'address-manage')">
           <icon-location class="menu-icon" />
           <span class="menu-text">收货地址</span>
-          <icon-right class="menu-arrow" />
+          <icon-arrow-right class="menu-arrow" />
         </div>
         <div class="menu-item" @click="$emit('navigate', 'invoice-title')">
           <icon-bookmark class="menu-icon" />
           <span class="menu-text">发票抬头</span>
-          <icon-right class="menu-arrow" />
+          <icon-arrow-right class="menu-arrow" />
         </div>
       </div>
     </div>
@@ -79,17 +55,7 @@
         <div class="menu-item" @click="$emit('navigate', 'settings')">
           <icon-settings class="menu-icon" />
           <span class="menu-text">系统设置</span>
-          <icon-right class="menu-arrow" />
-        </div>
-        <div class="menu-item" @click="$emit('navigate', 'change-password')">
-          <icon-lock class="menu-icon" />
-          <span class="menu-text">修改密码</span>
-          <icon-right class="menu-arrow" />
-        </div>
-        <div class="menu-item" @click="handleAbout">
-          <icon-info-circle class="menu-icon" />
-          <span class="menu-text">关于我们</span>
-          <icon-right class="menu-arrow" />
+          <icon-arrow-right class="menu-arrow" />
         </div>
       </div>
     </div>
@@ -129,16 +95,6 @@ const userInfo = ref({
   phone: '138****8000',
 })
 
-const merchantInfo = ref({
-  name: '深圳市建筑工程有限公司',
-  storeName: '深圳万象城店',
-  storeCode: 'CD001',
-})
-
-function handleAbout() {
-  emit('navigate', 'about')
-}
-
 function handleLogout() {
   emit('logout')
 }
@@ -160,7 +116,7 @@ function handleLogout() {
   background: linear-gradient(135deg, #165dff, #4080ff);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 0 16px;
   z-index: 100;
   
@@ -168,16 +124,6 @@ function handleLogout() {
     font-size: 16px;
     font-weight: 500;
     color: #fff;
-  }
-  
-  .header-action {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-size: 20px;
   }
 }
 
@@ -226,50 +172,6 @@ function handleLogout() {
   .arrow-icon {
     color: #c9cdd4;
     font-size: 16px;
-  }
-}
-
-.merchant-card {
-  margin: 0 12px 12px;
-  background: #fff;
-  border-radius: 12px;
-  padding: 14px 16px;
-  
-  .merchant-header {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 12px;
-    
-    .merchant-icon {
-      color: #165dff;
-      font-size: 18px;
-    }
-    
-    .merchant-title {
-      font-size: 14px;
-      font-weight: 500;
-      color: #1d2129;
-    }
-  }
-  
-  .merchant-info {
-    .info-row {
-      display: flex;
-      padding: 8px 0;
-      
-      .label {
-        width: 80px;
-        font-size: 13px;
-        color: #86909c;
-      }
-      
-      .value {
-        flex: 1;
-        font-size: 13px;
-        color: #1d2129;
-      }
-    }
   }
 }
 

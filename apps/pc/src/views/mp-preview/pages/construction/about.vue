@@ -18,11 +18,11 @@
       <div class="info-card">
         <div class="info-item" @click="handleProtocol">
           <span class="info-text">用户协议</span>
-          <icon-right class="info-arrow" />
+          <icon-arrow-right class="info-arrow" />
         </div>
         <div class="info-item" @click="handlePrivacy">
           <span class="info-text">隐私政策</span>
-          <icon-right class="info-arrow" />
+          <icon-arrow-right class="info-arrow" />
         </div>
       </div>
       

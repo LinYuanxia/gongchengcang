@@ -38,6 +38,14 @@
         <icon-file-text class="action-icon" />
         <span>交易明细</span>
       </div>
+      <div class="action-item" @click="$emit('navigate', 'offline-record')">
+        <icon-file-text class="action-icon" />
+        <span>线下转正</span>
+      </div>
+      <div class="action-item" @click="$emit('navigate', 'deduct-record')">
+        <icon-file-text class="action-icon" />
+        <span>应扣记录</span>
+      </div>
       <div class="action-item" @click="$emit('navigate', 'bank-card')">
         <icon-credit-card class="action-icon" />
         <span>银行卡管理</span>
@@ -195,25 +203,27 @@ function handleWithdraw() {
 
 .quick-actions {
   display: flex;
+  flex-wrap: wrap;
   background: #fff;
   border-radius: 8px;
-  padding: 16px;
+  padding: 12px;
   margin: 0 12px 12px;
   
   .action-item {
-    flex: 1;
+    width: 25%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+    padding: 8px 0;
     
     .action-icon {
-      font-size: 24px;
+      font-size: 22px;
       color: #165dff;
     }
     
     span {
-      font-size: 12px;
+      font-size: 11px;
       color: #4e5969;
     }
   }

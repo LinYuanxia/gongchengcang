@@ -1,10 +1,17 @@
 <template>
   <div class="recharge-record">
+    <div class="page-header">
+      <a-button type="text" @click="goBack">
+        <template #icon><icon-left /></template>
+        返回账户概览
+      </a-button>
+      <h3>充值记录</h3>
+    </div>
     <a-card>
       <template #extra>
-        <a-button type="primary" @click="handleRecharge">
-          <template #icon><icon-plus /></template>
-          充值
+        <a-button type="primary" @click="handleRechargeGuide">
+          <template #icon><icon-file-text /></template>
+          查看充值指南
         </a-button>
       </template>
 
@@ -91,23 +98,28 @@
       </a-table>
     </a-card>
 
-    <a-modal v-model:visible="rechargeVisible" title="账户充值" :width="500" @ok="handleRechargeConfirm">
-      <a-form :model="rechargeForm" layout="vertical">
-        <a-form-item label="充值金额" required>
-          <a-input-number v-model="rechargeForm.amount" :min="1" :precision="2" placeholder="请输入充值金额" style="width: 100%">
-            <template #prefix>¥</template>
-          </a-input-number>
-        </a-form-item>
-        <a-form-item label="充值方式">
-          <a-radio-group v-model="rechargeForm.method">
-            <a-radio value="bank">银行转账</a-radio>
-            <a-radio value="online">在线支付</a-radio>
-          </a-radio-group>
-        </a-form-item>
-        <a-form-item label="备注">
-          <a-textarea v-model="rechargeForm.remark" placeholder="请输入备注（选填）" :max-length="200" />
-        </a-form-item>
-      </a-form>
+    <a-modal v-model:visible="rechargeGuideVisible" title="充值指南" :width="600">
+      <div class="recharge-guide">
+        <a-alert type="info" style="margin-bottom: 16px">
+          <template #content>
+            <div><strong>重要提示：</strong>转账时请务必在备注中填写台账编码</div>
+          </template>
+        </a-alert>
+        <a-descriptions :column="1" bordered>
+          <a-descriptions-item label="收款账户名称">深圳湾科技园项目仓</a-descriptions-item>
+          <a-descriptions-item label="开户银行">中信银行深圳南山支行</a-descriptions-item>
+          <a-descriptions-item label="银行账号">7559 2188 0001 2345</a-descriptions-item>
+          <a-descriptions-item label="联行号">3025 8400 1234</a-descriptions-item>
+          <a-descriptions-item label="转账备注（必填）">LEDGER-2024-00856</a-descriptions-item>
+          <a-descriptions-item label="到账时间">工作日 9:00-17:00 转账，预计2小时内到账</a-descriptions-item>
+        </a-descriptions>
+        <div class="guide-tip">
+          <icon-info-circle /> 转账完成后，系统将自动识别到账金额，无需手动确认
+        </div>
+      </div>
+      <template #footer>
+        <a-button @click="rechargeGuideVisible = false">我知道了</a-button>
+      </template>
     </a-modal>
 
     <a-modal v-model:visible="detailVisible" title="充值详情" :width="600" :footer="false">
@@ -133,7 +145,10 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
+
+const router = useRouter()
 
 const searchForm = ref({
   rechargeNo: '',
@@ -158,15 +173,9 @@ const allRechargeList = ref([
 
 const rechargeList = ref([...allRechargeList.value])
 
-const rechargeVisible = ref(false)
+const rechargeGuideVisible = ref(false)
 const detailVisible = ref(false)
 const currentRecord = ref<any>(null)
-
-const rechargeForm = ref({
-  amount: 0,
-  method: 'bank',
-  remark: '',
-})
 
 function getStatusColor(status: string) {
   const colorMap: Record<string, string> = {
@@ -186,6 +195,10 @@ function getStatusText(status: string) {
     failed: '失败',
   }
   return textMap[status] || status
+}
+
+function goBack() {
+  router.push('/warehouse/finance/custody')
 }
 
 function handleSearch() {
@@ -222,18 +235,8 @@ function handlePageChange(page: number) {
   pagination.value.current = page
 }
 
-function handleRecharge() {
-  rechargeForm.value = { amount: 0, method: 'bank', remark: '' }
-  rechargeVisible.value = true
-}
-
-function handleRechargeConfirm() {
-  if (!rechargeForm.value.amount || rechargeForm.value.amount <= 0) {
-    Message.warning('请输入正确的充值金额')
-    return
-  }
-  Message.success('充值申请已提交，请等待审核')
-  rechargeVisible.value = false
+function handleRechargeGuide() {
+  rechargeGuideVisible.value = true
 }
 
 function handleViewDetail(record: any) {
@@ -245,6 +248,22 @@ function handleViewDetail(record: any) {
 <style scoped lang="less">
 .recharge-record {
   padding: 16px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 12px;
+
+  h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+  }
+}
+
+.stat-row {
 }
 
 .mt-16 {
@@ -263,6 +282,20 @@ function handleViewDetail(record: any) {
 
 .amount {
   font-weight: 600;
-  color: #165dff;
+  color: #00b42a;
+}
+
+.recharge-guide {
+  .guide-tip {
+    margin-top: 16px;
+    padding: 12px;
+    background: #e6fffb;
+    border: 1px solid #87e8de;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #006a6a;
+  }
 }
 </style>

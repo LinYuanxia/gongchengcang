@@ -18,6 +18,24 @@
       </view>
     </view>
 
+    <view class="search-section">
+      <view class="search-bar">
+        <text class="search-icon">🔍</text>
+        <input 
+          type="text" 
+          v-model="searchKeyword" 
+          placeholder="搜索门店名称/编码" 
+          class="search-input"
+          @confirm="handleSearch"
+        />
+        <text class="search-btn" @click="handleSearch">搜索</text>
+      </view>
+      <view class="location-filter">
+        <view class="location-item" :class="{ active: currentProvince === '' }" @click="selectProvince('')">全部省份</view>
+        <view class="location-item" v-for="province in provinces" :key="province.code" :class="{ active: currentProvince === province.code }" @click="selectProvince(province.code)">{{ province.name }}</view>
+      </view>
+    </view>
+
     <view class="data-card">
       <view class="card-header">
         <text class="card-title">数据看板</text>
@@ -51,6 +69,31 @@
               <text class="trend-icon" :class="item.trend > 0 ? 'up' : 'down'">{{ item.trend > 0 ? '↑' : '↓' }}</text>
               <text class="trend-value" :class="item.trend > 0 ? 'up' : 'down'">{{ Math.abs(item.trend) }}%</text>
             </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="project-section">
+      <view class="section-header">
+        <text class="section-title">门店项目</text>
+        <text class="section-more" @click="handleViewAllProjects">查看全部</text>
+      </view>
+      <view class="project-list">
+        <view class="project-card" v-for="project in filteredProjects" :key="project.id" @click="handleProjectDetail(project)">
+          <image :src="project.mainImage" mode="aspectFill" class="project-image" />
+          <view class="project-info">
+            <view class="project-header">
+              <text class="project-name">{{ project.name }}</text>
+              <view class="project-status" :class="project.status">{{ getStatusText(project.status) }}</view>
+            </view>
+            <text class="project-code">编码: {{ project.code }}</text>
+            <view class="project-brand">
+              <image :src="project.brandLogo" class="brand-icon" />
+              <text class="brand-name">{{ project.brandName }}</text>
+            </view>
+            <text class="project-address">📍 {{ project.address }}</text>
+            <text class="project-date">创建日期: {{ project.createDate }}</text>
           </view>
         </view>
       </view>
@@ -118,30 +161,6 @@
         </view>
       </view>
     </view>
-
-    <view class="pending-section">
-      <view class="section-header">
-        <text class="section-title">待处理事项</text>
-        <text class="section-count">共{{ totalPending }}项</text>
-      </view>
-      <view class="pending-list">
-        <view class="pending-item" v-for="item in pendingList" :key="item.id" @click="handlePending(item)">
-          <view class="pending-left">
-            <view class="pending-icon-wrap" :style="{ background: item.bgColor }">
-              <text class="pending-icon">{{ item.icon }}</text>
-            </view>
-            <view class="pending-info">
-              <text class="pending-text">{{ item.title }}</text>
-              <text class="pending-desc">{{ item.desc }}</text>
-            </view>
-          </view>
-          <view class="pending-right">
-            <text class="pending-count">{{ item.count }}</text>
-            <text class="pending-arrow">></text>
-          </view>
-        </view>
-      </view>
-    </view>
   </view>
 </template>
 
@@ -156,6 +175,15 @@ const userInfo = ref({
 const unreadCount = ref(5)
 const dataTab = ref('today')
 const noticeType = ref('all')
+const searchKeyword = ref('')
+const currentProvince = ref('')
+
+const provinces = ref([
+  { code: 'GD', name: '广东省' },
+  { code: 'BJ', name: '北京市' },
+  { code: 'SH', name: '上海市' },
+  { code: 'ZJ', name: '浙江省' },
+])
 
 const dashboardData = computed(() => {
   const data: Record<string, any[]> = {
@@ -187,6 +215,60 @@ const dashboardData = computed(() => {
   return data[dataTab.value]
 })
 
+const projects = ref([
+  {
+    id: 'proj001',
+    name: '深圳湾壹号装修项目',
+    code: 'PROJ-2024-001',
+    mainImage: 'https://picsum.photos/300/200?random=1',
+    brandLogo: 'https://via.placeholder.com/40',
+    brandName: '万科',
+    address: '广东省深圳市南山区深圳湾壹号T3栋',
+    status: 'construction',
+    createDate: '2024-01-15',
+  },
+  {
+    id: 'proj002',
+    name: '科技园总部大厦',
+    code: 'PROJ-2024-002',
+    mainImage: 'https://picsum.photos/300/200?random=2',
+    brandLogo: 'https://via.placeholder.com/40',
+    brandName: '华润置地',
+    address: '广东省深圳市南山区科技园南区',
+    status: 'survey',
+    createDate: '2024-02-20',
+  },
+  {
+    id: 'proj003',
+    name: '前海金融中心',
+    code: 'PROJ-2024-003',
+    mainImage: 'https://picsum.photos/300/200?random=3',
+    brandLogo: 'https://via.placeholder.com/40',
+    brandName: '卓越集团',
+    address: '广东省深圳市前海自贸区',
+    status: 'construction',
+    createDate: '2024-01-08',
+  },
+])
+
+const filteredProjects = computed(() => {
+  let result = projects.value
+  
+  if (searchKeyword.value) {
+    const kw = searchKeyword.value.toLowerCase()
+    result = result.filter(p => 
+      p.name.toLowerCase().includes(kw) || 
+      p.code.toLowerCase().includes(kw)
+    )
+  }
+  
+  if (currentProvince.value) {
+    result = result.filter(p => p.address.includes(getProvinceName(currentProvince.value)))
+  }
+  
+  return result
+})
+
 const quickTools = ref([
   { id: 1, name: '扫码发货', icon: '📦', bgColor: '#e8f3ff', badge: '12' },
   { id: 2, name: '发起采购', icon: '🛒', bgColor: '#fff7e8' },
@@ -212,18 +294,27 @@ const filteredNotices = computed(() => {
   return notices.value.filter(n => n.type === noticeType.value)
 })
 
-const pendingList = ref([
-  { id: 1, title: '待发货订单', desc: '需要尽快处理发货', count: 12, icon: '📦', bgColor: '#e8f3ff' },
-  { id: 2, title: '待确认采购', desc: '供应商已报价待确认', count: 5, icon: '🛒', bgColor: '#fff7e8' },
-  { id: 3, title: '待收货入库', desc: '采购订单在途待入库', count: 3, icon: '📥', bgColor: '#e8fff3' },
-  { id: 4, title: '待处理售后', desc: '客户申请售后待处理', count: 3, icon: '🔄', bgColor: '#ffece8' },
-  { id: 5, title: '待开票订单', desc: '已完成订单待开票', count: 8, icon: '📄', bgColor: '#f2e8ff' },
-  { id: 6, title: '库存预警', desc: '商品库存低于预警线', count: 5, icon: '⚠️', bgColor: '#fff1e8' },
-])
+function getStatusText(status: string) {
+  const statusMap: Record<string, string> = {
+    survey: '待堪场',
+    construction: '施工中',
+    completed: '已完成',
+  }
+  return statusMap[status] || status
+}
 
-const totalPending = computed(() => {
-  return pendingList.value.reduce((sum, item) => sum + item.count, 0)
-})
+function getProvinceName(code: string) {
+  const province = provinces.value.find(p => p.code === code)
+  return province ? province.name : ''
+}
+
+function selectProvince(code: string) {
+  currentProvince.value = code
+}
+
+function handleSearch() {
+  uni.showToast({ title: '搜索完成', icon: 'none' })
+}
 
 function handleMessage() {
   uni.navigateTo({ url: '/pages/mine/message' })
@@ -287,6 +378,14 @@ function handleTool(item: any) {
   }
 }
 
+function handleViewAllProjects() {
+  uni.navigateTo({ url: '/pages/index/projects' })
+}
+
+function handleProjectDetail(project: any) {
+  uni.navigateTo({ url: `/pages/index/project-detail?id=${project.id}` })
+}
+
 function handleNotice(item: any) {
   switch (item.type) {
     case 'order':
@@ -309,29 +408,6 @@ function handleNotice(item: any) {
       } else {
         uni.navigateTo({ url: '/pages/mine/custody' })
       }
-      break
-  }
-}
-
-function handlePending(item: any) {
-  switch (item.id) {
-    case 1:
-      uni.navigateTo({ url: '/pages/order/sale?status=toShip' })
-      break
-    case 2:
-      uni.navigateTo({ url: '/pages/order/purchase?status=toConfirm' })
-      break
-    case 3:
-      uni.navigateTo({ url: '/pages/order/receive' })
-      break
-    case 4:
-      uni.navigateTo({ url: '/pages/order/sale?status=afterSale' })
-      break
-    case 5:
-      uni.navigateTo({ url: '/pages/mine/invoice' })
-      break
-    case 6:
-      uni.navigateTo({ url: '/pages/mine/stock?filter=warning' })
       break
   }
 }
@@ -421,8 +497,61 @@ function handlePending(item: any) {
   padding: 0 8rpx;
 }
 
+.search-section {
+  margin: -30rpx 32rpx 24rpx;
+  background-color: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  height: 72rpx;
+  padding: 0 24rpx;
+  background-color: #f7f8fa;
+  border-radius: 36rpx;
+  margin-bottom: 20rpx;
+}
+
+.search-icon {
+  margin-right: 16rpx;
+}
+
+.search-input {
+  flex: 1;
+  font-size: 28rpx;
+}
+
+.search-btn {
+  font-size: 26rpx;
+  color: #165dff;
+  font-weight: 500;
+  margin-left: 16rpx;
+}
+
+.location-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.location-item {
+  padding: 12rpx 24rpx;
+  font-size: 24rpx;
+  color: #666;
+  background-color: #f7f8fa;
+  border-radius: 20rpx;
+  
+  &.active {
+    color: #fff;
+    background-color: #165dff;
+  }
+}
+
 .data-card {
-  margin: -40rpx 32rpx 24rpx;
+  margin: 0 32rpx 24rpx;
   background-color: #fff;
   border-radius: 16rpx;
   padding: 32rpx;
@@ -527,7 +656,7 @@ function handlePending(item: any) {
   }
 }
 
-.quick-tools {
+.project-section {
   margin: 0 32rpx 24rpx;
   background-color: #fff;
   border-radius: 16rpx;
@@ -552,9 +681,111 @@ function handlePending(item: any) {
   color: #165dff;
 }
 
-.section-count {
-  font-size: 24rpx;
+.project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.project-card {
+  display: flex;
+  background-color: #f7f8fa;
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+
+.project-image {
+  width: 180rpx;
+  height: 140rpx;
+  flex-shrink: 0;
+}
+
+.project-info {
+  flex: 1;
+  padding: 16rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.project-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.project-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1d2129;
+  flex: 1;
+}
+
+.project-status {
+  font-size: 20rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 4rpx;
+  
+  &.survey {
+    color: #ff7d00;
+    background-color: #fff7e8;
+  }
+  
+  &.construction {
+    color: #165dff;
+    background-color: #e8f3ff;
+  }
+  
+  &.completed {
+    color: #00b42a;
+    background-color: #e8ffea;
+  }
+}
+
+.project-code {
+  font-size: 22rpx;
   color: #86909c;
+  margin-top: 8rpx;
+}
+
+.project-brand {
+  display: flex;
+  align-items: center;
+  margin-top: 8rpx;
+}
+
+.brand-icon {
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: 6rpx;
+}
+
+.brand-name {
+  font-size: 22rpx;
+  color: #666;
+  margin-left: 8rpx;
+}
+
+.project-address {
+  font-size: 22rpx;
+  color: #86909c;
+  margin-top: 8rpx;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.project-date {
+  font-size: 20rpx;
+  color: #c9cdd4;
+  margin-top: 8rpx;
+}
+
+.quick-tools {
+  margin: 0 32rpx 24rpx;
+  background-color: #fff;
+  border-radius: 16rpx;
+  padding: 32rpx;
 }
 
 .tools-grid {
@@ -722,82 +953,5 @@ function handlePending(item: any) {
   height: 12rpx;
   background: #f53f3f;
   border-radius: 50%;
-}
-
-.pending-section {
-  margin: 0 32rpx 24rpx;
-  background-color: #fff;
-  border-radius: 16rpx;
-  padding: 32rpx;
-}
-
-.pending-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.pending-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20rpx 0;
-  border-bottom: 1rpx solid #f7f8fa;
-  
-  &:last-child {
-    border-bottom: none;
-  }
-}
-
-.pending-left {
-  display: flex;
-  align-items: center;
-  flex: 1;
-}
-
-.pending-icon-wrap {
-  width: 56rpx;
-  height: 56rpx;
-  border-radius: 12rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 16rpx;
-}
-
-.pending-icon {
-  font-size: 28rpx;
-}
-
-.pending-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.pending-text {
-  font-size: 28rpx;
-  color: #1d2129;
-}
-
-.pending-desc {
-  font-size: 22rpx;
-  color: #86909c;
-  margin-top: 4rpx;
-}
-
-.pending-right {
-  display: flex;
-  align-items: center;
-}
-
-.pending-count {
-  font-size: 32rpx;
-  font-weight: 600;
-  color: #f53f3f;
-  margin-right: 12rpx;
-}
-
-.pending-arrow {
-  font-size: 28rpx;
-  color: #c9cdd4;
 }
 </style>

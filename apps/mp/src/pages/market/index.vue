@@ -39,8 +39,8 @@
     </view>
 
     <template v-if="currentTab === 'product'">
-      <view class="category-scroll">
-        <scroll-view scroll-x class="category-list">
+      <view class="main-content">
+        <scroll-view scroll-y class="category-sidebar">
           <view 
             class="category-item" 
             :class="{ active: currentCategory === '' }"
@@ -58,108 +58,56 @@
             {{ cat.name }}
           </view>
         </scroll-view>
-      </view>
-      
-      <view class="filter-bar">
-        <view class="filter-item" :class="{ active: sortType === 'default' }" @click="handleSort('default')">
-          综合
-        </view>
-        <view class="filter-item" :class="{ active: sortType === 'sales' }" @click="handleSort('sales')">
-          <text>销量</text>
-          <text class="arrow" v-if="sortType === 'sales'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</text>
-        </view>
-        <view class="filter-item" :class="{ active: sortType === 'price' }" @click="handleSort('price')">
-          <text>价格</text>
-          <text class="arrow" v-if="sortType === 'price'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</text>
-        </view>
-        <view class="filter-item" :class="{ active: showFilterPanel }" @click="showFilterPanel = true">
-          <text>筛选</text>
-          <text class="filter-icon">⚙</text>
-        </view>
-      </view>
-      
-      <view class="filter-panel" v-if="showFilterPanel">
-        <view class="panel-mask" @click="showFilterPanel = false"></view>
-        <view class="panel-content">
-          <view class="panel-section">
-            <text class="panel-title">供应商</text>
-            <view class="panel-options">
+        
+        <view class="product-content">
+          <view class="filter-bar">
+            <view class="filter-item" :class="{ active: sortType === 'default' }" @click="handleSort('default')">
+              综合
+            </view>
+            <view class="filter-item" :class="{ active: sortType === 'sales' }" @click="handleSort('sales')">
+              销量
+            </view>
+            <view class="filter-item" :class="{ active: sortType === 'price' }" @click="handleSort('price')">
+              价格
+            </view>
+          </view>
+          
+          <scroll-view scroll-y class="product-scroll">
+            <view class="product-grid">
               <view 
-                class="option-item" 
-                :class="{ active: filterSupplier === '' }"
-                @click="filterSupplier = ''"
-              >全部</view>
-              <view 
-                v-for="s in supplierList" 
-                :key="s.id"
-                class="option-item" 
-                :class="{ active: filterSupplier === s.id }"
-                @click="filterSupplier = s.id"
-              >{{ s.name }}</view>
+                class="product-card" 
+                v-for="item in filteredProducts" 
+                :key="item.id" 
+                @click="handleProductDetail(item)"
+              >
+                <image :src="item.mainImage" mode="aspectFill" class="product-image" />
+                <view class="product-info">
+                  <text class="product-name">{{ item.skuName }}</text>
+                  <text class="product-spec">{{ formatSpecs(item.specs) }}</text>
+                  <view class="supplier-info">
+                    <text class="supplier-name" v-if="item.suppliers?.length === 1">{{ item.suppliers[0].supplierName }}</text>
+                    <text class="supplier-count" v-else-if="item.suppliers?.length > 1">{{ item.suppliers.length }}家供应商</text>
+                  </view>
+                  <view class="product-price-row">
+                    <view class="product-price">
+                      <text class="price-symbol">¥</text>
+                      <text class="price-value">{{ item.marketPrice }}</text>
+                      <text class="product-unit">/{{ item.unit }}</text>
+                    </view>
+                    <view class="add-cart" @click.stop="handleAddCart(item)">
+                      <text>+</text>
+                    </view>
+                  </view>
+                </view>
+              </view>
             </view>
-          </view>
-          <view class="panel-section">
-            <text class="panel-title">价格区间</text>
-            <view class="price-range">
-              <input type="number" v-model="priceMin" placeholder="最低价" class="price-input" />
-              <text class="price-sep">-</text>
-              <input type="number" v-model="priceMax" placeholder="最高价" class="price-input" />
+            
+            <view class="empty" v-if="filteredProducts.length === 0">
+              <text class="empty-icon">📦</text>
+              <text class="empty-text">暂无商品</text>
             </view>
-          </view>
-          <view class="panel-actions">
-            <view class="panel-btn reset" @click="resetFilter">重置</view>
-            <view class="panel-btn confirm" @click="confirmFilter">确定</view>
-          </view>
+          </scroll-view>
         </view>
-      </view>
-      
-      <view class="product-list" v-if="filteredProducts.length > 0">
-        <view 
-          class="product-item" 
-          v-for="item in filteredProducts" 
-          :key="item.id" 
-          @click="handleProductDetail(item)"
-        >
-          <image :src="item.mainImage" mode="aspectFill" class="product-image" />
-          <view class="product-info">
-            <view class="product-header">
-              <text class="product-name">{{ item.skuName }}</text>
-              <view class="product-tags">
-                <text class="tag permission" v-if="item.hasPermission">有权限</text>
-                <text class="tag hot" v-if="item.isHot">热销</text>
-              </view>
-            </view>
-            <text class="product-spec">{{ formatSpecs(item.specs) }}</text>
-            <view class="supplier-info">
-              <template v-if="item.suppliers && item.suppliers.length > 1">
-                <text class="supplier-count">{{ item.suppliers.length }}家供应商</text>
-                <text class="min-price">最低 ¥{{ getMinPrice(item.suppliers) }}</text>
-              </template>
-              <template v-else-if="item.suppliers && item.suppliers.length === 1">
-                <text class="supplier-name">{{ item.suppliers[0].supplierName }}</text>
-                <text class="supplier-stock">库存: {{ item.suppliers[0].estimatedStock }}{{ item.unit }}</text>
-              </template>
-            </view>
-            <view class="product-bottom">
-              <view class="product-price">
-                <text class="price-symbol">¥</text>
-                <text class="price-value">{{ item.marketPrice }}</text>
-                <text class="product-unit">/{{ item.unit }}</text>
-                <text class="supply-price" v-if="item.suppliers && item.suppliers.length > 0">
-                  供价¥{{ item.suppliers[0].supplyPrice }}
-                </text>
-              </view>
-              <view class="add-cart" @click.stop="handleAddCart(item)">
-                <text>+</text>
-              </view>
-            </view>
-          </view>
-        </view>
-      </view>
-      
-      <view class="empty" v-else>
-        <text class="empty-icon">📦</text>
-        <text class="empty-text">暂无商品</text>
       </view>
     </template>
 
@@ -181,25 +129,27 @@
           @click="bomType = 'custom'"
         >自定义</view>
       </view>
-      <view class="bom-list">
-        <view class="bom-item" v-for="item in filteredBomList" :key="item.id" @click="handleBomDetail(item)">
-          <view class="bom-header">
-            <text class="bom-name">{{ item.name }}</text>
-            <text class="bom-type">{{ item.type }}</text>
-          </view>
-          <text class="bom-desc">{{ item.description }}</text>
-          <view class="bom-info">
-            <text class="bom-count">{{ item.productCount }}种材料</text>
-            <text class="bom-price">预估总价: ¥{{ item.estimatedPrice }}</text>
-          </view>
-          <view class="bom-tags">
-            <text class="tag" v-for="tag in item.tags" :key="tag">{{ tag }}</text>
-          </view>
-          <view class="bom-action">
-            <view class="action-btn" @click.stop="handleBomPurchase(item)">立即采购</view>
+      <scroll-view scroll-y class="bom-scroll">
+        <view class="bom-list">
+          <view class="bom-item" v-for="item in filteredBomList" :key="item.id" @click="handleBomDetail(item)">
+            <view class="bom-header">
+              <text class="bom-name">{{ item.name }}</text>
+              <text class="bom-type">{{ item.type }}</text>
+            </view>
+            <text class="bom-desc">{{ item.description }}</text>
+            <view class="bom-info">
+              <text class="bom-count">{{ item.productCount }}种材料</text>
+              <text class="bom-price">预估总价: ¥{{ item.estimatedPrice }}</text>
+            </view>
+            <view class="bom-tags">
+              <text class="tag" v-for="tag in item.tags" :key="tag">{{ tag }}</text>
+            </view>
+            <view class="bom-action">
+              <view class="action-btn" @click.stop="handleBomPurchase(item)">立即采购</view>
+            </view>
           </view>
         </view>
-      </view>
+      </scroll-view>
     </template>
 
     <template v-if="currentTab === 'history'">
@@ -242,39 +192,45 @@
           >已完成</view>
         </view>
       </view>
-      <view class="history-list">
-        <view class="history-item" v-for="item in filteredHistory" :key="item.id" @click="handleHistoryDetail(item)">
-          <view class="history-header">
-            <text class="history-no">{{ item.orderNo }}</text>
-            <text class="history-status" :style="{ color: getStatusColor(item.status) }">{{ item.statusText }}</text>
-          </view>
-          <view class="history-supplier">
-            <text class="supplier-label">供应商:</text>
-            <text class="supplier-name">{{ item.supplierName }}</text>
-          </view>
-          <view class="history-products">
-            <view class="product-row" v-for="prod in item.products" :key="prod.id">
-              <image :src="prod.image" class="product-image" />
-              <view class="product-info">
-                <text class="product-name">{{ prod.name }}</text>
-                <text class="product-spec">{{ prod.spec }}</text>
-              </view>
-              <view class="product-right">
-                <text class="product-price">¥{{ prod.price }}</text>
-                <text class="product-qty">x{{ prod.qty }}</text>
+      <scroll-view scroll-y class="history-scroll">
+        <view class="history-list">
+          <view class="history-item" v-for="item in filteredHistory" :key="item.id" @click="handleHistoryDetail(item)">
+            <view class="history-header">
+              <text class="history-no">{{ item.orderNo }}</text>
+              <text class="history-status" :style="{ color: getStatusColor(item.status) }">{{ item.statusText }}</text>
+            </view>
+            <view class="history-supplier">
+              <text class="supplier-label">供应商:</text>
+              <text class="supplier-name">{{ item.supplierName }}</text>
+            </view>
+            <view class="history-products">
+              <view class="product-row" v-for="prod in item.products" :key="prod.id">
+                <image :src="prod.image" class="product-image" />
+                <view class="product-info">
+                  <text class="product-name">{{ prod.name }}</text>
+                  <text class="product-spec">{{ prod.spec }}</text>
+                </view>
+                <view class="product-right">
+                  <text class="product-price">¥{{ prod.price }}</text>
+                  <text class="product-qty">x{{ prod.qty }}</text>
+                </view>
               </view>
             </view>
-          </view>
-          <view class="history-footer">
-            <text class="history-total">共{{ item.totalQty }}件 合计: <text class="total-price">¥{{ item.totalAmount }}</text></text>
-            <text class="history-time">{{ item.createTime }}</text>
-          </view>
-          <view class="history-actions" v-if="item.status === 'pending'">
-            <view class="action-btn cancel" @click.stop="handleCancel(item)">取消</view>
-            <view class="action-btn primary" @click.stop="handleConfirm(item)">确认</view>
+            <view class="history-footer">
+              <text class="history-total">共{{ item.totalQty }}件 合计: <text class="total-price">¥{{ item.totalAmount }}</text></text>
+              <text class="history-time">{{ item.createTime }}</text>
+            </view>
+            <view class="history-actions" v-if="item.status === 'pending'">
+              <view class="action-btn cancel" @click.stop="handleCancel(item)">取消</view>
+              <view class="action-btn primary" @click.stop="handleConfirm(item)">确认</view>
+            </view>
           </view>
         </view>
-      </view>
+        <view class="empty" v-if="filteredHistory.length === 0">
+          <text class="empty-icon">📋</text>
+          <text class="empty-text">暂无采购记录</text>
+        </view>
+      </scroll-view>
     </template>
 
     <view class="cart-btn" @click="handleCart">
@@ -290,12 +246,7 @@ import { ref, computed } from 'vue'
 const currentTab = ref('product')
 const keyword = ref('')
 const sortType = ref('default')
-const sortOrder = ref('desc')
 const currentCategory = ref('')
-const showFilterPanel = ref(false)
-const filterSupplier = ref('')
-const priceMin = ref('')
-const priceMax = ref('')
 const cartCount = ref(3)
 const bomType = ref('')
 const startDate = ref('')
@@ -311,99 +262,102 @@ const categories = ref([
   { id: 'decoration', name: '装修材料' },
 ])
 
-const supplierList = ref([
-  { id: 's001', name: '华新水泥供应商' },
-  { id: 's002', name: '海螺水泥供应商' },
-  { id: 's003', name: '宝钢供应商' },
-  { id: 's004', name: '南方建材供应商' },
-  { id: 's005', name: '中建混凝土供应商' },
-])
-
 const products = ref([
   {
     id: 'mp001',
-    skuId: 'sku001',
-    skuCode: 'SKU-SN-001-42.5',
     skuName: '水泥 P.O 42.5',
-    categoryName: '水泥',
     categoryId: 'cement',
     specs: { '强度等级': '42.5' },
     mainImage: 'https://picsum.photos/200/200?random=1',
     unit: '吨',
     marketPrice: 450,
-    hasPermission: true,
-    isHot: true,
     suppliers: [
-      { supplierId: 's001', supplierName: '华新水泥供应商', supplyPrice: 420, supplyStatus: 'supplying', estimatedStock: 500 },
-      { supplierId: 's002', supplierName: '海螺水泥供应商', supplyPrice: 415, supplyStatus: 'supplying', estimatedStock: 300 },
+      { supplierId: 's001', supplierName: '华新水泥供应商', supplyPrice: 420, estimatedStock: 500 },
+      { supplierId: 's002', supplierName: '海螺水泥供应商', supplyPrice: 415, estimatedStock: 300 },
     ],
   },
   {
     id: 'mp002',
-    skuId: 'sku002',
-    skuCode: 'SKU-GC-002-16',
     skuName: '螺纹钢 HRB400 16mm',
-    categoryName: '钢材',
     categoryId: 'steel',
     specs: { '规格': '16mm' },
     mainImage: 'https://picsum.photos/200/200?random=2',
     unit: '吨',
     marketPrice: 4200,
-    hasPermission: true,
-    isHot: true,
     suppliers: [
-      { supplierId: 's003', supplierName: '宝钢供应商', supplyPrice: 4000, supplyStatus: 'supplying', estimatedStock: 100 },
+      { supplierId: 's003', supplierName: '宝钢供应商', supplyPrice: 4000, estimatedStock: 100 },
     ],
   },
   {
     id: 'mp003',
-    skuId: 'sku003',
-    skuCode: 'SKU-SS-003',
     skuName: '黄砂 中砂',
-    categoryName: '砂石',
     categoryId: 'sand',
     specs: { '类型': '中砂' },
     mainImage: 'https://picsum.photos/200/200?random=3',
     unit: '方',
     marketPrice: 95,
-    hasPermission: true,
-    isHot: false,
     suppliers: [
-      { supplierId: 's004', supplierName: '南方建材供应商', supplyPrice: 80, supplyStatus: 'supplying', estimatedStock: 1000 },
+      { supplierId: 's004', supplierName: '南方建材供应商', supplyPrice: 80, estimatedStock: 1000 },
     ],
   },
   {
     id: 'mp004',
-    skuId: 'sku004',
-    skuCode: 'SKU-HNT-004-C30',
     skuName: '商品混凝土 C30',
-    categoryName: '混凝土',
     categoryId: 'concrete',
     specs: { '强度等级': 'C30' },
     mainImage: 'https://picsum.photos/200/200?random=4',
     unit: '方',
     marketPrice: 420,
-    hasPermission: true,
-    isHot: false,
     suppliers: [
-      { supplierId: 's005', supplierName: '中建混凝土供应商', supplyPrice: 380, supplyStatus: 'supplying', estimatedStock: 500 },
+      { supplierId: 's005', supplierName: '中建混凝土供应商', supplyPrice: 380, estimatedStock: 500 },
     ],
   },
   {
     id: 'mp005',
-    skuId: 'sku005',
-    skuCode: 'SKU-GC-005-20',
     skuName: '螺纹钢 HRB400 20mm',
-    categoryName: '钢材',
     categoryId: 'steel',
     specs: { '规格': '20mm' },
     mainImage: 'https://picsum.photos/200/200?random=5',
     unit: '吨',
     marketPrice: 4150,
-    hasPermission: true,
-    isHot: false,
     suppliers: [
-      { supplierId: 's003', supplierName: '宝钢供应商', supplyPrice: 3950, supplyStatus: 'supplying', estimatedStock: 80 },
+      { supplierId: 's003', supplierName: '宝钢供应商', supplyPrice: 3950, estimatedStock: 80 },
+    ],
+  },
+  {
+    id: 'mp006',
+    skuName: '加气混凝土砌块',
+    categoryId: 'brick',
+    specs: { '规格': '600*200*200' },
+    mainImage: 'https://picsum.photos/200/200?random=6',
+    unit: '方',
+    marketPrice: 180,
+    suppliers: [
+      { supplierId: 's004', supplierName: '南方建材供应商', supplyPrice: 160, estimatedStock: 200 },
+    ],
+  },
+  {
+    id: 'mp007',
+    skuName: '防水涂料 JS',
+    categoryId: 'decoration',
+    specs: { '类型': '双组份' },
+    mainImage: 'https://picsum.photos/200/200?random=7',
+    unit: '桶',
+    marketPrice: 280,
+    suppliers: [
+      { supplierId: 's004', supplierName: '南方建材供应商', supplyPrice: 240, estimatedStock: 150 },
+    ],
+  },
+  {
+    id: 'mp008',
+    skuName: '瓷砖 抛光砖',
+    categoryId: 'decoration',
+    specs: { '规格': '800*800' },
+    mainImage: 'https://picsum.photos/200/200?random=8',
+    unit: '箱',
+    marketPrice: 156,
+    suppliers: [
+      { supplierId: 's004', supplierName: '南方建材供应商', supplyPrice: 130, estimatedStock: 300 },
     ],
   },
 ])
@@ -416,7 +370,7 @@ const bomList = ref([
     description: '适用于标准住宅项目的基础建材配置包，包含水泥、砂石、钢筋等基础材料',
     productCount: 12,
     estimatedPrice: '158,000',
-    tags: ['住宅', '基础工程', '推荐'],
+    tags: ['住宅', '基础工程'],
   },
   {
     id: 'bom002',
@@ -486,35 +440,12 @@ const filteredProducts = computed(() => {
   if (keyword.value) {
     const kw = keyword.value.toLowerCase()
     result = result.filter(p => 
-      p.skuName.toLowerCase().includes(kw) || 
-      p.skuCode.toLowerCase().includes(kw)
+      p.skuName.toLowerCase().includes(kw)
     )
   }
   
   if (currentCategory.value) {
     result = result.filter(p => p.categoryId === currentCategory.value)
-  }
-  
-  if (filterSupplier.value) {
-    result = result.filter(p => 
-      p.suppliers && p.suppliers.some(s => s.supplierId === filterSupplier.value)
-    )
-  }
-  
-  if (priceMin.value || priceMax.value) {
-    const min = parseFloat(priceMin.value) || 0
-    const max = parseFloat(priceMax.value) || Infinity
-    result = result.filter(p => p.marketPrice >= min && p.marketPrice <= max)
-  }
-  
-  if (sortType.value === 'price') {
-    result = [...result].sort((a, b) => 
-      sortOrder.value === 'asc' ? a.marketPrice - b.marketPrice : b.marketPrice - a.marketPrice
-    )
-  } else if (sortType.value === 'sales') {
-    result = [...result].sort((a, b) => 
-      sortOrder.value === 'asc' ? (a.isHot ? 0 : 1) - (b.isHot ? 0 : 1) : (b.isHot ? 0 : 1) - (a.isHot ? 0 : 1)
-    )
   }
   
   return result
@@ -552,31 +483,11 @@ function handleCategoryChange(id: string) {
 }
 
 function handleSort(type: string) {
-  if (sortType.value === type) {
-    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
-  } else {
-    sortType.value = type
-    sortOrder.value = 'desc'
-  }
-}
-
-function resetFilter() {
-  filterSupplier.value = ''
-  priceMin.value = ''
-  priceMax.value = ''
-}
-
-function confirmFilter() {
-  showFilterPanel.value = false
+  sortType.value = type
 }
 
 function formatSpecs(specs: Record<string, string>) {
   return Object.entries(specs).map(([k, v]) => v).join(' / ')
-}
-
-function getMinPrice(suppliers: any[]) {
-  const min = suppliers.reduce((m, s) => s.supplyPrice < m ? s.supplyPrice : m, suppliers[0].supplyPrice)
-  return min.toFixed(2)
 }
 
 function handleProductDetail(item: any) {
@@ -650,15 +561,13 @@ function handleCart() {
 .page {
   min-height: 100vh;
   background-color: #f7f8fa;
-  padding-bottom: 120rpx;
+  display: flex;
+  flex-direction: column;
 }
 
 .header {
   padding: 20rpx 32rpx;
   background-color: #fff;
-  position: sticky;
-  top: 0;
-  z-index: 100;
 }
 
 .search-bar {
@@ -716,34 +625,43 @@ function handleCart() {
   }
 }
 
-.category-scroll {
-  background-color: #fff;
-  border-bottom: 1rpx solid #f0f0f0;
+.main-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
 }
 
-.category-list {
-  white-space: nowrap;
-  padding: 20rpx 32rpx;
+.category-sidebar {
+  width: 200rpx;
+  background-color: #f5f5f5;
+  height: calc(100vh - 200rpx);
 }
 
 .category-item {
-  display: inline-block;
-  padding: 12rpx 32rpx;
-  margin-right: 20rpx;
+  padding: 28rpx 20rpx;
   font-size: 26rpx;
   color: #666;
-  background-color: #f5f5f5;
-  border-radius: 28rpx;
+  text-align: center;
+  border-left: 6rpx solid transparent;
   
   &.active {
-    color: #fff;
-    background-color: #165dff;
+    color: #165dff;
+    background-color: #fff;
+    border-left-color: #165dff;
+    font-weight: 600;
   }
+}
+
+.product-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 200rpx);
 }
 
 .filter-bar {
   display: flex;
-  padding: 20rpx 32rpx;
+  padding: 20rpx 24rpx;
   background-color: #fff;
   border-bottom: 1rpx solid #f0f0f0;
 }
@@ -753,241 +671,75 @@ function handleCart() {
   text-align: center;
   font-size: 26rpx;
   color: #666;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   
   &.active {
     color: #165dff;
     font-weight: 600;
   }
-  
-  .arrow {
-    margin-left: 8rpx;
-    font-size: 20rpx;
-  }
-  
-  .filter-icon {
-    margin-left: 8rpx;
-    font-size: 24rpx;
-  }
 }
 
-.filter-panel {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 200;
-}
-
-.panel-mask {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
-.panel-content {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 80%;
-  background-color: #fff;
-  padding: 32rpx;
-  padding-top: 80rpx;
-}
-
-.panel-section {
-  margin-bottom: 32rpx;
-}
-
-.panel-title {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: #1d2129;
-  margin-bottom: 20rpx;
-  display: block;
-}
-
-.panel-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16rpx;
-}
-
-.option-item {
-  padding: 12rpx 24rpx;
-  font-size: 26rpx;
-  color: #666;
-  background-color: #f7f8fa;
-  border-radius: 8rpx;
-  
-  &.active {
-    color: #165dff;
-    background-color: #e8f3ff;
-    border: 1rpx solid #165dff;
-  }
-}
-
-.price-range {
-  display: flex;
-  align-items: center;
-}
-
-.price-input {
+.product-scroll {
   flex: 1;
-  height: 72rpx;
-  padding: 0 20rpx;
-  background-color: #f7f8fa;
-  border-radius: 8rpx;
-  font-size: 26rpx;
+  padding: 20rpx;
 }
 
-.price-sep {
-  margin: 0 16rpx;
-  color: #86909c;
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20rpx;
 }
 
-.panel-actions {
-  display: flex;
-  gap: 24rpx;
-  margin-top: 48rpx;
-}
-
-.panel-btn {
-  flex: 1;
-  height: 80rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 40rpx;
-  font-size: 28rpx;
-  
-  &.reset {
-    color: #666;
-    background-color: #f7f8fa;
-  }
-  
-  &.confirm {
-    color: #fff;
-    background-color: #165dff;
-  }
-}
-
-.product-list {
-  padding: 24rpx 32rpx;
-}
-
-.product-item {
-  display: flex;
-  padding: 24rpx;
+.product-card {
   background-color: #fff;
-  border-radius: 16rpx;
-  margin-bottom: 24rpx;
+  border-radius: 12rpx;
+  overflow: hidden;
 }
 
 .product-image {
-  width: 180rpx;
-  height: 180rpx;
-  border-radius: 12rpx;
-  flex-shrink: 0;
+  width: 100%;
+  height: 240rpx;
 }
 
 .product-info {
-  flex: 1;
-  margin-left: 24rpx;
-  display: flex;
-  flex-direction: column;
-}
-
-.product-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  padding: 16rpx;
 }
 
 .product-name {
-  flex: 1;
-  font-size: 28rpx;
+  font-size: 26rpx;
   color: #1d2129;
   font-weight: 500;
-}
-
-.product-tags {
-  display: flex;
-  margin-left: 16rpx;
-  
-  .tag {
-    font-size: 20rpx;
-    padding: 4rpx 12rpx;
-    border-radius: 4rpx;
-    margin-left: 8rpx;
-    
-    &.permission {
-      color: #00b42a;
-      background-color: #e8ffea;
-    }
-    
-    &.hot {
-      color: #f53f3f;
-      background-color: #ffece8;
-    }
-  }
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .product-spec {
-  font-size: 24rpx;
+  font-size: 22rpx;
   color: #86909c;
   margin-top: 8rpx;
+  display: block;
 }
 
 .supplier-info {
-  display: flex;
-  align-items: center;
-  margin-top: 12rpx;
+  margin-top: 8rpx;
   
-  .supplier-count {
+  .supplier-name, .supplier-count {
     font-size: 22rpx;
-    color: #165dff;
-    background-color: #e8f3ff;
-    padding: 4rpx 12rpx;
-    border-radius: 4rpx;
-  }
-  
-  .min-price {
-    font-size: 22rpx;
-    color: #f53f3f;
-    margin-left: 16rpx;
-  }
-  
-  .supplier-name {
-    font-size: 22rpx;
-    color: #86909c;
-  }
-  
-  .supplier-stock {
-    font-size: 22rpx;
-    color: #00b42a;
-    margin-left: 16rpx;
+    color: #666;
   }
 }
 
-.product-bottom {
+.product-price-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: auto;
+  margin-top: 12rpx;
 }
 
 .product-price {
   display: flex;
   align-items: baseline;
-  flex-wrap: wrap;
 }
 
 .price-symbol {
@@ -996,7 +748,7 @@ function handleCart() {
 }
 
 .price-value {
-  font-size: 36rpx;
+  font-size: 32rpx;
   font-weight: 600;
   color: #f53f3f;
 }
@@ -1007,38 +759,28 @@ function handleCart() {
   margin-left: 4rpx;
 }
 
-.supply-price {
-  font-size: 22rpx;
-  color: #00b42a;
-  background-color: #e8ffea;
-  padding: 2rpx 8rpx;
-  border-radius: 4rpx;
-  margin-left: 12rpx;
-}
-
 .add-cart {
-  width: 56rpx;
-  height: 56rpx;
+  width: 52rpx;
+  height: 52rpx;
   background-color: #165dff;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 36rpx;
+  font-size: 32rpx;
 }
 
 .empty {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding-top: 200rpx;
+  padding: 100rpx 0;
 }
 
 .empty-icon {
-  font-size: 120rpx;
-  margin-bottom: 32rpx;
+  font-size: 100rpx;
+  margin-bottom: 24rpx;
 }
 
 .empty-text {
@@ -1064,6 +806,11 @@ function handleCart() {
     color: #fff;
     background-color: #165dff;
   }
+}
+
+.bom-scroll {
+  flex: 1;
+  height: calc(100vh - 200rpx);
 }
 
 .bom-list {
@@ -1202,6 +949,11 @@ function handleCart() {
     color: #fff;
     background-color: #165dff;
   }
+}
+
+.history-scroll {
+  flex: 1;
+  height: calc(100vh - 280rpx);
 }
 
 .history-list {

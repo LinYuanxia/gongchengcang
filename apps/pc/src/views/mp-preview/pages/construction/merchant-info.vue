@@ -43,7 +43,7 @@
           </div>
           <div class="info-item">
             <span class="label">统一社会信用代码</span>
-            <span class="value code">{{ merchantData.creditCode }}</span>
+            <span class="value code">{{ maskCreditCode(merchantData.creditCode) }}</span>
           </div>
           <div class="info-item">
             <span class="label">企业类型</span>
@@ -61,18 +61,6 @@
                 已认证
               </span>
             </span>
-          </div>
-        </div>
-      </div>
-      
-      <div class="section">
-        <div class="section-title">资质证明</div>
-        <div class="license-grid">
-          <div class="license-item" v-for="(item, index) in merchantData.licenses" :key="index">
-            <div class="license-image">
-              <img :src="item.image" :alt="item.name" />
-            </div>
-            <div class="license-name">{{ item.name }}</div>
           </div>
         </div>
       </div>
@@ -95,11 +83,12 @@ const merchantData = ref({
   creditCode: '91440300MA5GJHX2XX',
   companyType: '有限责任公司',
   businessScope: '建筑工程、装修装饰工程、机电安装工程',
-  licenses: [
-    { name: '营业执照', image: 'https://picsum.photos/200/140?random=license1' },
-    { name: '资质证书', image: 'https://picsum.photos/200/140?random=license2' },
-  ]
 })
+
+function maskCreditCode(code: string) {
+  if (!code || code.length <= 7) return code
+  return code.slice(0, 4) + '*'.repeat(code.length - 7) + code.slice(-3)
+}
 
 function handleBack() {
   emit('navigate', 'mine')

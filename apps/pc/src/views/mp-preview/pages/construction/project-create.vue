@@ -22,7 +22,7 @@
           <div class="form-picker" @click="showBrandPicker = true">
             <span v-if="formData.brand">{{ formData.brand }}</span>
             <span class="placeholder" v-else>请选择品牌</span>
-            <icon-right class="picker-arrow" />
+            <icon-arrow-right class="picker-arrow" />
           </div>
         </div>
         
@@ -31,7 +31,7 @@
           <div class="form-picker" @click="showRegionPicker = true">
             <span v-if="formData.province">{{ formData.province }} {{ formData.city }} {{ formData.district }}</span>
             <span class="placeholder" v-else>请选择省市区</span>
-            <icon-right class="picker-arrow" />
+            <icon-arrow-right class="picker-arrow" />
           </div>
         </div>
         
@@ -49,7 +49,7 @@
           <div class="form-picker" @click="showStartDatePicker = true">
             <span v-if="formData.startDate">{{ formData.startDate }}</span>
             <span class="placeholder" v-else>请选择开工日期</span>
-            <icon-right class="picker-arrow" />
+            <icon-arrow-right class="picker-arrow" />
           </div>
         </div>
         
@@ -58,7 +58,7 @@
           <div class="form-picker" @click="showEndDatePicker = true">
             <span v-if="formData.endDate">{{ formData.endDate }}</span>
             <span class="placeholder" v-else>请选择竣工日期</span>
-            <icon-right class="picker-arrow" />
+            <icon-arrow-right class="picker-arrow" />
           </div>
         </div>
       </div>
@@ -71,7 +71,7 @@
           <div class="form-picker" @click="handleSelectBom">
             <span v-if="formData.bomName">{{ formData.bomName }}</span>
             <span class="placeholder" v-else>请选择BOM基装包</span>
-            <icon-right class="picker-arrow" />
+            <icon-arrow-right class="picker-arrow" />
           </div>
         </div>
         

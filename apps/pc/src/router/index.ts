@@ -716,9 +716,33 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'finance',
         name: 'WarehouseFinance',
-        redirect: '/warehouse/finance/payment',
+        redirect: '/warehouse/finance/custody',
         meta: { title: '财务中心', icon: 'icon-money-collect' },
         children: [
+          {
+            path: 'custody',
+            name: 'WarehouseCustodyOverview',
+            component: () => import('@/views/warehouse/finance/custody/overview.vue'),
+            meta: { title: '虚拟账户' },
+          },
+          {
+            path: 'custody/recharge',
+            name: 'WarehouseCustodyRecharge',
+            component: () => import('@/views/warehouse/finance/custody/recharge.vue'),
+            meta: { title: '账户充值', hideInMenu: true },
+          },
+          {
+            path: 'custody/withdraw',
+            name: 'WarehouseCustodyWithdraw',
+            component: () => import('@/views/warehouse/finance/custody/withdraw.vue'),
+            meta: { title: '账户提现', hideInMenu: true },
+          },
+          {
+            path: 'custody/transaction',
+            name: 'WarehouseCustodyTransaction',
+            component: () => import('@/views/warehouse/finance/custody/transaction.vue'),
+            meta: { title: '流水记录', hideInMenu: true },
+          },
           {
             path: 'payment',
             name: 'WarehousePayment',
@@ -736,6 +760,30 @@ const routes: RouteRecordRaw[] = [
             name: 'WarehouseInvoiceOutput',
             component: () => import('@/views/warehouse/finance/invoice/output.vue'),
             meta: { title: '销项发票' },
+          },
+          {
+            path: 'transaction',
+            name: 'WarehouseFinanceTransaction',
+            component: () => import('@/views/warehouse/finance/transaction.vue'),
+            meta: { title: '支付流水' },
+          },
+          {
+            path: 'offline-record',
+            name: 'WarehouseOfflineRecord',
+            component: () => import('@/views/warehouse/finance/offline-record.vue'),
+            meta: { title: '线下转正记录' },
+          },
+          {
+            path: 'deduction',
+            name: 'WarehouseDeduction',
+            component: () => import('@/views/warehouse/finance/deduction/index.vue'),
+            meta: { title: '应扣记录' },
+          },
+          {
+            path: 'deduction/detail/:id',
+            name: 'WarehouseDeductionDetail',
+            component: () => import('@/views/warehouse/finance/deduction/detail.vue'),
+            meta: { title: '应扣明细', hideInMenu: true },
           },
         ],
       },

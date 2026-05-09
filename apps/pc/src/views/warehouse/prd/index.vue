@@ -195,6 +195,21 @@
     </div>
   </a-modal>
 
+  <!-- 资金交易链路架构图 -->
+  <PrbFlowDiagram v-model:visible="flowDiagramVisible" />
+
+  <!-- 核心交易链路时序图 -->
+  <CoreTransactionFlow v-model:visible="coreFlowVisible" />
+
+  <!-- 销售与采购完整双主线链路图 -->
+  <FullTransactionFlow v-model:visible="fullFlowVisible" />
+
+  <!-- 四端协同架构全景图 -->
+  <ArchitectureFlow v-model:visible="architectureVisible" />
+
+  <!-- 产品模块设计全景图 -->
+  <ProductModuleViewer v-model:visible="moduleImageVisible" />
+
   <!-- 同步到语雀弹窗（仅开发环境） -->
   <a-modal
     v-if="isDevEnv"
@@ -332,6 +347,11 @@ import mermaid from 'mermaid'
 import { Message } from '@arco-design/web-vue'
 import { prdDocTree, collectAllLeafModules, collectAllKeys, findFirstLeaf, findTreeNodeKey } from '@/components/PrdPanel/prdData'
 import type { PrdModule, TreeDocNode } from '@/components/PrdPanel/prdData'
+import PrbFlowDiagram from '@/components/PrbFlowDiagram/index.vue'
+import CoreTransactionFlow from '@/components/CoreTransactionFlow/index.vue'
+import FullTransactionFlow from '@/components/FullTransactionFlow/index.vue'
+import ArchitectureFlow from '@/components/ArchitectureFlow/index.vue'
+import ProductModuleViewer from '@/components/ProductModuleViewer/index.vue'
 
 // ------ 全局Mermaid渲染计数器（避免ID冲突）-----
 let mermaidRenderCounter = 0
@@ -364,6 +384,21 @@ const rawMarkdown = ref('')
 const editMode = ref(false)
 const saving = ref(false)
 const editContent = ref('')
+
+// ------ 流程图可视化 ------
+const flowDiagramVisible = ref(false)
+const coreFlowVisible = ref(false)
+const fullFlowVisible = ref(false)
+const architectureVisible = ref(false)
+const moduleImageVisible = ref(false)
+
+function showFlowDiagram() {
+  flowDiagramVisible.value = true
+}
+
+function showCoreFlow() {
+  coreFlowVisible.value = true
+}
 
 // ------ 语雀同步 ------
 const showYuqueModal = ref(false)
@@ -704,6 +739,9 @@ async function startYuqueSync() {
       const content = await res.text()
 
       // 调用语雀API创建文档
+      console.log(`📤 正在创建: ${mod.name}`)
+      console.log('  parent_uuid:', yuqueConfig.value.parentUuid || '(根目录)')
+      
       const apiRes = await fetch(`/api/yuque/repos/${extractRepoId(yuqueConfig.value.repoId)}/docs`, {
         method: 'POST',
         headers: {
@@ -715,11 +753,12 @@ async function startYuqueSync() {
           title: mod.name,
           body: content,
           format: 'markdown',
-          parent_uuid: yuqueConfig.value.parentUuid || null,
+          parent_uuid: yuqueConfig.value.parentUuid || undefined,
         }),
       })
 
       const result = await apiRes.json()
+      console.log(`📥 返回:`, result)
 
       if (apiRes.ok && result.data) {
         yuqueSyncResult.value.push({
@@ -729,11 +768,14 @@ async function startYuqueSync() {
         })
         yuqueSyncedCount.value++
       } else {
-        throw new Error(result.message || result.errors?.[0]?.message || 'API调用失败')
+        const errMsg = result.message || result.errors?.[0]?.message || JSON.stringify(result)
+        console.log(`❌ 创建失败: ${errMsg}`)
+        throw new Error(errMsg)
       }
-    } catch (e) {
+    } catch (e: any) {
+      console.log(`❌ 异常: ${e.message}`)
       yuqueSyncResult.value.push({
-        title: item.title,
+        title: `${item.title} (${e.message?.substring(0, 30)}...)`,
         status: 'fail',
       })
     }
@@ -808,16 +850,33 @@ function escapeHtmlForAttr(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
-// ------ Mermaid弹窗交互 ------
+// ------ Mermaid弹窗交互 & 流程图交互 ------
 function handleDocClick(e: MouseEvent) {
   const target = e.target as HTMLElement
-  const trigger = target.closest('.mermaid-zoom-trigger')
-  if (trigger) {
-    const def = trigger.getAttribute('data-def')
+
+  const mermaidTrigger = target.closest('.mermaid-zoom-trigger')
+  if (mermaidTrigger) {
+    const def = mermaidTrigger.getAttribute('data-def')
     if (def) {
       currentMermaidDef.value = def
       mermaidModalVisible.value = true
     }
+    return
+  }
+
+  const flowTrigger = target.closest('.flow-link')
+  if (flowTrigger) {
+    const flowType = flowTrigger.getAttribute('data-flow')
+    if (flowType === 'fund') {
+      flowDiagramVisible.value = true
+    } else if (flowType === 'transaction') {
+      coreFlowVisible.value = true
+    } else if (flowType === 'full-transaction') {
+      fullFlowVisible.value = true
+    } else if (flowType === 'architecture') {
+      moduleImageVisible.value = true
+    }
+    return
   }
 }
 

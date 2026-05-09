@@ -14,6 +14,9 @@ function prdEditorPlugin(): Plugin {
         const yuqueHost = req.headers['x-yuque-host'] as string || 'www.yuque.com'
         const path = req.url?.replace(/^\/api\/yuque/, '') || ''
 
+        console.log('🔁 语雀代理:', yuqueHost + path)
+        console.log('   Token:', req.headers['x-auth-token']?.toString().substring(0, 10) + '...')
+
         const options = {
           hostname: yuqueHost,
           path: `/api/v2${path}`,
@@ -21,16 +24,21 @@ function prdEditorPlugin(): Plugin {
           headers: {
             'Content-Type': 'application/json',
             'X-Auth-Token': req.headers['x-auth-token'] || '',
+            'User-Agent': 'PRD-Sync-Tool/1.0',
           },
         }
 
         const proxyReq = https.request(options, (proxyRes) => {
+          console.log('   状态码:', proxyRes.statusCode)
           res.writeHead(proxyRes.statusCode!, proxyRes.headers)
           proxyRes.pipe(res)
         })
 
         req.pipe(proxyReq)
-        proxyReq.on('error', () => res.end(JSON.stringify({ message: '代理失败' })))
+        proxyReq.on('error', (e) => {
+          console.log('   代理错误:', e)
+          res.end(JSON.stringify({ message: '代理失败' }))
+        })
       })
 
       server.middlewares.use('/api/save-prd-doc', (req, res) => {

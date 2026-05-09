@@ -253,6 +253,14 @@
             <icon-bookmark />
             <span>发票抬头</span>
           </div>
+          <div 
+            class="page-item" 
+            :class="{ active: currentPage === 'invoice-apply' }"
+            @click="currentPage = 'invoice-apply'"
+          >
+            <icon-file-add />
+            <span>申请开票</span>
+          </div>
           <div class="section-title" style="margin-top: 12px;">资金管理</div>
           <div 
             class="page-item" 
@@ -396,6 +404,7 @@ import MpConstructionProjectCreate from './pages/construction/project-create.vue
 import MpConstructionSiteStock from './pages/construction/site-stock.vue'
 import MpConstructionAddressManage from './pages/construction/address-manage.vue'
 import MpConstructionInvoiceTitle from './pages/construction/invoice-title.vue'
+import MpConstructionInvoiceApply from './pages/construction/invoice-apply.vue'
 import MpConstructionFundManagement from './pages/construction/fund-management.vue'
 import MpConstructionTransaction from './pages/construction/transaction.vue'
 import MpConstructionInvoiceManage from './pages/construction/invoice-manage.vue'
@@ -406,6 +415,9 @@ import MpConstructionPayOffline from './pages/construction/pay-offline.vue'
 import MpConstructionChangePassword from './pages/construction/change-password.vue'
 import MpConstructionMerchantInfo from './pages/construction/merchant-info.vue'
 import MpConstructionWarehouseDetail from './pages/construction/warehouse-detail.vue'
+import MpConstructionOfflineRecord from './pages/construction/offline-record.vue'
+import MpConstructionDeductRecord from './pages/construction/deduct-record.vue'
+import MpConstructionDeductDetail from './pages/construction/deduct-detail.vue'
 
 import MpSupplierMarket from './pages/supplier/market.vue'
 import MpSupplierSupplyManage from './pages/supplier/supply-manage.vue'
@@ -421,6 +433,10 @@ import MpInvoicePurchase from './pages/warehouse/invoice-purchase.vue'
 import MpProductManage from './pages/warehouse/product-manage.vue'
 import MpMessageCenter from './pages/warehouse/message-center.vue'
 import MpSettings from './pages/warehouse/settings.vue'
+import MpWarehouseTransaction from './pages/warehouse/transaction.vue'
+import MpWarehouseOfflineRecord from './pages/warehouse/offline-record.vue'
+import MpWarehouseDeductRecord from './pages/warehouse/deduct-record.vue'
+import MpWarehouseDeductDetail from './pages/warehouse/deduct-detail.vue'
 
 const route = useRoute()
 const currentRole = ref('warehouse')
@@ -480,6 +496,10 @@ const pageInfo = computed(() => {
       'stock-out': { title: '出库记录', path: '/pages/mine/stock-out' },
       'stock-check': { title: '库存盘点', path: '/pages/mine/stock-check' },
       'fund-management': { title: '资金管理', path: '/pages/mine/fund-management' },
+      'transaction': { title: '支付流水', path: '/pages/mine/transaction' },
+      'offline-record': { title: '线下转正记录', path: '/pages/mine/offline-record' },
+      'deduct-record': { title: '应扣记录', path: '/pages/mine/deduct-record' },
+      'deduct-detail': { title: '应扣明细', path: '/pages/mine/deduct-detail', params: 'recordId=xxx' },
       'invoice-sale': { title: '销项发票', path: '/pages/mine/invoice-sale' },
       'invoice-purchase': { title: '进项发票', path: '/pages/mine/invoice-purchase' },
       'product-manage': { title: '商品管理', path: '/pages/mine/product-manage' },
@@ -504,6 +524,7 @@ const pageInfo = computed(() => {
       'bom-order': { title: 'BOM订单确认', path: '/pages/construction/bom-order' },
       'address-manage': { title: '收货地址', path: '/pages/construction/address-manage' },
       'invoice-title': { title: '发票抬头', path: '/pages/construction/invoice-title' },
+      'invoice-apply': { title: '申请开票', path: '/pages/construction/invoice-apply' },
       'fund-management': { title: '账户余额', path: '/pages/construction/fund-management' },
       'transaction': { title: '交易明细', path: '/pages/construction/transaction' },
       'invoice-manage': { title: '发票管理', path: '/pages/construction/invoice-manage' },
@@ -514,6 +535,9 @@ const pageInfo = computed(() => {
       'change-password': { title: '修改密码', path: '/pages/construction/change-password' },
       'merchant-info': { title: '商户信息', path: '/pages/construction/merchant-info' },
       'warehouse-detail': { title: '工程仓详情', path: '/pages/construction/warehouse-detail', params: 'warehouseId=xxx' },
+      'offline-record': { title: '线下转正记录', path: '/pages/construction/offline-record' },
+      'deduct-record': { title: '应扣记录', path: '/pages/construction/deduct-record' },
+      'deduct-detail': { title: '应扣明细', path: '/pages/construction/deduct-detail', params: 'recordId=xxx' },
     },
     'supplier': {
       'index': { title: '首页', path: '/pages/index/index' },
@@ -549,6 +573,10 @@ const currentComponent = computed(() => {
       'stock-out': MpStockOut,
       'stock-check': MpStockCheck,
       'fund-management': MpFundManagement,
+      'transaction': MpWarehouseTransaction,
+      'offline-record': MpWarehouseOfflineRecord,
+      'deduct-record': MpWarehouseDeductRecord,
+      'deduct-detail': MpWarehouseDeductDetail,
       'invoice-sale': MpInvoiceSale,
       'invoice-purchase': MpInvoicePurchase,
       'product-manage': MpProductManage,
@@ -577,6 +605,7 @@ const currentComponent = computed(() => {
       'bom-order': MpConstructionBomOrder,
       'address-manage': MpConstructionAddressManage,
       'invoice-title': MpConstructionInvoiceTitle,
+      'invoice-apply': MpConstructionInvoiceApply,
       'fund-management': MpConstructionFundManagement,
       'transaction': MpConstructionTransaction,
       'invoice-manage': MpConstructionInvoiceManage,
@@ -587,6 +616,9 @@ const currentComponent = computed(() => {
       'change-password': MpConstructionChangePassword,
       'merchant-info': MpConstructionMerchantInfo,
       'warehouse-detail': MpConstructionWarehouseDetail,
+      'offline-record': MpConstructionOfflineRecord,
+      'deduct-record': MpConstructionDeductRecord,
+      'deduct-detail': MpConstructionDeductDetail,
     }
     return components[currentPage.value] || MpConstructionIndex
   }

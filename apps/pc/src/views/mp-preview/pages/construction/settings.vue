@@ -16,7 +16,7 @@
             <icon-lock class="item-icon" />
             <span class="item-text">修改密码</span>
           </div>
-          <icon-right class="item-arrow" />
+          <icon-arrow-right class="item-arrow" />
         </div>
       </div>
       
@@ -29,7 +29,7 @@
           </div>
           <div class="item-right">
             <span class="item-extra">v1.0.0</span>
-            <icon-right class="item-arrow" />
+            <icon-arrow-right class="item-arrow" />
           </div>
         </div>
         <div class="settings-item" @click="handleClearCache">
@@ -39,7 +39,7 @@
           </div>
           <div class="item-right">
             <span class="item-extra">{{ cacheSize }}</span>
-            <icon-right class="item-arrow" />
+            <icon-arrow-right class="item-arrow" />
           </div>
         </div>
       </div>

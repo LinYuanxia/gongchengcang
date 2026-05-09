@@ -1,5 +1,12 @@
 <template>
   <div class="withdraw-record">
+    <div class="page-header">
+      <a-button type="text" @click="goBack">
+        <template #icon><icon-left /></template>
+        返回账户概览
+      </a-button>
+      <h3>提现记录</h3>
+    </div>
     <a-card>
       <template #extra>
         <a-button type="primary" @click="handleWithdraw">
@@ -149,7 +156,14 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
+
+const router = useRouter()
+
+function goBack() {
+  router.push('/warehouse/finance/custody')
+}
 
 const searchForm = ref({
   withdrawNo: '',
@@ -261,6 +275,19 @@ function handleViewDetail(record: any) {
 <style scoped lang="less">
 .withdraw-record {
   padding: 16px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 12px;
+
+  h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+  }
 }
 
 .mt-16 {

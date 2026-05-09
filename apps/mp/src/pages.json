@@ -7,6 +7,24 @@
       }
     },
     {
+      "path": "pages/index/projects",
+      "style": {
+        "navigationBarTitleText": "门店项目"
+      }
+    },
+    {
+      "path": "pages/index/project-detail",
+      "style": {
+        "navigationBarTitleText": "项目详情"
+      }
+    },
+    {
+      "path": "pages/index/order-create",
+      "style": {
+        "navigationBarTitleText": "材料下单"
+      }
+    },
+    {
       "path": "pages/market/index",
       "style": {
         "navigationBarTitleText": "采购市场"

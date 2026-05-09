@@ -110,7 +110,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-defineEmits(['navigate'])
+const emit = defineEmits(['navigate'])
 
 const showBalance = ref(true)
 const balance = ref('158,520.00')
@@ -161,7 +161,7 @@ function handleWithdraw() {
 }
 
 function handleRecords() {
-  console.log('明细')
+  emit('navigate', 'transaction')
 }
 
 function handlePayOrder() {
