@@ -1,0 +1,194 @@
+.page.data-v-e68fdcc7 {
+  min-height: 100vh;
+  background-color: #f7f8fa;
+  padding-bottom: 32rpx;
+}
+.balance-card.data-v-e68fdcc7 {
+  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
+  padding: 48rpx 32rpx;
+  color: #fff;
+}
+.balance-label.data-v-e68fdcc7 {
+  font-size: 26rpx;
+  opacity: 0.9;
+  display: block;
+}
+.balance-value.data-v-e68fdcc7 {
+  font-size: 56rpx;
+  font-weight: 600;
+  display: block;
+  margin: 12rpx 0;
+}
+.balance-frozen.data-v-e68fdcc7 {
+  font-size: 24rpx;
+  opacity: 0.8;
+}
+.form-section.data-v-e68fdcc7 {
+  margin: 24rpx 32rpx;
+  background-color: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+}
+.form-item.data-v-e68fdcc7 {
+  margin-bottom: 32rpx;
+}
+.form-label.data-v-e68fdcc7 {
+  font-size: 28rpx;
+  color: #1d2129;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 16rpx;
+}
+.amount-input-wrap.data-v-e68fdcc7 {
+  display: flex;
+  align-items: center;
+  padding: 24rpx;
+  background-color: #f7f8fa;
+  border-radius: 12rpx;
+}
+.currency.data-v-e68fdcc7 {
+  font-size: 36rpx;
+  color: #1d2129;
+  font-weight: 600;
+  margin-right: 12rpx;
+}
+.amount-input.data-v-e68fdcc7 {
+  flex: 1;
+  font-size: 36rpx;
+  font-weight: 600;
+}
+.all-btn.data-v-e68fdcc7 {
+  font-size: 26rpx;
+  color: #165dff;
+  padding: 8rpx 16rpx;
+  background-color: #e8f3ff;
+  border-radius: 8rpx;
+}
+.amount-tip.data-v-e68fdcc7 {
+  font-size: 24rpx;
+  color: #86909c;
+  margin-top: 12rpx;
+  display: block;
+}
+.bank-list.data-v-e68fdcc7 {
+  border-radius: 12rpx;
+  overflow: hidden;
+  border: 1rpx solid #f0f0f0;
+}
+.bank-item.data-v-e68fdcc7 {
+  display: flex;
+  align-items: center;
+  padding: 24rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+.bank-item.data-v-e68fdcc7:last-child {
+  border-bottom: none;
+}
+.bank-item.active.data-v-e68fdcc7 {
+  background-color: #f7f8fa;
+}
+.bank-icon.data-v-e68fdcc7 {
+  width: 64rpx;
+  height: 64rpx;
+  background-color: #e8f3ff;
+  border-radius: 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  color: #165dff;
+  font-weight: 600;
+  margin-right: 16rpx;
+}
+.bank-info.data-v-e68fdcc7 {
+  flex: 1;
+}
+.bank-name.data-v-e68fdcc7 {
+  font-size: 28rpx;
+  color: #1d2129;
+  display: block;
+}
+.bank-account.data-v-e68fdcc7 {
+  font-size: 24rpx;
+  color: #86909c;
+  margin-top: 4rpx;
+  display: block;
+}
+.bank-check.data-v-e68fdcc7 {
+  width: 40rpx;
+  height: 40rpx;
+  border: 2rpx solid #c9cdd4;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.check-dot.data-v-e68fdcc7 {
+  width: 24rpx;
+  height: 24rpx;
+  background-color: #165dff;
+  border-radius: 50%;
+}
+.add-bank.data-v-e68fdcc7 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24rpx;
+  margin-top: 16rpx;
+  border: 2rpx dashed #c9cdd4;
+  border-radius: 12rpx;
+}
+.add-icon.data-v-e68fdcc7 {
+  font-size: 32rpx;
+  color: #165dff;
+  margin-right: 8rpx;
+}
+.add-text.data-v-e68fdcc7 {
+  font-size: 28rpx;
+  color: #165dff;
+}
+.desc-list.data-v-e68fdcc7 {
+  padding: 16rpx;
+  background-color: #f7f8fa;
+  border-radius: 12rpx;
+}
+.desc-item.data-v-e68fdcc7 {
+  display: flex;
+  align-items: flex-start;
+  padding: 8rpx 0;
+}
+.desc-dot.data-v-e68fdcc7 {
+  color: #86909c;
+  margin-right: 8rpx;
+}
+.desc-text.data-v-e68fdcc7 {
+  font-size: 24rpx;
+  color: #86909c;
+}
+.submit-btn.data-v-e68fdcc7 {
+  margin: 48rpx 32rpx 24rpx;
+  padding: 28rpx 0;
+  background-color: #165dff;
+  border-radius: 12rpx;
+  text-align: center;
+}
+.btn-text.data-v-e68fdcc7 {
+  font-size: 32rpx;
+  color: #fff;
+  font-weight: 500;
+}
+.records-link.data-v-e68fdcc7 {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24rpx;
+}
+.link-text.data-v-e68fdcc7 {
+  font-size: 28rpx;
+  color: #165dff;
+}
+.link-arrow.data-v-e68fdcc7 {
+  font-size: 28rpx;
+  color: #165dff;
+  margin-left: 8rpx;
+}

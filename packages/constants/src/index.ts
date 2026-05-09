@@ -1,6 +1,0 @@
-export * from './user'
-export * from './merchant'
-export * from './order'
-export * from './product'
-export * from './warehouse'
-export * from './finance'

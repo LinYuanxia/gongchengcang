@@ -1,0 +1,313 @@
+.page.data-v-3789eeb8 {
+  min-height: 100vh;
+  background-color: #f7f8fa;
+  padding-bottom: 120rpx;
+}
+.address-section.data-v-3789eeb8 {
+  display: flex;
+  align-items: center;
+  padding: 32rpx;
+  background-color: #fff;
+  margin-bottom: 24rpx;
+}
+.address-content.data-v-3789eeb8 {
+  flex: 1;
+}
+.address-header.data-v-3789eeb8 {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+.address-name.data-v-3789eeb8 {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1d2129;
+  margin-right: 16rpx;
+}
+.address-phone.data-v-3789eeb8 {
+  font-size: 28rpx;
+  color: #86909c;
+}
+.default-tag.data-v-3789eeb8 {
+  font-size: 20rpx;
+  color: #165dff;
+  background-color: #e8f3ff;
+  padding: 4rpx 12rpx;
+  border-radius: 4rpx;
+  margin-left: 16rpx;
+}
+.address-detail.data-v-3789eeb8 {
+  font-size: 26rpx;
+  color: #4e5969;
+}
+.address-empty.data-v-3789eeb8 {
+  flex: 1;
+}
+.empty-text.data-v-3789eeb8 {
+  font-size: 28rpx;
+  color: #86909c;
+}
+.arrow.data-v-3789eeb8 {
+  font-size: 32rpx;
+  color: #c9cdd4;
+  margin-left: 16rpx;
+}
+.product-section.data-v-3789eeb8 {
+  margin-bottom: 24rpx;
+}
+.supplier-group.data-v-3789eeb8 {
+  background-color: #fff;
+  margin-bottom: 24rpx;
+}
+.group-header.data-v-3789eeb8 {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 32rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+.supplier-icon.data-v-3789eeb8 {
+  font-size: 32rpx;
+  margin-right: 12rpx;
+}
+.supplier-name.data-v-3789eeb8 {
+  flex: 1;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #1d2129;
+}
+.delivery-info.data-v-3789eeb8 {
+  font-size: 22rpx;
+  color: #165dff;
+  background-color: #e8f3ff;
+  padding: 4rpx 12rpx;
+  border-radius: 4rpx;
+}
+.product-item.data-v-3789eeb8 {
+  display: flex;
+  padding: 24rpx 32rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+.product-image.data-v-3789eeb8 {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 12rpx;
+  flex-shrink: 0;
+}
+.product-info.data-v-3789eeb8 {
+  flex: 1;
+  margin-left: 24rpx;
+  display: flex;
+  flex-direction: column;
+}
+.product-name.data-v-3789eeb8 {
+  font-size: 28rpx;
+  color: #1d2129;
+  font-weight: 500;
+}
+.product-spec.data-v-3789eeb8 {
+  font-size: 24rpx;
+  color: #86909c;
+  margin-top: 8rpx;
+}
+.product-bottom.data-v-3789eeb8 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+}
+.product-price.data-v-3789eeb8 {
+  display: flex;
+  align-items: baseline;
+}
+.price-symbol.data-v-3789eeb8 {
+  font-size: 24rpx;
+  color: #f53f3f;
+}
+.price-value.data-v-3789eeb8 {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #f53f3f;
+}
+.product-quantity.data-v-3789eeb8 {
+  font-size: 26rpx;
+  color: #86909c;
+}
+.group-footer.data-v-3789eeb8 {
+  padding: 24rpx 32rpx;
+}
+.remark-row.data-v-3789eeb8 {
+  display: flex;
+  align-items: center;
+}
+.remark-label.data-v-3789eeb8 {
+  font-size: 26rpx;
+  color: #86909c;
+  width: 140rpx;
+}
+.remark-content.data-v-3789eeb8 {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.remark-text.data-v-3789eeb8 {
+  font-size: 26rpx;
+  color: #1d2129;
+  max-width: 400rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.remark-text.placeholder.data-v-3789eeb8 {
+  color: #c9cdd4;
+}
+.info-section.data-v-3789eeb8 {
+  background-color: #fff;
+  padding: 24rpx 32rpx;
+  margin-bottom: 24rpx;
+}
+.info-item.data-v-3789eeb8 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16rpx 0;
+}
+.info-label.data-v-3789eeb8 {
+  font-size: 28rpx;
+  color: #4e5969;
+}
+.info-value.data-v-3789eeb8 {
+  font-size: 28rpx;
+  color: #1d2129;
+}
+.bottom-bar.data-v-3789eeb8 {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100rpx;
+  background-color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 32rpx;
+  box-shadow: 0 -2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+.total-info.data-v-3789eeb8 {
+  margin-right: 32rpx;
+}
+.total-label.data-v-3789eeb8 {
+  font-size: 28rpx;
+  color: #1d2129;
+}
+.total-price.data-v-3789eeb8 {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #f53f3f;
+}
+.submit-btn.data-v-3789eeb8 {
+  padding: 16rpx 64rpx;
+  background-color: #165dff;
+  color: #fff;
+  border-radius: 40rpx;
+  font-size: 28rpx;
+}
+.remark-modal.data-v-3789eeb8, .address-modal.data-v-3789eeb8 {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+}
+.modal-content.data-v-3789eeb8 {
+  width: 100%;
+  background-color: #fff;
+  border-radius: 32rpx 32rpx 0 0;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+.modal-header.data-v-3789eeb8 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 32rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+.modal-title.data-v-3789eeb8 {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1d2129;
+}
+.modal-close.data-v-3789eeb8 {
+  font-size: 36rpx;
+  color: #86909c;
+}
+.modal-body.data-v-3789eeb8 {
+  padding: 32rpx;
+  flex: 1;
+  overflow-y: auto;
+}
+.remark-input.data-v-3789eeb8 {
+  width: 100%;
+  height: 200rpx;
+  padding: 24rpx;
+  font-size: 28rpx;
+  background-color: #f7f8fa;
+  border-radius: 12rpx;
+  box-sizing: border-box;
+}
+.modal-footer.data-v-3789eeb8 {
+  padding: 32rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+.btn-confirm.data-v-3789eeb8, .btn-add.data-v-3789eeb8 {
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  color: #fff;
+  background-color: #165dff;
+  border-radius: 44rpx;
+}
+.address-list.data-v-3789eeb8 {
+  padding: 24rpx 32rpx;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.address-item.data-v-3789eeb8 {
+  display: flex;
+  align-items: flex-start;
+  padding: 24rpx;
+  background-color: #f7f8fa;
+  border-radius: 12rpx;
+  margin-bottom: 16rpx;
+}
+.address-item.active.data-v-3789eeb8 {
+  background-color: #e8f3ff;
+}
+.address-item.active .address-radio.data-v-3789eeb8 {
+  background-color: #165dff;
+  border-color: #165dff;
+  color: #fff;
+}
+.address-radio.data-v-3789eeb8 {
+  width: 40rpx;
+  height: 40rpx;
+  border: 2rpx solid #c9cdd4;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 20rpx;
+  font-size: 24rpx;
+  flex-shrink: 0;
+}
+.address-info.data-v-3789eeb8 {
+  flex: 1;
+}

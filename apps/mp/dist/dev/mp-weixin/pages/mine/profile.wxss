@@ -1,0 +1,215 @@
+.page.data-v-a55bda20 {
+  min-height: 100vh;
+  background-color: #f7f8fa;
+  padding-bottom: 32rpx;
+}
+.header-card.data-v-a55bda20 {
+  display: flex;
+  align-items: center;
+  padding: 48rpx 32rpx;
+  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
+}
+.company-logo.data-v-a55bda20 {
+  width: 100rpx;
+  height: 100rpx;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.logo-text.data-v-a55bda20 {
+  font-size: 48rpx;
+  color: #fff;
+  font-weight: 600;
+}
+.company-info.data-v-a55bda20 {
+  margin-left: 24rpx;
+  color: #fff;
+}
+.company-name.data-v-a55bda20 {
+  font-size: 36rpx;
+  font-weight: 600;
+  display: block;
+}
+.cert-status.data-v-a55bda20 {
+  display: inline-flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 4rpx 12rpx;
+  border-radius: 20rpx;
+  margin-top: 12rpx;
+}
+.cert-icon.data-v-a55bda20 {
+  font-size: 20rpx;
+  margin-right: 4rpx;
+}
+.cert-text.data-v-a55bda20 {
+  font-size: 22rpx;
+}
+.section.data-v-a55bda20 {
+  margin: 24rpx 32rpx;
+  background-color: #fff;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+.section-header.data-v-a55bda20 {
+  padding: 24rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+.section-title.data-v-a55bda20 {
+  font-size: 28rpx;
+  color: #1d2129;
+  font-weight: 500;
+}
+.info-group.data-v-a55bda20 {
+  padding: 0 24rpx;
+}
+.info-item.data-v-a55bda20 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #f7f8fa;
+}
+.info-item.data-v-a55bda20:last-child {
+  border-bottom: none;
+}
+.info-label.data-v-a55bda20 {
+  font-size: 28rpx;
+  color: #86909c;
+  flex-shrink: 0;
+}
+.info-value.data-v-a55bda20 {
+  font-size: 28rpx;
+  color: #1d2129;
+  text-align: right;
+  flex: 1;
+  margin-left: 24rpx;
+}
+.info-right.data-v-a55bda20 {
+  display: flex;
+  align-items: center;
+}
+.info-arrow.data-v-a55bda20 {
+  color: #c9cdd4;
+  margin-left: 12rpx;
+}
+.cert-list.data-v-a55bda20 {
+  padding: 0 24rpx;
+}
+.cert-item.data-v-a55bda20 {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f7f8fa;
+}
+.cert-item.data-v-a55bda20:last-child {
+  border-bottom: none;
+}
+.cert-image.data-v-a55bda20 {
+  width: 120rpx;
+  height: 90rpx;
+  border-radius: 8rpx;
+  flex-shrink: 0;
+}
+.cert-info.data-v-a55bda20 {
+  flex: 1;
+  margin-left: 16rpx;
+}
+.cert-name.data-v-a55bda20 {
+  font-size: 28rpx;
+  color: #1d2129;
+  display: block;
+}
+.cert-status.data-v-a55bda20 {
+  font-size: 22rpx;
+  margin-top: 8rpx;
+}
+.cert-status.valid.data-v-a55bda20 {
+  color: #00b42a;
+}
+.cert-status.expiring.data-v-a55bda20 {
+  color: #ff7d00;
+}
+.cert-status.expired.data-v-a55bda20 {
+  color: #f53f3f;
+}
+.cert-actions.data-v-a55bda20 {
+  flex-shrink: 0;
+}
+.cert-btn.data-v-a55bda20 {
+  font-size: 26rpx;
+  color: #165dff;
+  padding: 8rpx 16rpx;
+  background-color: #e8f3ff;
+  border-radius: 8rpx;
+}
+.add-cert-btn.data-v-a55bda20, .add-btn.data-v-a55bda20 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+.add-icon.data-v-a55bda20 {
+  font-size: 32rpx;
+  color: #165dff;
+  margin-right: 8rpx;
+}
+.add-text.data-v-a55bda20 {
+  font-size: 28rpx;
+  color: #165dff;
+}
+.bank-list.data-v-a55bda20 {
+  padding: 0 24rpx;
+}
+.bank-item.data-v-a55bda20 {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f7f8fa;
+}
+.bank-item.data-v-a55bda20:last-child {
+  border-bottom: none;
+}
+.bank-icon.data-v-a55bda20 {
+  width: 64rpx;
+  height: 64rpx;
+  background-color: #e8f3ff;
+  border-radius: 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  color: #165dff;
+  font-weight: 600;
+}
+.bank-info.data-v-a55bda20 {
+  flex: 1;
+  margin-left: 16rpx;
+}
+.bank-name.data-v-a55bda20 {
+  font-size: 28rpx;
+  color: #1d2129;
+  display: block;
+}
+.bank-account.data-v-a55bda20 {
+  font-size: 24rpx;
+  color: #86909c;
+  margin-top: 4rpx;
+  display: block;
+}
+.bank-status.data-v-a55bda20 {
+  font-size: 22rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 4rpx;
+}
+.bank-status.verified.data-v-a55bda20 {
+  color: #00b42a;
+  background-color: #e8ffea;
+}
+.bank-status.pending.data-v-a55bda20 {
+  color: #ff7d00;
+  background-color: #fff7e8;
+}
