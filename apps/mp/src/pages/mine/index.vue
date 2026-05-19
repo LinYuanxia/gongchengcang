@@ -196,7 +196,8 @@ const financeMenus = ref([
   { id: 1, name: '销项发票', icon: '📄', path: '/pages/mine/invoice?type=out', badge: '8' },
   { id: 2, name: '进项发票', icon: '📥', path: '/pages/mine/invoice?type=in' },
   { id: 3, name: '开票记录', icon: '📋', path: '/pages/mine/invoice-records' },
-  { id: 4, name: '银行卡管理', icon: '💳', path: '/pages/mine/bankcard' },
+  { id: 4, name: '施工方发票', icon: '🧾', path: '/pages/construction/invoice' },
+  { id: 5, name: '银行卡管理', icon: '💳', path: '/pages/mine/bankcard' },
 ])
 
 const settingMenus = ref([

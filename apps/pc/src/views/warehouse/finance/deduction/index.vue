@@ -30,23 +30,17 @@
     </a-row>
 
     <a-card :bordered="false">
-      <a-tabs v-model:active-key="activeTab" class="record-tabs">
-        <a-tab-pane key="all" title="全部" />
-        <a-tab-pane key="pending" title="待扣款" />
-        <a-tab-pane key="deducted" title="已扣款" />
-      </a-tabs>
-
       <div class="table-actions">
         <a-space>
           <a-input-search
             v-model="searchForm.keyword"
-            placeholder="搜索应扣编号/订单编号/支付编号"
+            placeholder="搜索应扣编号/关联订单号/施工方"
             style="width: 280px"
             @search="handleSearch"
           />
           <a-select v-model="searchForm.status" placeholder="扣款状态" style="width: 140px" allow-clear>
-            <a-option value="pending">待扣款</a-option>
             <a-option value="deducted">已扣款</a-option>
+            <a-option value="pending">待扣款</a-option>
           </a-select>
           <a-range-picker v-model="searchForm.dateRange" style="width: 260px" allow-clear />
         </a-space>
@@ -68,24 +62,23 @@
               <a-link>{{ record.deductionNo }}</a-link>
             </template>
           </a-table-column>
-          <a-table-column title="订单编号" :width="160">
+          <a-table-column title="关联订单" :width="180">
             <template #cell="{ record }">
               <a-link>{{ record.orderNo }}</a-link>
             </template>
           </a-table-column>
-          <a-table-column title="支付编号" :width="160">
+          <a-table-column title="施工方" data-index="constructionParty" :width="180" />
+          <a-table-column title="应扣类型" :width="120">
             <template #cell="{ record }">
-              <a-link>{{ record.paymentNo }}</a-link>
+              <a-tag color="blue">交易撮合费</a-tag>
             </template>
           </a-table-column>
-          <a-table-column title="订单金额" :width="120" align="right">
+          <a-table-column title="订单金额" :width="130" align="right">
             <template #cell="{ record }">
-              ¥{{ record.orderAmount?.toLocaleString() }}
-            </template>
-          </a-table-column>
-          <a-table-column title="交易撮合费" :width="120" align="right">
-            <template #cell="{ record }">
-              <span class="text-danger">¥{{ record.matchFee?.toLocaleString() }}</span>
+              <div>
+                <div>¥{{ record.orderAmount?.toLocaleString() }}</div>
+                <div class="paid-amount">实付 ¥{{ record.paidAmount?.toLocaleString() }}</div>
+              </div>
             </template>
           </a-table-column>
           <a-table-column title="工程仓入账" :width="120" align="right">
@@ -98,7 +91,7 @@
               <span class="text-danger text-xl">¥{{ record.deductAmount?.toLocaleString() }}</span>
             </template>
           </a-table-column>
-          <a-table-column title="应扣状态" :width="100">
+          <a-table-column title="扣款状态" :width="100">
             <template #cell="{ record }">
               <a-tag :color="record.status === 'deducted' ? 'green' : 'orange'">
                 {{ record.status === 'deducted' ? '已扣款' : '待扣款' }}
@@ -108,7 +101,7 @@
           <a-table-column title="创建时间" data-index="createTime" :width="180" />
           <a-table-column title="操作" :width="120" fixed="right">
             <template #cell="{ record }">
-              <a-button type="text" size="small" @click="handleViewDetail(record)">明细</a-button>
+              <a-button type="text" size="small" @click="handleViewDetail(record)">详情</a-button>
             </template>
           </a-table-column>
         </template>
@@ -119,12 +112,11 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { Message, useRouter } from '@arco-design/web-vue'
+import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
 const loading = ref(false)
-const activeTab = ref('all')
 const pagination = reactive({
   current: 1,
   pageSize: 10,
@@ -142,9 +134,9 @@ const recordList = ref([
     id: '1',
     deductionNo: 'YK202401220001',
     orderNo: 'SO202401220001',
-    paymentNo: 'PAY202401220001',
+    constructionParty: '中建三局深圳分公司',
     orderAmount: 128600,
-    matchFee: 1286,
+    paidAmount: 127314,
     warehouseAmount: 127314,
     deductAmount: 1286,
     status: 'deducted',
@@ -154,9 +146,9 @@ const recordList = ref([
     id: '2',
     deductionNo: 'YK202401210001',
     orderNo: 'SO202401210002',
-    paymentNo: 'PAY202401210001',
+    constructionParty: '中建三局深圳分公司',
     orderAmount: 86500,
-    matchFee: 865,
+    paidAmount: 85635,
     warehouseAmount: 85635,
     deductAmount: 865,
     status: 'deducted',
@@ -166,9 +158,9 @@ const recordList = ref([
     id: '3',
     deductionNo: 'YK202401200001',
     orderNo: 'SO202401200003',
-    paymentNo: 'PAY202401200001',
+    constructionParty: '中铁建设集团',
     orderAmount: 50000,
-    matchFee: 500,
+    paidAmount: 49500,
     warehouseAmount: 49500,
     deductAmount: 500,
     status: 'pending',
@@ -178,9 +170,9 @@ const recordList = ref([
     id: '4',
     deductionNo: 'YK202401190001',
     orderNo: 'SO202401190001',
-    paymentNo: 'PAY202401190001',
+    constructionParty: '中铁建设集团',
     orderAmount: 35000,
-    matchFee: 350,
+    paidAmount: 34650,
     warehouseAmount: 34650,
     deductAmount: 350,
     status: 'pending',
@@ -190,9 +182,9 @@ const recordList = ref([
     id: '5',
     deductionNo: 'YK202401180001',
     orderNo: 'SO202401180001',
-    paymentNo: 'PAY202401180001',
+    constructionParty: '中交一航局',
     orderAmount: 200000,
-    matchFee: 2000,
+    paidAmount: 198000,
     warehouseAmount: 198000,
     deductAmount: 2000,
     status: 'deducted',
@@ -203,16 +195,12 @@ const recordList = ref([
 const filteredRecordList = computed(() => {
   let result = recordList.value
 
-  if (activeTab.value !== 'all') {
-    result = result.filter(r => r.status === activeTab.value)
-  }
-
   if (searchForm.keyword) {
     const keyword = searchForm.keyword.toLowerCase()
     result = result.filter(r => 
       r.deductionNo.toLowerCase().includes(keyword) ||
       r.orderNo.toLowerCase().includes(keyword) ||
-      r.paymentNo.toLowerCase().includes(keyword)
+      r.constructionParty.toLowerCase().includes(keyword)
     )
   }
 
@@ -254,7 +242,6 @@ function handleReset() {
   searchForm.keyword = ''
   searchForm.status = ''
   searchForm.dateRange = []
-  activeTab.value = 'all'
   pagination.current = 1
 }
 
@@ -297,5 +284,11 @@ function handleViewDetail(record: any) {
 .text-xl {
   font-size: 18px;
   font-weight: 600;
+}
+
+.paid-amount {
+  font-size: 12px;
+  color: var(--color-text-3);
+  margin-top: 4px;
 }
 </style>

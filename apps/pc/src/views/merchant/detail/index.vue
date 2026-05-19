@@ -178,6 +178,27 @@
             <a-descriptions-item label="支行信息">{{ merchantInfo.settlementAccount.bankBranch }}</a-descriptions-item>
             <a-descriptions-item label="联行号" :span="2">{{ merchantInfo.settlementAccount.bankBranchCode || '-' }}</a-descriptions-item>
           </a-descriptions>
+
+          <a-descriptions title="支付配置" :column="2" bordered class="mt-16">
+            <a-descriptions-item label="支付商户号">
+              <a-space>
+                <span>{{ merchantInfo.paymentMerchantNo || '-' }}</span>
+                <a-button 
+                  type="text" 
+                  size="small" 
+                  @click="handleBindPaymentMerchantNo"
+                  v-if="merchantInfo.registrationStatus === 'approved'"
+                >
+                  <icon-edit /> 绑定
+                </a-button>
+              </a-space>
+            </a-descriptions-item>
+            <a-descriptions-item label="绑定状态">
+              <a-tag :color="merchantInfo.paymentMerchantNo ? 'green' : 'default'">
+                {{ merchantInfo.paymentMerchantNo ? '已绑定' : '未绑定' }}
+              </a-tag>
+            </a-descriptions-item>
+          </a-descriptions>
         </a-tab-pane>
 
         <a-tab-pane key="contract" title="合同信息">
@@ -338,6 +359,23 @@
         </a-tab-pane>
       </a-tabs>
     </a-spin>
+
+    <a-modal 
+      v-model:visible="bindPaymentModalVisible" 
+      title="绑定支付商户号" 
+      :width="500"
+      @ok="handleBindPaymentSubmit"
+      @cancel="cancelBindPayment"
+    >
+      <a-form :model="paymentMerchantNoForm" layout="vertical">
+        <a-form-item label="支付商户号" required>
+          <a-input 
+            v-model="paymentMerchantNoForm.paymentMerchantNo" 
+            placeholder="请输入支付商户号"
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
@@ -392,6 +430,11 @@ const logPagination = reactive({
   current: 1,
   pageSize: 10,
   total: 50,
+})
+
+const bindPaymentModalVisible = ref(false)
+const paymentMerchantNoForm = reactive({
+  paymentMerchantNo: '',
 })
 
 onMounted(() => {
@@ -564,6 +607,25 @@ function handleResetPassword(record: any) {
 
 function handleLogPageChange(page: number) {
   logPagination.current = page
+}
+
+function handleBindPaymentMerchantNo() {
+  paymentMerchantNoForm.paymentMerchantNo = merchantInfo.value.paymentMerchantNo || ''
+  bindPaymentModalVisible.value = true
+}
+
+function handleBindPaymentSubmit() {
+  if (!paymentMerchantNoForm.paymentMerchantNo.trim()) {
+    Message.error('请输入支付商户号')
+    return
+  }
+  merchantInfo.value.paymentMerchantNo = paymentMerchantNoForm.paymentMerchantNo
+  bindPaymentModalVisible.value = false
+  Message.success('支付商户号绑定成功')
+}
+
+function cancelBindPayment() {
+  bindPaymentModalVisible.value = false
 }
 
 function getLogTypeColor(type: string) {

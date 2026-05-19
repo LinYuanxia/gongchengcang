@@ -82,6 +82,15 @@
           <span>确认订单</span>
         </div>
         <template v-if="currentRole === 'warehouse'">
+          <div class="section-title" style="margin-top: 12px;">销售管理</div>
+          <div 
+            class="page-item" 
+            :class="{ active: currentPage === 'sales-order-list' }"
+            @click="currentPage = 'sales-order-list'"
+          >
+            <icon-file-text />
+            <span>销售订单</span>
+          </div>
           <div class="section-title" style="margin-top: 12px;">库存管理</div>
           <div 
             class="page-item" 
@@ -286,6 +295,15 @@
             <icon-file />
             <span>发票管理</span>
           </div>
+          <div class="section-title" style="margin-top: 12px;">售后报损</div>
+          <div 
+            class="page-item" 
+            :class="{ active: currentPage === 'damage-list' }"
+            @click="currentPage = 'damage-list'"
+          >
+            <icon-file-text />
+            <span>报损管理</span>
+          </div>
           <div class="section-title" style="margin-top: 12px;">其他</div>
           <div 
             class="page-item" 
@@ -418,6 +436,9 @@ import MpConstructionWarehouseDetail from './pages/construction/warehouse-detail
 import MpConstructionOfflineRecord from './pages/construction/offline-record.vue'
 import MpConstructionDeductRecord from './pages/construction/deduct-record.vue'
 import MpConstructionDeductDetail from './pages/construction/deduct-detail.vue'
+import MpConstructionDamageList from './pages/construction/damage-list.vue'
+import MpConstructionDamageApply from './pages/construction/damage-apply.vue'
+import MpConstructionDamageDetail from './pages/construction/damage-detail.vue'
 
 import MpSupplierMarket from './pages/supplier/market.vue'
 import MpSupplierSupplyManage from './pages/supplier/supply-manage.vue'
@@ -437,6 +458,8 @@ import MpWarehouseTransaction from './pages/warehouse/transaction.vue'
 import MpWarehouseOfflineRecord from './pages/warehouse/offline-record.vue'
 import MpWarehouseDeductRecord from './pages/warehouse/deduct-record.vue'
 import MpWarehouseDeductDetail from './pages/warehouse/deduct-detail.vue'
+import MpWarehouseSalesOrderList from './pages/warehouse/sales-order-list.vue'
+import MpWarehouseSalesOrderDetail from './pages/warehouse/sales-order-detail.vue'
 
 const route = useRoute()
 const currentRole = ref('warehouse')
@@ -495,6 +518,8 @@ const pageInfo = computed(() => {
       'stock-in': { title: '入库记录', path: '/pages/mine/stock-in' },
       'stock-out': { title: '出库记录', path: '/pages/mine/stock-out' },
       'stock-check': { title: '库存盘点', path: '/pages/mine/stock-check' },
+      'sales-order-list': { title: '销售订单', path: '/pages/mine/sales-order-list' },
+      'sales-order-detail': { title: '订单详情', path: '/pages/mine/sales-order-detail', params: 'orderId=xxx' },
       'fund-management': { title: '资金管理', path: '/pages/mine/fund-management' },
       'transaction': { title: '支付流水', path: '/pages/mine/transaction' },
       'offline-record': { title: '线下转正记录', path: '/pages/mine/offline-record' },
@@ -538,6 +563,9 @@ const pageInfo = computed(() => {
       'offline-record': { title: '线下转正记录', path: '/pages/construction/offline-record' },
       'deduct-record': { title: '应扣记录', path: '/pages/construction/deduct-record' },
       'deduct-detail': { title: '应扣明细', path: '/pages/construction/deduct-detail', params: 'recordId=xxx' },
+      'damage-list': { title: '报损管理', path: '/pages/construction/damage-list' },
+      'damage-apply': { title: '发起报损', path: '/pages/construction/damage-apply' },
+      'damage-detail': { title: '报损详情', path: '/pages/construction/damage-detail', params: 'damageId=xxx' },
     },
     'supplier': {
       'index': { title: '首页', path: '/pages/index/index' },
@@ -572,6 +600,8 @@ const currentComponent = computed(() => {
       'stock-in': MpStockIn,
       'stock-out': MpStockOut,
       'stock-check': MpStockCheck,
+      'sales-order-list': MpWarehouseSalesOrderList,
+      'sales-order-detail': MpWarehouseSalesOrderDetail,
       'fund-management': MpFundManagement,
       'transaction': MpWarehouseTransaction,
       'offline-record': MpWarehouseOfflineRecord,
@@ -619,6 +649,9 @@ const currentComponent = computed(() => {
       'offline-record': MpConstructionOfflineRecord,
       'deduct-record': MpConstructionDeductRecord,
       'deduct-detail': MpConstructionDeductDetail,
+      'damage-list': MpConstructionDamageList,
+      'damage-apply': MpConstructionDamageApply,
+      'damage-detail': MpConstructionDamageDetail,
     }
     return components[currentPage.value] || MpConstructionIndex
   }

@@ -213,15 +213,7 @@
               <a-table-column title="操作" :width="120" fixed="right">
                 <template #cell="{ record }">
                   <a-space>
-                    <a-button type="text" size="small">查看</a-button>
-                    <a-dropdown v-if="record.status === 1">
-                      <template #content>
-                        <a-doption>审核</a-doption>
-                        <a-doption>打印</a-doption>
-                        <a-doption>作废</a-doption>
-                      </template>
-                      <a-button type="text" size="small">更多</a-button>
-                    </a-dropdown>
+                    <a-button type="text" size="small" @click="handleViewOutbound(record)">查看</a-button>
                   </a-space>
                 </template>
               </a-table-column>
@@ -397,6 +389,106 @@
         </a-row>
       </div>
     </a-modal>
+
+    <a-modal
+      v-model:visible="outboundViewModalVisible"
+      title="出库单详情"
+      :width="1000"
+      @ok="handleOutboundSave"
+      @cancel="outboundViewModalVisible = false"
+    >
+      <a-descriptions :column="2" bordered size="small" style="margin-bottom: 16px">
+        <a-descriptions-item label="出库单号">{{ currentOutbound.outNo }}</a-descriptions-item>
+        <a-descriptions-item label="出库类型">
+          <a-tag :color="getOutTypeColor(currentOutbound.outType)">
+            {{ getOutTypeText(currentOutbound.outType) }}
+          </a-tag>
+        </a-descriptions-item>
+        <a-descriptions-item label="来源单据">{{ currentOutbound.sourceNo }}</a-descriptions-item>
+        <a-descriptions-item label="客户/去向">{{ currentOutbound.customerName }}</a-descriptions-item>
+      </a-descriptions>
+      <a-form :model="outboundForm" layout="vertical">
+        <a-form-item label="发货仓库" required>
+          <a-input v-model="outboundForm.warehouseName" disabled />
+        </a-form-item>
+        <a-form-item label="是否有物流公司" required>
+          <a-radio-group v-model="outboundForm.hasLogistics">
+            <a-radio :value="true">是</a-radio>
+            <a-radio :value="false">否</a-radio>
+          </a-radio-group>
+        </a-form-item>
+        <template v-if="outboundForm.hasLogistics">
+          <a-form-item label="物流公司" required>
+            <a-select v-model="outboundForm.logisticsCompany" placeholder="请选择物流公司">
+              <a-option value="SF">顺丰速运</a-option>
+              <a-option value="YTO">圆通速递</a-option>
+              <a-option value="ZTO">中通快递</a-option>
+              <a-option value="YD">韵达快递</a-option>
+              <a-option value="EMS">EMS</a-option>
+              <a-option value="JD">京东物流</a-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item label="物流单号" required>
+            <a-select 
+              v-model="outboundForm.trackingNos" 
+              placeholder="请选择物流单号" 
+              multiple
+              allow-create
+              :max-tag-count="3"
+            >
+              <a-option v-for="no in outboundTrackingOptions" :key="no" :value="no">{{ no }}</a-option>
+            </a-select>
+          </a-form-item>
+        </template>
+        <a-form-item label="发货备注">
+          <a-textarea v-model="outboundForm.remark" placeholder="请输入发货备注" :rows="3" />
+        </a-form-item>
+      </a-form>
+
+      <a-divider>发货内容</a-divider>
+      
+      <a-table :data="outboundForm.batchItems" :pagination="false" row-key="batchNo" size="small">
+        <template #columns>
+          <a-table-column title="SKU编码" data-index="skuCode" :width="120" />
+          <a-table-column title="商品名称" data-index="productName" :width="150" />
+          <a-table-column title="规格型号" data-index="specification" :width="120" />
+          <a-table-column title="单位" data-index="unit" :width="60" align="center" />
+          <a-table-column title="批次号" data-index="batchNo" :width="180" />
+          <a-table-column title="批次数量" :width="100" align="right">
+            <template #cell="{ record }">
+              {{ record.quantity }}
+            </template>
+          </a-table-column>
+          <a-table-column title="发货数量" :width="120" align="right">
+            <template #cell="{ record }">
+              <a-input-number 
+                v-model="record.shipQuantity" 
+                :min="0" 
+                :max="record.quantity"
+                :precision="0"
+                style="width: 100px"
+              />
+            </template>
+          </a-table-column>
+          <a-table-column title="批次备注" :width="160">
+            <template #cell="{ record }">
+              <a-input 
+                v-model="record.batchRemark" 
+                placeholder="批次备注" 
+                :max-length="50"
+                size="small"
+              />
+            </template>
+          </a-table-column>
+        </template>
+      </a-table>
+
+      <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e6eb;">
+        <a-space>
+          <span>发货商品总数：<strong>{{ outboundTotalQuantity }}</strong> 件</span>
+        </a-space>
+      </div>
+    </a-modal>
   </div>
 </template>
 
@@ -487,30 +579,48 @@ const outList = ref([
     sourceNo: 'SO202403200001',
     warehouseName: '深圳湾科技园项目仓',
     customerName: '中建三局集团有限公司',
-    skuCount: 5,
+    skuCount: 3,
     totalQty: 850,
     totalAmount: 325600,
     status: 2,
     creator: '张三',
     createdAt: '2024-03-24 14:20:00',
+    items: [
+      { skuCode: 'SKU001', productName: '螺纹钢HRB400E Φ16 6m', specification: 'Φ16 6m', unit: '吨', quantity: 500, price: 380 },
+      { skuCode: 'SKU002', productName: '水泥PO42.5', specification: 'PO42.5', unit: '袋', quantity: 200, price: 420 },
+      { skuCode: 'SKU003', productName: '中沙', specification: '河沙', unit: '方', quantity: 150, price: 85 },
+    ],
+    batches: [
+      { batchNo: 'B202403240001', skuCode: 'SKU001', productName: '螺纹钢HRB400E Φ16 6m', specification: 'Φ16 6m', unit: '吨', quantity: 500, shipQuantity: 500, batchRemark: '' },
+      { batchNo: 'B202403240002', skuCode: 'SKU002', productName: '水泥PO42.5', specification: 'PO42.5', unit: '袋', quantity: 200, shipQuantity: 200, batchRemark: '' },
+      { batchNo: 'B202403240003', skuCode: 'SKU003', productName: '中沙', specification: '河沙', unit: '方', quantity: 150, shipQuantity: 150, batchRemark: '' },
+    ],
   },
   {
     outNo: 'OUT202403240002',
-    outType: 'transfer',
-    sourceNo: 'TF202403240001',
+    outType: 'sale',
+    sourceNo: 'SO202403200002',
     warehouseName: '深圳湾科技园项目仓',
     customerName: '宝安新安项目仓',
     skuCount: 2,
     totalQty: 300,
     totalAmount: 95000,
-    status: 1,
+    status: 2,
     creator: '李四',
     createdAt: '2024-03-24 11:10:00',
+    items: [
+      { skuCode: 'SKU004', productName: '瓷砖800x800mm', specification: '800x800mm', unit: '块', quantity: 200, price: 80 },
+      { skuCode: 'SKU005', productName: '防水涂料', specification: '20kg/桶', unit: '桶', quantity: 100, price: 350 },
+    ],
+    batches: [
+      { batchNo: 'B202403240004', skuCode: 'SKU004', productName: '瓷砖800x800mm', specification: '800x800mm', unit: '块', quantity: 200, shipQuantity: 200, batchRemark: '' },
+      { batchNo: 'B202403240005', skuCode: 'SKU005', productName: '防水涂料', specification: '20kg/桶', unit: '桶', quantity: 100, shipQuantity: 100, batchRemark: '' },
+    ],
   },
   {
     outNo: 'OUT202403230003',
-    outType: 'return',
-    sourceNo: '',
+    outType: 'sale',
+    sourceNo: 'SO202403200003',
     warehouseName: '深圳湾科技园项目仓',
     customerName: '东方雨虹',
     skuCount: 1,
@@ -519,6 +629,12 @@ const outList = ref([
     status: 2,
     creator: '王五',
     createdAt: '2024-03-23 10:30:00',
+    items: [
+      { skuCode: 'SKU006', productName: '防水卷材', specification: '3mm厚', unit: '卷', quantity: 20, price: 380 },
+    ],
+    batches: [
+      { batchNo: 'B202403230006', skuCode: 'SKU006', productName: '防水卷材', specification: '3mm厚', unit: '卷', quantity: 20, shipQuantity: 20, batchRemark: '' },
+    ],
   },
 ])
 
@@ -781,6 +897,62 @@ function handleViewInboundDetail(record: any) {
 
 function handlePrint() {
   Message.info('打印入库单功能')
+}
+
+const outboundViewModalVisible = ref(false)
+const currentOutbound = ref<any>({})
+const outboundTrackingOptions = ref<string[]>(['SF1234567890', 'YTO9876543210', 'ZTO1122334455', 'JD5566778899'])
+
+const outboundForm = reactive({
+  warehouseName: '',
+  hasLogistics: true,
+  logisticsCompany: '',
+  trackingNos: [] as string[],
+  remark: '',
+  batchItems: [] as any[],
+})
+
+const outboundTotalQuantity = computed(() => {
+  return outboundForm.batchItems.reduce((sum: number, item: any) => sum + (item.shipQuantity || 0), 0)
+})
+
+function handleViewOutbound(record: any) {
+  currentOutbound.value = record
+  outboundForm.warehouseName = record.warehouseName
+  outboundForm.hasLogistics = true
+  outboundForm.logisticsCompany = ''
+  outboundForm.trackingNos = []
+  outboundForm.remark = ''
+  outboundForm.batchItems = (record.batches || []).map((batch: any, index: number) => ({
+    ...batch,
+    id: batch.batchNo || `batch_${index}`,
+  }))
+  outboundViewModalVisible.value = true
+}
+
+function handleOutboundSave() {
+  const totalShip = outboundForm.batchItems.reduce((sum: number, item: any) => sum + (item.shipQuantity || 0), 0)
+  if (totalShip === 0) {
+    Message.warning('发货数量不能为0')
+    return
+  }
+
+  const record = outList.value.find((item: any) => item.outNo === currentOutbound.value.outNo)
+  if (record) {
+    record.batches = outboundForm.batchItems.map((item: any) => ({
+      batchNo: item.batchNo,
+      skuCode: item.skuCode,
+      productName: item.productName,
+      specification: item.specification,
+      unit: item.unit,
+      quantity: item.quantity,
+      shipQuantity: item.shipQuantity,
+      batchRemark: item.batchRemark,
+    }))
+  }
+
+  Message.success('出库单更新成功')
+  outboundViewModalVisible.value = false
 }
 
 const prdModules = [

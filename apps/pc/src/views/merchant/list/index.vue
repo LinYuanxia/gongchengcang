@@ -95,7 +95,7 @@
             </template>
           </a-table-column>
           <a-table-column title="创建时间" data-index="createdAt" :width="180" />
-          <a-table-column title="操作" :width="280" fixed="right">
+          <a-table-column title="操作" :width="320" fixed="right">
             <template #cell="{ record }">
               <a-space wrap>
                 <a-button type="text" size="small" @click="handleView(record)">查看</a-button>
@@ -109,6 +109,14 @@
                   @click="handleEnterSystem(record)"
                 >
                   进入系统
+                </a-button>
+                <a-button 
+                  type="text" 
+                  size="small" 
+                  v-if="record.registrationStatus === 'approved'"
+                  @click="handleBindPaymentMerchantNo(record)"
+                >
+                  绑定支付商户号
                 </a-button>
                 <a-popconfirm content="确定要删除该商户吗？" @ok="handleDelete(record)">
                   <a-button type="text" size="small" status="danger">删除</a-button>
@@ -131,6 +139,40 @@
       v-model:visible="detailVisible"
       :tenant-id="currentTenantId"
     />
+
+    <a-modal 
+      v-model:visible="bindPaymentModalVisible" 
+      title="绑定支付商户号" 
+      :width="500"
+      :footer="null"
+    >
+      <a-form :model="paymentMerchantNoForm" layout="vertical">
+        <a-form-item label="支付商户号" required>
+          <a-input 
+            v-model="paymentMerchantNoForm.paymentMerchantNo" 
+            placeholder="请输入支付商户号"
+          />
+        </a-form-item>
+      </a-form>
+      
+      <a-divider />
+      
+      <div class="modal-actions">
+        <a-button @click="handleBindPaymentSubmit">绑定</a-button>
+        <a-button type="primary" @click="handleQueryPaymentInfo">查询</a-button>
+        <a-button @click="cancelBindPayment">关闭</a-button>
+      </div>
+      
+      <a-divider v-if="paymentQueryResult" />
+      
+      <a-descriptions v-if="paymentQueryResult" title="查询结果" :column="2" bordered>
+        <a-descriptions-item label="商户名称">{{ paymentQueryResult.merchantName }}</a-descriptions-item>
+        <a-descriptions-item label="支付商户号">{{ paymentQueryResult.paymentMerchantNo }}</a-descriptions-item>
+        <a-descriptions-item label="渠道">{{ paymentQueryResult.channel }}</a-descriptions-item>
+        <a-descriptions-item label="渠道商户号">{{ paymentQueryResult.channelMerchantNo }}</a-descriptions-item>
+        <a-descriptions-item label="绑定时间" :span="2">{{ paymentQueryResult.bindTime }}</a-descriptions-item>
+      </a-descriptions>
+    </a-modal>
   </div>
 </template>
 
@@ -621,6 +663,20 @@ const formMode = ref<'add' | 'edit'>('add')
 const currentTenantId = ref('')
 const detailVisible = ref(false)
 
+const bindPaymentModalVisible = ref(false)
+const currentRecord = ref<Merchant | null>(null)
+const paymentMerchantNoForm = reactive({
+  paymentMerchantNo: '',
+})
+
+const paymentQueryResult = ref<{
+  merchantName: string
+  paymentMerchantNo: string
+  channel: string
+  channelMerchantNo: string
+  bindTime: string
+} | null>(null)
+
 onMounted(() => {
   loadData()
 })
@@ -725,4 +781,49 @@ async function handleStatusChange(record: Merchant, val: number | boolean) {
 function handleFormSuccess() {
   loadData()
 }
+
+function handleBindPaymentMerchantNo(record: Merchant) {
+  currentRecord.value = record
+  paymentMerchantNoForm.paymentMerchantNo = record.paymentMerchantNo || ''
+  bindPaymentModalVisible.value = true
+}
+
+function handleBindPaymentSubmit() {
+  if (!paymentMerchantNoForm.paymentMerchantNo.trim()) {
+    Message.error('请输入支付商户号')
+    return
+  }
+  if (currentRecord.value) {
+    currentRecord.value.paymentMerchantNo = paymentMerchantNoForm.paymentMerchantNo
+    Message.success(`成功为「${currentRecord.value.merchantName}」绑定支付商户号`)
+  }
+}
+
+function handleQueryPaymentInfo() {
+  if (!paymentMerchantNoForm.paymentMerchantNo.trim()) {
+    Message.error('请输入支付商户号')
+    return
+  }
+  
+  paymentQueryResult.value = {
+    merchantName: currentRecord.value?.merchantName || '未知商户',
+    paymentMerchantNo: paymentMerchantNoForm.paymentMerchantNo,
+    channel: '中信银行',
+    channelMerchantNo: 'ZX_' + paymentMerchantNoForm.paymentMerchantNo,
+    bindTime: new Date().toLocaleString('zh-CN'),
+  }
+}
+
+function cancelBindPayment() {
+  bindPaymentModalVisible.value = false
+  paymentQueryResult.value = null
+}
 </script>
+
+<style scoped>
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+</style>

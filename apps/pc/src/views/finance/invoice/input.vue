@@ -1,291 +1,537 @@
 <template>
-  <div class="invoice-input page-container">
+  <div class="invoice-manage page-container">
     <a-card :bordered="false">
       <template #extra>
         <a-space>
-          <a-button @click="handleExport">
+          <a-button @click="handleBatchExport">
             <template #icon><icon-download /></template>
-            导出
+            批量导出
           </a-button>
         </a-space>
       </template>
 
-      <a-row :gutter="16" class="stat-row">
-        <a-col :span="6">
-          <a-statistic title="本月进项金额" :value="156800" :precision="2">
-            <template #prefix>¥</template>
-          </a-statistic>
-        </a-col>
-        <a-col :span="6">
-          <a-statistic title="本月进项税额" :value="20384" :precision="2">
-            <template #prefix>¥</template>
-          </a-statistic>
-        </a-col>
-        <a-col :span="6">
-          <a-statistic title="待核验发票" :value="5" suffix="张" />
-        </a-col>
-        <a-col :span="6">
-          <a-statistic title="发票总数" :value="28" suffix="张" />
-        </a-col>
-      </a-row>
+      <a-tabs v-model:active-tab="activeTab" class="invoice-tabs">
+        <a-tab-pane key="all" title="全部" />
+        <a-tab-pane key="uninvoiced" title="未开票" />
+        <a-tab-pane key="invoiced" title="已开票" />
+      </a-tabs>
 
-      <a-form :model="searchForm" layout="inline" class="search-form mt-16">
-        <a-form-item label="发票号码">
-          <a-input v-model="searchForm.invoiceNo" placeholder="请输入发票号码" allow-clear style="width: 180px" />
-        </a-form-item>
-        <a-form-item label="开票方">
-          <a-select v-model="searchForm.issuerId" placeholder="全部" allow-clear style="width: 150px">
-            <a-option value="w1">深圳湾科技园项目仓</a-option>
-            <a-option value="w2">广州天河工程仓</a-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item label="发票类型">
-          <a-select v-model="searchForm.invoiceType" placeholder="全部" allow-clear style="width: 150px">
-            <a-option value="special">增值税专用发票</a-option>
-            <a-option value="normal">增值税普通发票</a-option>
-            <a-option value="electronic">电子发票</a-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item label="核验状态">
-          <a-select v-model="searchForm.status" placeholder="全部" allow-clear style="width: 120px">
-            <a-option value="pending">待核验</a-option>
-            <a-option value="verified">已核验</a-option>
-            <a-option value="invalid">已作废</a-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item>
-          <a-button type="primary" @click="handleSearch">查询</a-button>
-          <a-button style="margin-left: 8px" @click="handleReset">重置</a-button>
-        </a-form-item>
-      </a-form>
+      <div class="table-actions">
+        <a-space>
+          <a-input-search
+            v-model="searchForm.orderNo"
+            placeholder="订单编号"
+            style="width: 160px"
+            @search="handleSearch"
+          />
+          <a-input-search
+            v-model="searchForm.invoiceTitle"
+            placeholder="发票抬头"
+            style="width: 180px"
+            @search="handleSearch"
+          />
+          <a-range-picker v-model="searchForm.dateRange" style="width: 260px" allow-clear />
+        </a-space>
+        <a-space>
+          <a-button @click="handleReset">重置</a-button>
+        </a-space>
+      </div>
 
-      <a-table :data="invoiceList" :pagination="pagination" class="mt-16" @page-change="handlePageChange">
+      <a-table
+        :data="filteredList"
+        :loading="loading"
+        :pagination="pagination"
+        @page-change="handlePageChange"
+        row-key="id"
+      >
         <template #columns>
-          <a-table-column title="发票号码" data-index="invoiceNo" :width="180" />
-          <a-table-column title="发票类型" :width="150">
+          <a-table-column title="订单编号" :width="160">
             <template #cell="{ record }">
-              <a-tag :color="getInvoiceTypeColor(record.invoiceType)">
-                {{ getInvoiceTypeText(record.invoiceType) }}
+              <a-link @click="handleViewOrder(record)">{{ record.orderNo }}</a-link>
+            </template>
+          </a-table-column>
+          <a-table-column title="应收记录编号" :width="160">
+            <template #cell="{ record }">
+              <a-link @click="handleViewReceivable(record)">{{ record.receivableNo }}</a-link>
+            </template>
+          </a-table-column>
+          <a-table-column title="发票抬头" :width="180">
+            <template #cell="{ record }">
+              <div class="invoice-title">{{ record.invoiceTitle }}</div>
+            </template>
+          </a-table-column>
+          <a-table-column title="开票金额" :width="120" align="right">
+            <template #cell="{ record }">
+              <span>¥{{ record.invoiceAmount?.toLocaleString() }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="实际开票金额" :width="130" align="right">
+            <template #cell="{ record }">
+              <span class="actual-amount">¥{{ record.actualInvoiceAmount?.toLocaleString() || '-' }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="开票状态" :width="100">
+            <template #cell="{ record }">
+              <a-tag :color="record.invoiceStatus === 'invoiced' ? 'green' : 'gray'">
+                {{ record.invoiceStatus === 'invoiced' ? '已开票' : '未开票' }}
               </a-tag>
             </template>
           </a-table-column>
-          <a-table-column title="开票方" data-index="issuerName" :width="180" />
-          <a-table-column title="金额(不含税)" :width="120" align="right">
-            <template #cell="{ record }">
-              ¥{{ record.amount }}
-            </template>
-          </a-table-column>
-          <a-table-column title="税额" :width="100" align="right">
-            <template #cell="{ record }">
-              ¥{{ record.taxAmount }}
-            </template>
-          </a-table-column>
-          <a-table-column title="价税合计" :width="120" align="right">
-            <template #cell="{ record }">
-              <span class="total">¥{{ record.totalAmount }}</span>
-            </template>
-          </a-table-column>
-          <a-table-column title="开票日期" data-index="invoiceDate" :width="120" />
-          <a-table-column title="核验状态" :width="100">
-            <template #cell="{ record }">
-              <a-tag :color="getStatusColor(record.status)">
-                {{ getStatusText(record.status) }}
-              </a-tag>
-            </template>
-          </a-table-column>
-          <a-table-column title="操作" :width="150" fixed="right">
+          <a-table-column title="创建时间" data-index="createTime" :width="160" />
+          <a-table-column title="操作" :width="180" fixed="right">
             <template #cell="{ record }">
               <a-space>
-                <a-button type="text" size="small" @click="handleView(record)">查看</a-button>
-                <a-button v-if="record.status === 'pending'" type="text" size="small" status="success" @click="handleVerify(record)">核验</a-button>
+                <a-button 
+                  v-if="record.invoiceStatus === 'invoiced'" 
+                  type="text" 
+                  size="small" 
+                  @click="handleViewInvoice(record)"
+                >
+                  查看发票
+                </a-button>
+                <a-button 
+                  v-if="record.invoiceStatus === 'invoiced'" 
+                  type="text" 
+                  size="small" 
+                  @click="handleDownloadInvoice(record)"
+                >
+                  下载
+                </a-button>
+                <a-button 
+                  v-if="record.invoiceStatus === 'uninvoiced'" 
+                  type="text" 
+                  size="small" 
+                  :disabled="record.accountingStatus !== 'recorded'"
+                  @click="handleOpenInvoice(record)"
+                >
+                  {{ record.accountingStatus === 'recorded' ? '开票' : '记账未完成' }}
+                </a-button>
               </a-space>
             </template>
           </a-table-column>
         </template>
       </a-table>
     </a-card>
+
+    <a-modal 
+      v-model:visible="invoiceModalVisible" 
+      title="开具发票" 
+      :width="600"
+      @ok="handleInvoiceSubmit"
+      @cancel="invoiceModalVisible = false"
+    >
+      <a-form :model="invoiceForm" layout="vertical">
+        <a-form-item label="订单编号">
+          <a-input :value="currentRecord?.orderNo" disabled />
+        </a-form-item>
+        <a-form-item label="发票抬头" required>
+          <a-input v-model="invoiceForm.invoiceTitle" placeholder="请输入发票抬头" />
+        </a-form-item>
+        <a-form-item label="开票金额">
+          <a-input-number 
+            v-model="invoiceForm.invoiceAmount" 
+            :min="0" 
+            :precision="2"
+            style="width: 100%"
+          />
+        </a-form-item>
+        <a-form-item label="发票图片上传">
+          <a-upload
+            :custom-request="handleUploadRequest"
+            :show-file-list="false"
+            accept="image/*"
+            @success="handleUploadSuccess"
+          >
+            <a-button>
+              <template #icon><icon-upload /></template>
+              上传发票图片
+            </a-button>
+          </a-upload>
+          <div v-if="invoiceForm.invoiceImage" class="upload-preview">
+            <a-image :src="invoiceForm.invoiceImage" width="120" />
+          </div>
+        </a-form-item>
+      </a-form>
+
+      <a-divider>OCR识别结果</a-divider>
+      
+      <a-descriptions v-if="ocrResult" :column="2" bordered size="small">
+        <a-descriptions-item label="识别金额">
+          <span :class="{ 'amount-match': ocrResult.amountMatch, 'amount-mismatch': !ocrResult.amountMatch }">
+            ¥{{ ocrResult.recognizedAmount?.toLocaleString() }}
+          </span>
+        </a-descriptions-item>
+        <a-descriptions-item label="核对结果">
+          <a-tag :color="ocrResult.amountMatch ? 'green' : 'red'">
+            {{ ocrResult.amountMatch ? '金额一致' : '金额不一致' }}
+          </a-tag>
+        </a-descriptions-item>
+        <a-descriptions-item label="发票代码">{{ ocrResult.invoiceCode || '-' }}</a-descriptions-item>
+        <a-descriptions-item label="发票号码">{{ ocrResult.invoiceNo || '-' }}</a-descriptions-item>
+        <a-descriptions-item label="开票日期" :span="2">{{ ocrResult.invoiceDate || '-' }}</a-descriptions-item>
+      </a-descriptions>
+      <a-empty v-else description="上传发票图片后自动识别" />
+
+      <div v-if="ocrResult && !ocrResult.amountMatch" class="ocr-warning">
+        <icon-info-circle style="color: #ff7d00; margin-right: 8px;" />
+        识别金额与开票金额不一致，请核对后确认开票
+      </div>
+    </a-modal>
+
+    <a-modal 
+      v-model:visible="viewInvoiceVisible" 
+      title="查看发票" 
+      :width="800"
+      :footer="null"
+    >
+      <a-descriptions :column="2" bordered class="invoice-info">
+        <a-descriptions-item label="订单编号">{{ currentRecord?.orderNo }}</a-descriptions-item>
+        <a-descriptions-item label="应收记录编号">{{ currentRecord?.receivableNo }}</a-descriptions-item>
+        <a-descriptions-item label="发票抬头">{{ currentRecord?.invoiceTitle }}</a-descriptions-item>
+        <a-descriptions-item label="实际开票金额">
+          <span class="highlight">¥{{ currentRecord?.actualInvoiceAmount?.toLocaleString() }}</span>
+        </a-descriptions-item>
+        <a-descriptions-item label="开票时间" :span="2">{{ currentRecord?.invoiceTime }}</a-descriptions-item>
+      </a-descriptions>
+
+      <a-divider>发票图片</a-divider>
+      
+      <div class="invoice-image-container">
+        <a-image 
+          v-if="currentRecord?.invoiceImage" 
+          :src="currentRecord.invoiceImage" 
+          width="100%" 
+        />
+        <a-empty v-else description="暂无发票图片" />
+      </div>
+
+      <div class="invoice-actions">
+        <a-button type="primary" @click="handleDownloadInvoice(currentRecord)">
+          <template #icon><icon-download /></template>
+          下载发票
+        </a-button>
+      </div>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { Message } from '@arco-design/web-vue'
-
-const prdItems = [
-  {
-    title: '1. 模块定位',
-    content: `
-**进项发票管理 - 平台收票流程：**
-
-- **发票来源**：工程仓开具的服务费发票、供应商提供的货物发票
-- **发票类型**：增值税专用发票（可抵扣）/ 普通发票
-- **核心流程**：待核验 → 已核验入账 → 税务抵扣
-- **核心价值**：平台成本进项凭证，增值税抵扣依据
-    `
-  }
-]
-
-const searchForm = ref({
-  invoiceNo: '',
-  issuerId: '',
-  invoiceType: '',
-  status: '',
-})
-
-const pagination = ref({
-  current: 1,
-  pageSize: 10,
-  total: 50,
-})
 
 interface InvoiceRecord {
   id: string
-  invoiceNo: string
-  invoiceType: string
-  issuerName: string
-  amount: string
-  taxAmount: string
-  totalAmount: string
-  invoiceDate: string
-  status: string
+  orderNo: string
+  receivableNo: string
+  invoiceTitle: string
+  invoiceAmount: number
+  actualInvoiceAmount?: number
+  invoiceStatus: 'invoiced' | 'uninvoiced'
+  accountingStatus: 'recorded' | 'unrecorded'
+  invoiceImage?: string
+  invoiceTime?: string
+  createTime: string
 }
 
-const allInvoiceList = ref<InvoiceRecord[]>([
-  { id: '1', invoiceNo: 'INV202401150001', invoiceType: 'special', issuerName: '深圳湾科技园项目仓', amount: '4,716.98', taxAmount: '613.21', totalAmount: '5,330.19', invoiceDate: '2024-01-15', status: 'verified' },
-  { id: '2', invoiceNo: 'INV202401140001', invoiceType: 'special', issuerName: '广州天河工程仓', amount: '3,301.89', taxAmount: '429.25', totalAmount: '3,731.14', invoiceDate: '2024-01-14', status: 'pending' },
-  { id: '3', invoiceNo: 'INV202401130001', invoiceType: 'electronic', issuerName: '深圳湾科技园项目仓', amount: '2,452.83', taxAmount: '318.87', totalAmount: '2,771.70', invoiceDate: '2024-01-13', status: 'verified' },
-  { id: '4', invoiceNo: 'INV202401120001', invoiceType: 'special', issuerName: '广州天河工程仓', amount: '5,660.38', taxAmount: '735.85', totalAmount: '6,396.23', invoiceDate: '2024-01-12', status: 'verified' },
-  { id: '5', invoiceNo: 'INV202401110001', invoiceType: 'normal', issuerName: '深圳湾科技园项目仓', amount: '1,886.79', taxAmount: '245.28', totalAmount: '2,132.07', invoiceDate: '2024-01-11', status: 'invalid' },
+const loading = ref(false)
+const activeTab = ref('all')
+const invoiceModalVisible = ref(false)
+const viewInvoiceVisible = ref(false)
+const currentRecord = ref<InvoiceRecord | null>(null)
+
+const pagination = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+})
+
+const searchForm = reactive({
+  orderNo: '',
+  invoiceTitle: '',
+  dateRange: [] as string[],
+})
+
+const invoiceForm = reactive({
+  invoiceTitle: '',
+  invoiceAmount: 0,
+  invoiceImage: '',
+})
+
+const ocrResult = ref<{
+  recognizedAmount: number
+  amountMatch: boolean
+  invoiceCode?: string
+  invoiceNo?: string
+  invoiceDate?: string
+} | null>(null)
+
+const allList = ref<InvoiceRecord[]>([
+  {
+    id: '1',
+    orderNo: 'SO202401150001',
+    receivableNo: 'YS202401150001',
+    invoiceTitle: '深圳市某某建筑有限公司',
+    invoiceAmount: 6290,
+    actualInvoiceAmount: 6290,
+    invoiceStatus: 'invoiced',
+    accountingStatus: 'recorded',
+    invoiceImage: '',
+    invoiceTime: '2024-01-16 10:30:00',
+    createTime: '2024-01-15 16:30:00',
+  },
+  {
+    id: '2',
+    orderNo: 'SO202401140001',
+    receivableNo: 'YS202401150002',
+    invoiceTitle: '广州某某工程有限公司',
+    invoiceAmount: 4475,
+    invoiceStatus: 'uninvoiced',
+    accountingStatus: 'recorded',
+    createTime: '2024-01-15 14:20:00',
+  },
+  {
+    id: '3',
+    orderNo: 'SO202401130001',
+    receivableNo: 'YS202401140001',
+    invoiceTitle: '深圳某某建设集团',
+    invoiceAmount: 2615,
+    actualInvoiceAmount: 2600,
+    invoiceStatus: 'invoiced',
+    accountingStatus: 'recorded',
+    invoiceImage: '',
+    invoiceTime: '2024-01-15 09:00:00',
+    createTime: '2024-01-14 10:00:00',
+  },
+  {
+    id: '4',
+    orderNo: 'SO202401120001',
+    receivableNo: 'YS202401130001',
+    invoiceTitle: '东莞市某某建材贸易公司',
+    invoiceAmount: 8400,
+    invoiceStatus: 'uninvoiced',
+    accountingStatus: 'unrecorded',
+    createTime: '2024-01-13 15:30:00',
+  },
+  {
+    id: '5',
+    orderNo: 'SO202401110001',
+    receivableNo: 'YS202401120001',
+    invoiceTitle: '佛山市某某工程材料公司',
+    invoiceAmount: 4560,
+    invoiceStatus: 'invoiced',
+    accountingStatus: 'recorded',
+    invoiceImage: '',
+    invoiceTime: '2024-01-13 11:20:00',
+    createTime: '2024-01-12 09:00:00',
+  },
 ])
 
-const invoiceList = ref<InvoiceRecord[]>([...allInvoiceList.value])
+const filteredList = computed(() => {
+  let filtered = [...allList.value]
 
-function getInvoiceTypeColor(type: string) {
-  const colorMap: Record<string, string> = {
-    special: 'blue',
-    normal: 'green',
-    electronic: 'purple',
+  if (activeTab.value === 'invoiced') {
+    filtered = filtered.filter(item => item.invoiceStatus === 'invoiced')
+  } else if (activeTab.value === 'uninvoiced') {
+    filtered = filtered.filter(item => item.invoiceStatus === 'uninvoiced')
   }
-  return colorMap[type] || 'gray'
-}
 
-function getInvoiceTypeText(type: string) {
-  const textMap: Record<string, string> = {
-    special: '增值税专用发票',
-    normal: '增值税普通发票',
-    electronic: '电子发票',
+  if (searchForm.orderNo) {
+    filtered = filtered.filter(item => item.orderNo.includes(searchForm.orderNo))
   }
-  return textMap[type] || type
-}
 
-function getStatusColor(status: string) {
-  const colorMap: Record<string, string> = {
-    pending: 'orange',
-    verified: 'green',
-    invalid: 'gray',
+  if (searchForm.invoiceTitle) {
+    filtered = filtered.filter(item => item.invoiceTitle.includes(searchForm.invoiceTitle))
   }
-  return colorMap[status] || 'gray'
-}
 
-function getStatusText(status: string) {
-  const textMap: Record<string, string> = {
-    pending: '待核验',
-    verified: '已核验',
-    invalid: '已作废',
+  if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+    const [startDate, endDate] = searchForm.dateRange
+    filtered = filtered.filter(item => {
+      const itemDate = new Date(item.createTime.split(' ')[0])
+      return itemDate >= new Date(startDate) && itemDate <= new Date(endDate)
+    })
   }
-  return textMap[status] || status
-}
+
+  pagination.total = filtered.length
+  return filtered.slice(
+    (pagination.current - 1) * pagination.pageSize,
+    pagination.current * pagination.pageSize
+  )
+})
 
 function handleSearch() {
-  let filtered = [...allInvoiceList.value]
-  
-  if (searchForm.value.invoiceNo) {
-    filtered = filtered.filter(item => 
-      item.invoiceNo.includes(searchForm.value.invoiceNo)
-    )
-  }
-  
-  if (searchForm.value.issuerId) {
-    filtered = filtered.filter(item => 
-      item.issuerName.includes(searchForm.value.issuerId)
-    )
-  }
-  
-  if (searchForm.value.invoiceType) {
-    filtered = filtered.filter(item => item.invoiceType === searchForm.value.invoiceType)
-  }
-  
-  if (searchForm.value.status) {
-    filtered = filtered.filter(item => item.status === searchForm.value.status)
-  }
-  
-  invoiceList.value = filtered
-  pagination.value.total = filtered.length
-  Message.success(`查询完成，共 ${filtered.length} 条记录`)
+  pagination.current = 1
 }
 
 function handleReset() {
-  searchForm.value = {
-    invoiceNo: '',
-    issuerId: '',
-    invoiceType: '',
-    status: '',
-  }
+  searchForm.orderNo = ''
+  searchForm.invoiceTitle = ''
+  searchForm.dateRange = []
+  pagination.current = 1
 }
 
 function handlePageChange(page: number) {
-  pagination.value.current = page
+  pagination.current = page
 }
 
-function handleView(record: InvoiceRecord) {
-  Message.info(`查看发票: ${record.invoiceNo}`)
+function handleViewOrder(record: InvoiceRecord) {
+  Message.info(`跳转订单详情: ${record.orderNo}`)
 }
 
-function handleVerify(record: InvoiceRecord) {
-  Message.success(`发票 ${record.invoiceNo} 已核验`)
+function handleViewReceivable(record: InvoiceRecord) {
+  Message.info(`跳转应收记录: ${record.receivableNo}`)
 }
 
-function handleExport() {
-  if (invoiceList.value.length === 0) {
+function handleOpenInvoice(record: InvoiceRecord) {
+  if (record.accountingStatus !== 'recorded') {
+    Message.warning('该订单记账未完成，暂不可开票')
+    return
+  }
+  currentRecord.value = record
+  invoiceForm.invoiceTitle = record.invoiceTitle || ''
+  invoiceForm.invoiceAmount = record.invoiceAmount
+  invoiceForm.invoiceImage = ''
+  ocrResult.value = null
+  invoiceModalVisible.value = true
+}
+
+function handleUploadRequest(options: any) {
+  setTimeout(() => {
+    options.onSuccess(null)
+  }, 500)
+}
+
+function handleUploadSuccess(file: any) {
+  invoiceForm.invoiceImage = URL.createObjectURL(file.file)
+  simulateOcrRecognition()
+}
+
+function simulateOcrRecognition() {
+  const randomAmount = invoiceForm.invoiceAmount * (0.9 + Math.random() * 0.2)
+  ocrResult.value = {
+    recognizedAmount: Math.round(randomAmount * 100) / 100,
+    amountMatch: Math.abs(randomAmount - invoiceForm.invoiceAmount) / invoiceForm.invoiceAmount < 0.05,
+    invoiceCode: '144031900110',
+    invoiceNo: 'INV' + Date.now().toString().slice(-10),
+    invoiceDate: new Date().toLocaleDateString('zh-CN'),
+  }
+}
+
+function handleInvoiceSubmit() {
+  if (!invoiceForm.invoiceTitle.trim()) {
+    Message.error('请输入发票抬头')
+    return
+  }
+  if (!invoiceForm.invoiceAmount) {
+    Message.error('请输入开票金额')
+    return
+  }
+  
+  if (ocrResult.value && !ocrResult.value.amountMatch) {
+    Message.warning('识别金额与开票金额不一致，请核对')
+    return
+  }
+
+  if (currentRecord.value) {
+    currentRecord.value.invoiceStatus = 'invoiced'
+    currentRecord.value.actualInvoiceAmount = invoiceForm.invoiceAmount
+    currentRecord.value.invoiceTitle = invoiceForm.invoiceTitle
+    currentRecord.value.invoiceImage = invoiceForm.invoiceImage
+    currentRecord.value.invoiceTime = new Date().toLocaleString('zh-CN')
+  }
+
+  Message.success('开票成功')
+  invoiceModalVisible.value = false
+}
+
+function handleViewInvoice(record: InvoiceRecord) {
+  currentRecord.value = record
+  viewInvoiceVisible.value = true
+}
+
+function handleDownloadInvoice(record: InvoiceRecord) {
+  Message.success(`开始下载发票: ${record.orderNo}`)
+}
+
+function handleBatchExport() {
+  if (filteredList.value.length === 0) {
     Message.warning('暂无数据可导出')
     return
   }
-  Message.success(`成功导出 ${invoiceList.value.length} 条进项发票记录`)
+  Message.success(`成功导出 ${filteredList.value.length} 条发票记录`)
 }
 </script>
 
 <style scoped lang="less">
-.invoice-tip {
-  background: #e6f7ff;
-  border: 1px solid #91d5ff;
-  border-radius: 4px;
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.invoice-manage {
+  padding: 16px;
+}
+
+.invoice-tabs {
   margin-bottom: 16px;
 }
 
-.invoice-input {
-  padding: 16px;
+.table-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
 }
 
-.mt-16 {
-  margin-top: 16px;
+.invoice-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.stat-row {
-  padding: 16px;
-  background: var(--color-fill-1);
-  border-radius: 4px;
-}
-
-.search-form {
-  margin-bottom: 0;
-}
-
-.total {
-  font-weight: 600;
+.actual-amount {
   color: #165dff;
+  font-weight: 500;
+}
+
+.upload-preview {
+  margin-top: 12px;
+}
+
+.ocr-warning {
+  display: flex;
+  align-items: center;
+  margin-top: 16px;
+  padding: 12px;
+  background: #fff7e6;
+  border: 1px solid #ffd591;
+  border-radius: 4px;
+  color: #d46b00;
+  font-size: 13px;
+}
+
+.amount-match {
+  color: #52c41a;
+  font-weight: 600;
+}
+
+.amount-mismatch {
+  color: #ff4d4f;
+  font-weight: 600;
+}
+
+.invoice-info {
+  margin-bottom: 16px;
+}
+
+.highlight {
+  color: #165dff;
+  font-weight: 600;
+}
+
+.invoice-image-container {
+  background: #fafafa;
+  padding: 16px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.invoice-actions {
+  display: flex;
+  justify-content: center;
 }
 </style>

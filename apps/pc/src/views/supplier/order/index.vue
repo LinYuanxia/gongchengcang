@@ -5,14 +5,116 @@
         <span>订单管理</span>
       </template>
 
+      <a-row :gutter="16" style="margin-bottom: 16px">
+        <a-col :span="12">
+          <a-form :model="searchForm" layout="inline">
+            <a-row :gutter="12">
+              <a-col :span="6">
+                <a-form-item label="订单编码">
+                  <a-input 
+                    v-model="searchForm.orderNo" 
+                    placeholder="支持模糊搜索" 
+                    style="width: 100%"
+                  />
+                </a-form-item>
+              </a-col>
+              <a-col :span="5">
+                <a-form-item label="订单类型">
+                  <a-select 
+                    v-model="searchForm.orderType" 
+                    placeholder="全部" 
+                    style="width: 100%"
+                  >
+                    <a-option value="">全部</a-option>
+                    <a-option value="purchase">采购订单</a-option>
+                    <a-option value="after_sales">售后订单</a-option>
+                  </a-select>
+                </a-form-item>
+              </a-col>
+              <a-col :span="7">
+                <a-form-item label="下单时间">
+                  <a-range-picker 
+                    v-model="searchForm.createTimeRange" 
+                    style="width: 100%"
+                  />
+                </a-form-item>
+              </a-col>
+              <a-col :span="6">
+                <a-form-item label="支付状态">
+                  <a-select 
+                    v-model="searchForm.paymentStatus" 
+                    mode="multiple" 
+                    placeholder="全部" 
+                    style="width: 100%"
+                  >
+                    <a-option value="unpaid">待支付</a-option>
+                    <a-option value="partial_paid">部分支付</a-option>
+                    <a-option value="paid">已支付</a-option>
+                  </a-select>
+                </a-form-item>
+              </a-col>
+            </a-row>
+            <a-row :gutter="12" style="margin-top: 12px">
+              <a-col :span="6">
+                <a-form-item label="采购方">
+                  <a-input 
+                    v-model="searchForm.buyerName" 
+                    placeholder="支持名称模糊查询" 
+                    style="width: 100%"
+                  />
+                </a-form-item>
+              </a-col>
+              <a-col :span="5">
+                <a-form-item label="发货标签">
+                  <a-select 
+                    v-model="searchForm.shipStatus" 
+                    placeholder="全部" 
+                    style="width: 100%"
+                  >
+                    <a-option value="">全部</a-option>
+                    <a-option value="partial_shipped">部分发货</a-option>
+                    <a-option value="fully_shipped">全部发货</a-option>
+                  </a-select>
+                </a-form-item>
+              </a-col>
+              <a-col :span="6">
+                <a-form-item label="订单完成日期">
+                  <a-range-picker 
+                    v-model="searchForm.completeTimeRange" 
+                    style="width: 100%"
+                  />
+                </a-form-item>
+              </a-col>
+              <a-col :span="7" style="display: flex; align-items: flex-end;">
+                <a-space>
+                  <a-button type="primary" @click="handleSearch">
+                    <template #icon><icon-search /></template>
+                    查询
+                  </a-button>
+                  <a-button @click="handleReset">
+                    <template #icon><icon-refresh-cw /></template>
+                    重置
+                  </a-button>
+                </a-space>
+              </a-col>
+            </a-row>
+          </a-form>
+        </a-col>
+        <a-col :span="12" style="text-align: right;">
+          <a-button type="primary" @click="handleExport">
+            <template #icon><icon-download /></template>
+            导出订单
+          </a-button>
+        </a-col>
+      </a-row>
+
       <a-tabs v-model:active-tab="activeTab" class="order-tabs">
         <a-tab-pane key="all" :title="`全部 (${orderStats.total})`" />
         <a-tab-pane key="pending" :title="`待确认 (${orderStats.pending})`" />
-        <a-tab-pane key="unpaid" :title="`待支付 (${orderStats.unpaid})`" />
-        <a-tab-pane key="undelivered" :title="`待发货 (${orderStats.undelivered})`" />
-        <a-tab-pane key="delivered" :title="`待收货 (${orderStats.delivered})`" />
+        <a-tab-pane key="confirmed" :title="`待发货 (${orderStats.confirmed})`" />
+        <a-tab-pane key="shipped" :title="`待收货 (${orderStats.shipped})`" />
         <a-tab-pane key="completed" :title="`已完成 (${orderStats.completed})`" />
-        <a-tab-pane key="refunded" :title="`已退款 (${orderStats.refunded})`" />
+        <a-tab-pane key="rejected" :title="`已驳回 (${orderStats.rejected})`" />
       </a-tabs>
 
       <a-table
@@ -29,9 +131,14 @@
               {{ record.warehouseName }}
             </template>
           </a-table-column>
-          <a-table-column title="商品数量" :width="100" align="center">
+          <a-table-column title="商品数量（SKU）" :width="120" align="center">
             <template #cell="{ record }">
               {{ record.skuCount }} 种
+            </template>
+          </a-table-column>
+          <a-table-column title="采购量" :width="100" align="center">
+            <template #cell="{ record }">
+              {{ record.totalQuantity || 0 }}
             </template>
           </a-table-column>
           <a-table-column title="订单金额" :width="120" align="right">
@@ -39,10 +146,26 @@
               ¥{{ record.totalAmount?.toLocaleString() || '0' }}
             </template>
           </a-table-column>
-          <a-table-column title="支付状态" :width="100">
+          <a-table-column title="实付金额" :width="120" align="right">
             <template #cell="{ record }">
-              <a-tag :color="getPaymentStatusColor(record.paymentStatus)">
+              ¥{{ (record.paidAmount || record.totalAmount)?.toLocaleString() || '0' }}
+            </template>
+          </a-table-column>
+          <a-table-column title="支付状态" :width="110">
+            <template #cell="{ record }">
+              <a-tag 
+                :color="getPaymentStatusColor(record.paymentStatus)" 
+                style="cursor: pointer;"
+                @click="handleViewPayment(record)"
+              >
                 {{ getPaymentStatusText(record.paymentStatus) }}
+              </a-tag>
+            </template>
+          </a-table-column>
+          <a-table-column title="发货状态" :width="100">
+            <template #cell="{ record }">
+              <a-tag :color="getShipStatusColor(record.shipStatus)">
+                {{ getShipStatusText(record.shipStatus) }}
               </a-tag>
             </template>
           </a-table-column>
@@ -76,17 +199,14 @@
               </a-space>
             </template>
           </a-table-column>
-          <a-table-column title="售后金额" :width="120" align="right">
-            <template #cell="{ record }">
-              <span v-if="record.refundAmount > 0" class="text-danger">
-                -¥{{ record.refundAmount?.toLocaleString() }}
-              </span>
-              <span v-else>-</span>
-            </template>
-          </a-table-column>
           <a-table-column title="下单时间" :width="160">
             <template #cell="{ record }">
               {{ record.createTime }}
+            </template>
+          </a-table-column>
+          <a-table-column title="完成时间" :width="160">
+            <template #cell="{ record }">
+              {{ record.completeTime || '-' }}
             </template>
           </a-table-column>
           <a-table-column title="操作" :width="260" fixed="right">
@@ -687,6 +807,16 @@ const router = useRouter()
 const loading = ref(false)
 const activeTab = ref('all')
 
+const searchForm = reactive({
+  orderNo: '',
+  orderType: '',
+  createTimeRange: [],
+  paymentStatus: [],
+  buyerName: '',
+  shipStatus: '',
+  completeTimeRange: [],
+})
+
 const pagination = reactive({
   current: 1,
   pageSize: 10,
@@ -700,11 +830,11 @@ pagination.total = initialData.total
 const orderStats = computed(() => {
   return {
     total: orderList.value.length,
-    pending: orderList.value.filter(o => o.status === 'pending').length,
-    unpaid: orderList.value.filter(o => o.paymentStatus === 'unpaid' && o.status !== 'pending').length,
-    undelivered: orderList.value.filter(o => o.status === 'confirmed' && o.paymentStatus === 'paid').length,
-    delivered: orderList.value.filter(o => o.status === 'shipped').length,
+    pending: orderList.value.filter(o => o.status === 'pending' || o.status === 'to_confirm').length,
+    confirmed: orderList.value.filter(o => o.status === 'confirmed').length,
+    shipped: orderList.value.filter(o => o.status === 'shipped').length,
     completed: orderList.value.filter(o => o.status === 'completed').length,
+    rejected: orderList.value.filter(o => o.status === 'cancelled').length,
     refunded: orderList.value.filter(o => o.status === 'refunded').length,
   }
 })
@@ -713,18 +843,72 @@ const filteredOrders = computed(() => {
   let result = orderList.value
   
   if (activeTab.value === 'pending') {
-    result = result.filter(o => o.status === 'pending')
-  } else if (activeTab.value === 'unpaid') {
-    result = result.filter(o => o.paymentStatus === 'unpaid' && o.status !== 'pending')
-  } else if (activeTab.value === 'undelivered') {
-    result = result.filter(o => o.status === 'confirmed' && o.paymentStatus === 'paid')
-  } else if (activeTab.value === 'delivered') {
+    result = result.filter(o => o.status === 'pending' || o.status === 'to_confirm')
+  } else if (activeTab.value === 'confirmed') {
+    result = result.filter(o => o.status === 'confirmed')
+  } else if (activeTab.value === 'shipped') {
     result = result.filter(o => o.status === 'shipped')
   } else if (activeTab.value === 'completed') {
     result = result.filter(o => o.status === 'completed')
+  } else if (activeTab.value === 'rejected') {
+    result = result.filter(o => o.status === 'cancelled')
   } else if (activeTab.value === 'refunded') {
     result = result.filter(o => o.status === 'refunded')
   }
+  
+  if (searchForm.orderNo) {
+    result = result.filter(o => o.orderNo?.toLowerCase().includes(searchForm.orderNo.toLowerCase()))
+  }
+  
+  if (searchForm.orderType) {
+    result = result.filter(o => o.orderType === searchForm.orderType)
+  }
+  
+  if (searchForm.buyerName) {
+    result = result.filter(o => o.warehouseName?.toLowerCase().includes(searchForm.buyerName.toLowerCase()))
+  }
+  
+  if (searchForm.shipStatus) {
+    result = result.filter(o => o.shipStatus === searchForm.shipStatus)
+  }
+  
+  if (searchForm.paymentStatus && searchForm.paymentStatus.length > 0) {
+    result = result.filter(o => searchForm.paymentStatus.includes(o.paymentStatus))
+  }
+  
+  if (searchForm.createTimeRange && searchForm.createTimeRange.length === 2) {
+    result = result.filter(o => {
+      const createTime = new Date(o.createTime).getTime()
+      return createTime >= searchForm.createTimeRange[0].getTime() && createTime <= searchForm.createTimeRange[1].getTime()
+    })
+  }
+  
+  if (searchForm.completeTimeRange && searchForm.completeTimeRange.length === 2) {
+    result = result.filter(o => {
+      if (!o.completeTime) return false
+      const completeTime = new Date(o.completeTime).getTime()
+      return completeTime >= searchForm.completeTimeRange[0].getTime() && completeTime <= searchForm.completeTimeRange[1].getTime()
+    })
+  }
+  
+  result.sort((a, b) => {
+    const statusOrder: Record<string, number> = {
+      pending: 0,
+      confirmed: 1,
+      'payment_pending': 2,
+      shipped: 3,
+      completed: 4,
+      refunded: 5,
+      cancelled: 6
+    }
+    
+    const statusCompare = (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99)
+    if (statusCompare !== 0) {
+      return statusCompare
+    }
+    
+    return new Date(b.createTime).getTime() - new Date(a.createTime).getTime()
+  })
   
   return result
 })
@@ -840,6 +1024,27 @@ function isUrgent(deliveryDate: string) {
 
 function handlePageChange(page: number) {
   pagination.current = page
+}
+
+function handleSearch() {
+  pagination.current = 1
+  refreshOrderList()
+}
+
+function handleReset() {
+  searchForm.orderNo = ''
+  searchForm.orderType = ''
+  searchForm.createTimeRange = []
+  searchForm.paymentStatus = []
+  searchForm.buyerName = ''
+  searchForm.shipStatus = ''
+  searchForm.completeTimeRange = []
+  pagination.current = 1
+  refreshOrderList()
+}
+
+function handleExport() {
+  Message.info('导出订单功能开发中')
 }
 
 function handleView(record: any) {
@@ -1056,6 +1261,30 @@ function getStatusText(status: string) {
     unpaid: '待支付',
   }
   return texts[status] || status
+}
+
+function getShipStatusColor(shipStatus: string) {
+  const colors: Record<string, string> = {
+    '': 'gray',
+    'not_shipped': 'gray',
+    'partial_shipped': 'orange',
+    'fully_shipped': 'green',
+  }
+  return colors[shipStatus] || 'gray'
+}
+
+function getShipStatusText(shipStatus: string) {
+  const texts: Record<string, string> = {
+    '': '未发货',
+    'not_shipped': '未发货',
+    'partial_shipped': '部分发货',
+    'fully_shipped': '全部发货',
+  }
+  return texts[shipStatus] || '未发货'
+}
+
+function handleViewPayment(record: any) {
+  router.push(`/supplier/order/detail/${record.id}`)
 }
 
 function handleViewAfterSales(record: any) {

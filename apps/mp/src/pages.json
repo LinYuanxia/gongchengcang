@@ -209,6 +209,12 @@
       "style": {
         "navigationBarTitleText": "登录"
       }
+    },
+    {
+      "path": "pages/construction/invoice",
+      "style": {
+        "navigationBarTitleText": "发票管理"
+      }
     }
   ],
   "globalStyle": {

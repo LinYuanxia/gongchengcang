@@ -25,9 +25,17 @@
               <component :is="getIcon(menu.meta?.icon)" />
             </template>
             <template #title>{{ menu.meta?.title }}</template>
-            <a-menu-item v-for="child in menu.children" :key="child.name">
-              {{ child.meta?.title }}
-            </a-menu-item>
+            <template v-for="child in menu.children" :key="child.name">
+              <a-sub-menu v-if="child.children?.length" :key="child.name">
+                <template #title>{{ child.meta?.title }}</template>
+                <a-menu-item v-for="grandchild in child.children" :key="grandchild.name">
+                  {{ grandchild.meta?.title }}
+                </a-menu-item>
+              </a-sub-menu>
+              <a-menu-item v-else :key="child.name">
+                {{ child.meta?.title }}
+              </a-menu-item>
+            </template>
           </a-sub-menu>
           <a-menu-item v-else :key="menu.name">
             <template #icon>
@@ -156,8 +164,8 @@ const iconMap: Record<string, any> = {
 }
 
 function getIcon(iconName?: string) {
-  if (!iconName) return null
-  return iconMap[iconName] || null
+  if (!iconName) return undefined
+  return (iconMap as any)[iconName] || undefined
 }
 
 const router = useRouter()
@@ -167,13 +175,23 @@ const appStore = useAppStore()
 const selectedKeys = ref<string[]>([])
 const openKeys = ref<string[]>([])
 
-const menuList = computed(() => {
+interface MenuItem {
+  name: string
+  path: string
+  meta?: { title?: string; icon?: string; hidden?: boolean; hideInMenu?: boolean }
+  children?: MenuItem[]
+}
+
+const menuList = computed<MenuItem[]>(() => {
   const layoutRoute = router.options.routes.find((r: RouteRecordRaw) => r.path === '/warehouse')
   const children = layoutRoute?.children?.filter((r: RouteRecordRaw) => !r.meta?.hidden && !r.meta?.hideInMenu) || []
   return children.map((menu: RouteRecordRaw) => ({
     ...menu,
-    children: menu.children?.filter((c: RouteRecordRaw) => !c.meta?.hidden && !c.meta?.hideInMenu) || []
-  }))
+    children: menu.children?.filter((c: RouteRecordRaw) => !c.meta?.hidden && !c.meta?.hideInMenu).map((c: RouteRecordRaw) => ({
+      ...c,
+      children: c.children?.filter((g: RouteRecordRaw) => !g.meta?.hidden && !g.meta?.hideInMenu) || []
+    })) || []
+  })) as unknown as MenuItem[]
 })
 
 const breadcrumbs = computed(() => {
@@ -185,10 +203,10 @@ watch(
   (name) => {
     if (name) {
       selectedKeys.value = [name as string]
-      const parent = route.matched[route.matched.length - 2]
-      if (parent) {
-        openKeys.value = [parent.name as string]
-      }
+      openKeys.value = route.matched
+        .slice(1, -1)
+        .map(r => r.name as string)
+        .filter(Boolean)
     }
   },
   { immediate: true }
