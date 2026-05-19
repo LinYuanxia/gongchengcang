@@ -220,7 +220,8 @@
                     <span class="qty-btn" @click="decreaseBatchQty(batch.id, p.productId)">-</span>
                     <input 
                       type="number" 
-                      v-model="getBatchQty(batch.id, p.productId)"
+                      :value="getBatchQty(batch.id, p.productId)"
+                      @input="setBatchQty(batch.id, p.productId, Number(($event.target as HTMLInputElement).value))"
                       min="0"
                       :max="p.stock"
                     />

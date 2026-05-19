@@ -102,7 +102,7 @@
             <a-descriptions-item label="开户时间">
               {{ accountInfo.createTime }}
             </a-descriptions-item>
-            <a-desquisitions-item label="最后变动时间">
+            <a-descriptions-item label="最后变动时间">
               {{ accountInfo.lastActivityTime }}
             </a-descriptions-item>
             <a-descriptions-item label="关联商户">
@@ -467,7 +467,8 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive } from 'vue'
-import { Message, useRouter } from '@arco-design/web-vue'
+import { Message } from '@arco-design/web-vue'
+import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
