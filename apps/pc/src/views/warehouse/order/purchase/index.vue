@@ -83,6 +83,9 @@
         <a-tab-pane key="cancelled">
           <template #title>已取消 ({{ getStatusCount('cancelled') }})</template>
         </a-tab-pane>
+        <a-tab-pane key="rejected">
+          <template #title>已驳回 ({{ getStatusCount('rejected') }})</template>
+        </a-tab-pane>
       </a-tabs>
 
       <a-table :data="filteredOrders" :pagination="pagination" :row-key="(record: any) => record.id">
@@ -710,6 +713,7 @@ function getStatusColor(status: string) {
     receiving: 'cyan',
     completed: 'green',
     cancelled: 'gray',
+    rejected: 'red',
     refunded: 'red',
   }
   return colors[status] || 'gray'
@@ -722,6 +726,7 @@ function getStatusText(status: string) {
     receiving: '待收货',
     completed: '已完成',
     cancelled: '已取消',
+    rejected: '已驳回',
     refunded: '已退款',
   }
   return texts[status] || status

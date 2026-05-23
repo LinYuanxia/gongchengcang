@@ -41,6 +41,11 @@
         <a-descriptions-item label="实付金额">¥{{ paidAmount.toLocaleString() }}</a-descriptions-item>
         <a-descriptions-item label="创建时间">{{ order.createTime }}</a-descriptions-item>
         <a-descriptions-item label="支付时间">{{ order.paymentTime || '-' }}</a-descriptions-item>
+        <a-descriptions-item label="订单备注" :span="4">
+          <a-tooltip :content="order.remark || '-'">
+            <span>{{ order.remark || '-' }}</span>
+          </a-tooltip>
+        </a-descriptions-item>
       </a-descriptions>
 
       <a-divider />
@@ -67,27 +72,39 @@
       <h3>商品信息</h3>
       <a-table :data="order.items" :pagination="false">
         <template #columns>
-          <a-table-column title="商品名称" data-index="productName" :width="200" />
-          <a-table-column title="规格" data-index="spec" :width="120" />
-          <a-table-column title="单位" data-index="unit" :width="80" />
-          <a-table-column title="购买数量" data-index="quantity" :width="100" align="right" />
-          <a-table-column title="待发数量" :width="100" align="right">
+          <a-table-column title="商品名称" data-index="productName" :width="160" />
+          <a-table-column title="规格" data-index="spec" :width="100" />
+          <a-table-column title="单位" data-index="unit" :width="70" />
+          <a-table-column title="供应商接单状态" :width="120">
+            <template #cell="{ record }">
+              <a-tag :color="getSupplierStatusColor(record.supplierStatus)">
+                {{ getSupplierStatusText(record.supplierStatus) }}
+              </a-tag>
+            </template>
+          </a-table-column>
+          <a-table-column title="购买数量" data-index="quantity" :width="90" align="right" />
+          <a-table-column title="确认数量" :width="90" align="right">
+            <template #cell="{ record }">
+              <span style="color: #00b42a;">{{ record.confirmedQuantity || 0 }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="待发数量" :width="90" align="right">
             <template #cell="{ record }">
               <span :style="{ color: '#86909c' }">
-                {{ record.quantity - (record.shippedQuantity || 0) }}
+                {{ (record.confirmedQuantity || 0) - (record.shippedQuantity || 0) }}
               </span>
             </template>
           </a-table-column>
-          <a-table-column title="已收数量" :width="100" align="right">
+          <a-table-column title="已收数量" :width="90" align="right">
             <template #cell="{ record }">
-              <span :style="{ color: '#00b42a' }">
+              <span style="color: #00b42a;">
                 {{ record.receivedQuantity || 0 }}
               </span>
             </template>
           </a-table-column>
-          <a-table-column title="货损数量" :width="100" align="right">
+          <a-table-column title="货损数量" :width="90" align="right">
             <template #cell="{ record }">
-              <span :style="{ color: '#f53f3f' }">
+              <span style="color: #f53f3f;">
                 {{ record.damageQuantity || 0 }}
               </span>
             </template>
@@ -99,18 +116,28 @@
           </a-table-column>
           <a-table-column title="金额" :width="120" align="right">
             <template #cell="{ record }">
-              <span style="color: #165dff; font-weight: 600;">¥{{ (record.quantity * record.price)?.toLocaleString() }}</span>
+              <span style="color: #165dff; font-weight: 600;">¥{{ ((record.confirmedQuantity || record.quantity) * record.price)?.toLocaleString() }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="备注" :width="160">
+            <template #cell="{ record }">
+              <a-tooltip :content="record.supplierRemark || '-'">
+                <span class="remark-text">{{ record.supplierRemark || '-' }}</span>
+              </a-tooltip>
             </template>
           </a-table-column>
         </template>
       </a-table>
 
-      <a-descriptions :column="4" bordered size="small" style="margin-top: 16px;">
+      <a-descriptions :column="5" bordered size="small" style="margin-top: 16px;">
         <a-descriptions-item label="商品数">
           <strong style="color: #165dff;">{{ order.items.length }} 种</strong>
         </a-descriptions-item>
         <a-descriptions-item label="购买量">
           <strong style="color: #165dff;">{{ totalQuantity }}</strong>
+        </a-descriptions-item>
+        <a-descriptions-item label="确认量">
+          <strong style="color: #00b42a;">{{ confirmedQuantity }}</strong>
         </a-descriptions-item>
         <a-descriptions-item label="订单金额">
           <strong style="color: #165dff;">¥{{ order.totalAmount?.toLocaleString() }}</strong>
@@ -119,21 +146,6 @@
           <strong style="color: #00b42a;">¥{{ paidAmount.toLocaleString() }}</strong>
         </a-descriptions-item>
       </a-descriptions>
-
-      <a-divider />
-
-      <h3>发货记录</h3>
-      <a-table :data="shipments" :pagination="false">
-        <template #columns>
-          <a-table-column title="发货单号" data-index="shipmentNo" :width="160" />
-          <a-table-column title="发货时间" data-index="shipTime" :width="160" />
-          <a-table-column title="操作" :width="80">
-            <template #cell="{ record }">
-              <a-link @click="handleViewShipment(record)">查看</a-link>
-            </template>
-          </a-table-column>
-        </template>
-      </a-table>
 
       <a-divider />
 
@@ -690,6 +702,7 @@ const order = ref<any>({
   paymentTime: '2024-01-15 16:30:00',
   confirmTime: '2024-01-15 14:30:00',
   confirmRemark: '水泥目前库存紧张，正在加急生产，预计3天内可补发',
+  remark: '请优先安排C30混凝土和螺纹钢的发货，水泥可以稍后',
   afterSalesNos: ['AS202401200001', 'AS202401250002'],
   receiverName: '张工',
   receiverPhone: '13800138001',
@@ -701,6 +714,7 @@ const order = ref<any>({
       spec: 'C30',
       unit: 'm³',
       quantity: 100,
+      supplierStatus: 'confirmed',
       confirmedQuantity: 100,
       supplierRemark: '',
       shippedQuantity: 80,
@@ -714,6 +728,7 @@ const order = ref<any>({
       spec: 'Φ20',
       unit: '吨',
       quantity: 50,
+      supplierStatus: 'confirmed',
       confirmedQuantity: 40,
       supplierRemark: '部分缺货，后续优先安排',
       shippedQuantity: 40,
@@ -727,6 +742,7 @@ const order = ref<any>({
       spec: 'P.O42.5',
       unit: '吨',
       quantity: 20,
+      supplierStatus: 'unavailable',
       confirmedQuantity: 15,
       supplierRemark: '库存不足',
       shippedQuantity: 15,
@@ -964,6 +980,10 @@ const totalQuantity = computed(() => {
   return order.value.items?.reduce((sum, item: any) => sum + item.quantity, 0) || 0
 })
 
+const confirmedQuantity = computed(() => {
+  return order.value.items?.reduce((sum, item: any) => sum + (item.confirmedQuantity || 0), 0) || 0
+})
+
 const payableAmount = computed(() => {
   return order.value.totalAmount || 0
 })
@@ -1020,7 +1040,7 @@ function getStatusColor(status: string) {
 
 function getStatusText(status: string) {
   const texts: Record<string, string> = {
-    pending: '待供应商确认',
+    pending: '待确认',
     shipping: '待发货',
     receiving: '待收货',
     completed: '已完成',
@@ -1083,6 +1103,23 @@ function getShipmentReceiveText(status: string) {
     pending: '待收货',
     partial: '部分收货',
     received: '已收货',
+  }
+  return texts[status] || status
+}
+
+// 供应商接单状态
+function getSupplierStatusColor(status: string) {
+  const colors: Record<string, string> = {
+    confirmed: 'green',    // 已确认供货
+    unavailable: 'red',   // 暂无供货
+  }
+  return colors[status] || 'gray'
+}
+
+function getSupplierStatusText(status: string) {
+  const texts: Record<string, string> = {
+    confirmed: '通过',
+    unavailable: '暂无供货',
   }
   return texts[status] || status
 }
@@ -1263,11 +1300,6 @@ async function handleReceiveConfirm() {
 
 function cancelReceive() {
   receiveModalVisible.value = false
-}
-
-function handleViewShipment(record: any) {
-  currentShipment.value = record
-  shipmentDetailVisible.value = true
 }
 
 function handleViewInbound(record: any) {
@@ -1501,5 +1533,14 @@ function handleApplyAfterSales() {
 .voucher-preview {
   text-align: center;
   padding: 16px;
+}
+
+.remark-text {
+  display: inline-block;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #86909c;
 }
 </style>
