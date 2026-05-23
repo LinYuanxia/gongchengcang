@@ -45,13 +45,20 @@ import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 interface PrdItem {
-  reqId: number
-  moduleName: string
+  title?: string
+  reqId?: number
+  moduleName?: string
   content: string
 }
 
-const route = useRoute()
+const props = withDefaults(defineProps<{
+  items?: PrdItem[]
+}>(), {
+  items: () => []
+})
+
 const visible = ref(false)
+const route = useRoute()
 
 const prdDatabase: Record<string, { name: string; items: PrdItem[] }> = {
 
@@ -513,13 +520,23 @@ function matchPrd(path: string) {
 }
 
 const currentPageName = computed(() => {
+  if (props.items && props.items.length > 0) {
+    return '当前页面'
+  }
   const prd = matchPrd(route.path || '')
   return prd?.name || route.path || '当前页面'
 })
 
 const currentPrdItems = computed(() => {
-  const prd = matchPrd(route.path || '')
-  return prd?.items || []
+  const sourceItems = props.items && props.items.length > 0
+    ? props.items
+    : (matchPrd(route.path || '')?.items || [])
+
+  return sourceItems.map((item, index) => ({
+    reqId: item.reqId ?? index + 1,
+    moduleName: item.moduleName || item.title || '',
+    content: item.content
+  }))
 })
 
 const openPanel = () => {

@@ -15,4 +15,8 @@ app.use(ArcoVueIcon)
 app.use(pinia)
 app.use(router)
 
+app.config.errorHandler = (err) => {
+  console.warn('[Vue Error]', (err as Error).message)
+}
+
 app.mount('#app')

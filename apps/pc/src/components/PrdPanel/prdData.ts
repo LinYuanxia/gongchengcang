@@ -350,7 +350,7 @@ export const supplierPrdModules: PrdModule[] = [
     docUrl: '/gongchengcang/prd-docs/supplier/05-工作台与商户中心功能设计.md',
     icon: 'icon-home',
     priority: 'P1',
-    description: '供应商端工作台仪表盘与商户中心，包含数据概览、主体信息管理、合同列表等功能',
+    description: '供应商端工作台仪表盘与商户中心，含欢迎横幅/4个指标卡片/待处理事项/快捷入口/平台公告，商户信息只读展示+合同管理+资质管理',
   },
   {
     id: '06',
@@ -359,7 +359,7 @@ export const supplierPrdModules: PrdModule[] = [
     docUrl: '/gongchengcang/prd-docs/supplier/06-商品中心功能设计.md',
     icon: 'icon-apps',
     priority: 'P0',
-    description: '供应商端商品中心，包含商品列表/新增/编辑/详情/上下架/库存查询/库存流水等7个功能点',
+    description: '供应商端商品中心（含商品录入），SPU/SKU双视图+分类树+批量上下架+供货状态管理+审核追踪+从平台库选择',
   },
   {
     id: '07',
@@ -368,7 +368,7 @@ export const supplierPrdModules: PrdModule[] = [
     docUrl: '/gongchengcang/prd-docs/supplier/07-订单管理功能设计.md',
     icon: 'icon-file',
     priority: 'P0',
-    description: '供应商端订单管理（核心模块），包含订单列表/详情/确认/取消/发货/打印/售后补发等12个功能点',
+    description: '供应商端订单管理（核心模块），含审核支付/确认接单/分批发货/自配送/导出待发货单/开具发票/5Tab详情',
   },
   {
     id: '08',
@@ -377,7 +377,7 @@ export const supplierPrdModules: PrdModule[] = [
     docUrl: '/gongchengcang/prd-docs/supplier/08-财务中心功能设计.md',
     icon: 'icon-money-collect',
     priority: 'P1',
-    description: '供应商端财务管理，包含发票管理(列表/新增/关联/详情/下载)、待结算、结算单等7个功能点',
+    description: '供应商端财务管理，含资金托管/待结算/结算单/票据管理/支付记录/银行对账/凭证管理/发票管理/API对接9个子模块',
   },
   {
     id: '09',
@@ -386,7 +386,7 @@ export const supplierPrdModules: PrdModule[] = [
     docUrl: '/gongchengcang/prd-docs/supplier/09-系统设置功能设计.md',
     icon: 'icon-settings',
     priority: 'P1',
-    description: '供应商端系统管理，包含账号列表、员工管理、角色列表、权限配置等4个功能点',
+    description: '供应商端系统管理，含员工管理（部门/职位筛选）、账号管理（重置密码/启用禁用/删除）、角色管理（权限树/系统角色保护）',
   },
   {
     id: '10',
@@ -405,6 +405,15 @@ export const supplierPrdModules: PrdModule[] = [
     icon: 'icon-file',
     priority: '操作手册',
     description: '供应商端系统操作手册，面向最终用户的完整使用指南，覆盖工作台/商品/订单/财务/系统设置五大模块',
+  },
+  {
+    id: '12',
+    name: '工程仓配置',
+    docFile: '12-工程仓配置功能设计.md',
+    docUrl: '/gongchengcang/prd-docs/supplier/12-工程仓配置功能设计.md',
+    icon: 'icon-storage',
+    priority: 'P1',
+    description: '供应商与工程仓之间的供货关系配置，支持按供应商/按工程仓双视图查看，3步向导批量建立配置关系',
   },
 ]
 

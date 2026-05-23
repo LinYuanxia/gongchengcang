@@ -48,6 +48,12 @@
               <a-descriptions-item label="发票号码">
                 {{ invoiceData.invoiceNo || '-' }}
               </a-descriptions-item>
+              <a-descriptions-item label="发票抬头">
+                {{ invoiceData.invoiceTitle || '-' }}
+              </a-descriptions-item>
+              <a-descriptions-item label="纳税人识别号">
+                {{ invoiceData.taxNumber || '-' }}
+              </a-descriptions-item>
               <a-descriptions-item label="开票日期">
                 {{ invoiceData.invoiceDate || '-' }}
               </a-descriptions-item>
@@ -185,6 +191,8 @@ interface InvoiceRecord {
   abnormalReason?: string
   invoiceNo?: string
   invoiceDate?: string
+  invoiceTitle?: string
+  taxNumber?: string
   invoiceUrl?: string
   creatorName: string
   createdAt: string
@@ -210,6 +218,8 @@ const invoiceData = ref<InvoiceRecord>({
   pendingAmount: 0,
   status: 'unissued',
   complianceStatus: 'normal',
+  invoiceTitle: '',
+  taxNumber: '',
   creatorName: '',
   createdAt: '',
   updatedAt: '',
@@ -309,6 +319,8 @@ onMounted(() => {
     pendingAmount: 15000,
     status: 'unissued',
     complianceStatus: 'normal',
+    invoiceTitle: '深圳建筑工程有限公司',
+    taxNumber: '91440300MA5GXXXXXX',
     creatorName: '供应商A',
     createdAt: '2024-03-25 09:00:00',
     updatedAt: '2024-03-25 09:00:00',

@@ -1,250 +1,354 @@
 <template>
-  <div class="order-detail">
-    <a-page-header
-      :title="`订单详情 - ${order.orderNo}`"
-      @back="handleBack"
-    >
+  <div class="page-container">
+    <a-card :bordered="false">
+      <template #title>
+        <a-space>
+          <a-button type="text" @click="handleBack">
+            <template #icon><icon-left /></template>
+          </a-button>
+          <span>订单详情</span>
+        </a-space>
+      </template>
       <template #extra>
         <a-space>
-          <a-button type="primary" status="warning" @click="handleReissue">
-            <template #icon><icon-refresh /></template>
-            补发商品
+          <a-button
+            v-if="order.status === 'pending'"
+            type="primary"
+            status="success"
+            @click="handleConfirm"
+          >
+            <template #icon><icon-check-circle /></template>
+            订单确认
           </a-button>
-          <a-button v-if="order.status === 'confirmed' || order.shipStatus === 'partial'" type="primary" @click="handleShip">
+          <a-button
+            v-if="hasPendingPaymentRecords"
+            type="primary"
+            status="warning"
+            @click="handleAuditPayment"
+          >
+            <template #icon><icon-safe /></template>
+            审核支付
+          </a-button>
+          <a-button
+            v-if="order.status === 'confirmed'"
+            type="primary"
+            @click="handleExportPending"
+          >
+            <template #icon><icon-download /></template>
+            导出待发货单
+          </a-button>
+          <a-button
+            v-if="order.status === 'confirmed' || order.shipStatus === 'partial'"
+            type="primary"
+            @click="handleShip"
+          >
             <template #icon><icon-send /></template>
             {{ order.shipStatus === 'partial' ? '继续发货' : '发货' }}
           </a-button>
-          <a-button v-if="allShipmentRecords.length > 0" @click="handleViewLogistics">
-            <template #icon><icon-location /></template>
-            物流跟踪
-          </a-button>
-          <a-button v-if="order.status !== 'refunded' && order.status !== 'cancelled'" type="primary" status="danger" @click="handleApplyRefund">
-            <template #icon><icon-refund /></template>
-            申请退款
-          </a-button>
-        </a-space>
-      </template>
-    </a-page-header>
-
-    <a-card class="mt-16">
-      <a-descriptions :column="4" bordered>
-        <a-descriptions-item label="订单编号">{{ order.orderNo }}</a-descriptions-item>
-        <a-descriptions-item label="采购方">{{ order.warehouseName }}</a-descriptions-item>
-        <a-descriptions-item label="订单金额">
-          <span class="amount">¥{{ order.totalAmount?.toLocaleString() }}</span>
-        </a-descriptions-item>
-        <a-descriptions-item label="订单状态">
-          <a-tag :color="getStatusColor(order.status)">
-            {{ getStatusText(order.status) }}
-          </a-tag>
-        </a-descriptions-item>
-        <a-descriptions-item label="支付状态">
-          <a-tag :color="getPaymentStatusColor(order.paymentStatus)">
-            {{ getPaymentStatusText(order.paymentStatus) }}
-          </a-tag>
-        </a-descriptions-item>
-        <a-descriptions-item label="发货状态">
-          <a-tag :color="getShipStatusColor(order.shipStatus)">
-            {{ getShipStatusText(order.shipStatus) }}
-          </a-tag>
-        </a-descriptions-item>
-        <a-descriptions-item label="创建时间">{{ order.createTime }}</a-descriptions-item>
-        <a-descriptions-item label="支付时间">{{ order.paymentTime || '-' }}</a-descriptions-item>
-      </a-descriptions>
-    </a-card>
-
-    <a-card title="商品信息" class="mt-16">
-      <template #extra>
-        <a-tag color="green">确认供货：{{ order.items?.filter((i: any) => i.confirmStatus === 'accept' || !i.confirmStatus).length }} 种</a-tag>
-        <a-tag color="red" style="margin-left: 8px">无法供货：{{ order.items?.filter((i: any) => i.confirmStatus === 'reject').length }} 种</a-tag>
-      </template>
-      <a-table :data="order.items" :pagination="false">
-        <template #columns>
-          <a-table-column title="商品名称" data-index="productName" :width="200" />
-          <a-table-column title="规格" data-index="spec" :width="120" />
-          <a-table-column title="单位" data-index="unit" :width="80" />
-          <a-table-column title="采购数量" data-index="quantity" :width="100" align="right" />
-          <a-table-column title="接单状态" :width="120">
-            <template #cell="{ record }">
-              <a-tag v-if="record.confirmStatus === 'reject'" color="red">无法供货</a-tag>
-              <a-tag v-else color="green">确认供货</a-tag>
-            </template>
-          </a-table-column>
-          <a-table-column title="无法供货原因" :width="150">
-            <template #cell="{ record }">
-              <span v-if="record.confirmStatus === 'reject'" class="text-danger">
-                {{ getRejectReasonText(record.rejectReason) }}
-              </span>
-              <span v-else class="text-disabled">-</span>
-            </template>
-          </a-table-column>
-          <a-table-column title="预计发货时间" :width="140">
-            <template #cell="{ record }">
-              <span v-if="record.confirmStatus !== 'reject'">{{ record.estimatedShipDate || '-' }}</span>
-              <span v-else class="text-disabled">-</span>
-            </template>
-          </a-table-column>
-          <a-table-column title="已发货数量" :width="120" align="right" v-if="order.shipStatus !== 'pending'">
-            <template #cell="{ record }">
-              <span v-if="record.confirmStatus !== 'reject'" :class="record.shippedQuantity < record.quantity ? 'text-warning' : 'text-success'">
-                {{ record.shippedQuantity || 0 }}
-              </span>
-              <span v-else class="text-disabled">-</span>
-            </template>
-          </a-table-column>
-          <a-table-column title="待发货数量" :width="120" align="right" v-if="order.shipStatus !== 'pending'">
-            <template #cell="{ record }">
-              <span v-if="record.confirmStatus !== 'reject'" class="text-danger">{{ record.quantity - (record.shippedQuantity || 0) }}</span>
-              <span v-else class="text-disabled">-</span>
-            </template>
-          </a-table-column>
-          <a-table-column title="单价" :width="100" align="right">
-            <template #cell="{ record }">
-              ¥{{ record.price?.toLocaleString() }}
-            </template>
-          </a-table-column>
-          <a-table-column title="金额" :width="120" align="right">
-            <template #cell="{ record }">
-              ¥{{ (record.quantity * record.price)?.toLocaleString() }}
-            </template>
-          </a-table-column>
-          <a-table-column title="备注" :width="150">
-            <template #cell="{ record }">
-              {{ record.remark || '-' }}
-            </template>
-          </a-table-column>
-        </template>
-      </a-table>
-    </a-card>
-
-    <a-card title="发货记录" class="mt-16">
-      <template #extra>
-        <a-space>
           <a-button type="primary" status="warning" @click="handleReissue">
             <template #icon><icon-refresh /></template>
             补发商品
           </a-button>
-          <a-button v-if="order.shipStatus === 'partial'" type="primary" @click="handleShip">
-            继续发货
-          </a-button>
         </a-space>
       </template>
 
-      <a-table :data="allShipmentRecords" :pagination="false">
-        <template #columns>
-          <a-table-column title="类型" :width="80">
-            <template #cell="{ record }">
-              <a-tag v-if="record.type === 'reissue'" color="orange">补发</a-tag>
-              <a-tag v-else color="blue">正常发货</a-tag>
+      <a-skeleton v-if="pageLoading" :animation="true">
+        <a-skeleton-line :rows="1" style="height: 80px; margin-bottom: 16px" />
+        <a-skeleton-line :rows="1" style="height: 120px; margin-bottom: 16px" />
+        <a-skeleton-line :rows="1" style="height: 300px; margin-bottom: 16px" />
+      </a-skeleton>
+
+      <template v-if="!pageLoading">
+      <a-descriptions :column="4" bordered size="small">
+        <a-descriptions-item label="订单编号">{{ order.orderNo }}</a-descriptions-item>
+        <a-descriptions-item label="采购方">{{ order.warehouseName }}</a-descriptions-item>
+        <a-descriptions-item label="订单状态">
+          <a-tag :color="getStatusColor(order.status)">{{ getStatusText(order.status) }}</a-tag>
+        </a-descriptions-item>
+        <a-descriptions-item label="订单金额">
+          <span class="text-primary">¥{{ order.totalAmount?.toLocaleString() }}</span>
+        </a-descriptions-item>
+        <a-descriptions-item label="支付状态">
+          <a-tag :color="getPaymentStatusColor(order.paymentStatus)">{{ getPaymentStatusText(order.paymentStatus) }}</a-tag>
+        </a-descriptions-item>
+        <a-descriptions-item label="发货状态">
+          <a-tag :color="getShipStatusColor(order.shipStatus)">{{ getShipStatusText(order.shipStatus) }}</a-tag>
+        </a-descriptions-item>
+        <a-descriptions-item label="创建时间">{{ order.createTime }}</a-descriptions-item>
+        <a-descriptions-item label="付款时间">{{ order.paymentTime || '-' }}</a-descriptions-item>
+      </a-descriptions>
+
+      <a-divider />
+
+      <a-row :gutter="24">
+        <a-col :span="24">
+          <a-card :bordered="true" size="small">
+            <template #title>
+              <icon-user /> 买方信息（工程仓）
             </template>
-          </a-table-column>
-          <a-table-column title="发货单号" data-index="shipmentNo" :width="180" />
-          <a-table-column title="发货时间" data-index="shipTime" :width="160" />
-          <a-table-column title="物流公司" data-index="logisticsCompany" :width="120" />
-          <a-table-column title="物流单号" :width="180">
-            <template #cell="{ record }">
-              <a-link @click="handleTrackLogistics(record)">{{ record.logisticsNo }}</a-link>
+            <a-descriptions :column="2" size="small">
+              <a-descriptions-item label="采购方名称">{{ order.warehouseName }}</a-descriptions-item>
+              <a-descriptions-item label="联系人">{{ order.buyerContact || '-' }}</a-descriptions-item>
+              <a-descriptions-item label="联系电话">{{ order.buyerPhone || '-' }}</a-descriptions-item>
+              <a-descriptions-item label="收货地址">{{ order.buyerAddress || order.warehouseName || '-' }}</a-descriptions-item>
+            </a-descriptions>
+          </a-card>
+        </a-col>
+      </a-row>
+
+      <a-divider />
+
+      <a-tabs v-model:active-key="activeTab">
+        <a-tab-pane key="products" title="商品明细">
+          <a-table :data="order.items" :pagination="false">
+            <template #columns>
+              <a-table-column title="商品名称" data-index="productName" :width="200" />
+              <a-table-column title="规格" data-index="spec" :width="120" />
+              <a-table-column title="单位" data-index="unit" :width="60" align="center" />
+              <a-table-column title="采购数量" data-index="quantity" :width="80" align="center" />
+              <a-table-column title="单价" :width="100" align="right">
+                <template #cell="{ record }">
+                  ¥{{ record.price?.toLocaleString() }}
+                </template>
+              </a-table-column>
+              <a-table-column title="小计" :width="120" align="right">
+                <template #cell="{ record }">
+                  <span class="text-primary">¥{{ (record.quantity * record.price)?.toLocaleString() }}</span>
+                </template>
+              </a-table-column>
+              <a-table-column title="接单状态" :width="100" align="center">
+                <template #cell="{ record }">
+                  <a-tag v-if="record.confirmStatus === 'reject'" color="red">无法供货</a-tag>
+                  <a-tag v-else color="green">确认供货</a-tag>
+                </template>
+              </a-table-column>
+              <a-table-column title="已发货数量" :width="100" align="center">
+                <template #cell="{ record }">
+                  <span :class="record.shippedQuantity === record.quantity ? 'text-success' : 'text-warning'">
+                    {{ record.shippedQuantity || 0 }} / {{ record.quantity }}
+                  </span>
+                </template>
+              </a-table-column>
+              <a-table-column title="备注" data-index="remark" :width="150" ellipsis>
+                <template #cell="{ record }">
+                  {{ record.remark || '-' }}
+                </template>
+              </a-table-column>
             </template>
-          </a-table-column>
-          <a-table-column title="发货数量" :width="100" align="right">
-            <template #cell="{ record }">
-              {{ record.items?.reduce((sum: number, item: any) => sum + item.quantity, 0) }}
+          </a-table>
+
+          <div class="order-summary">
+            <div class="summary-row">
+              <span class="summary-label">商品金额</span>
+              <span class="summary-value">¥{{ formatAmount(order.productAmount || order.totalAmount) }}</span>
+            </div>
+            <div class="summary-row" v-if="order.discountAmount > 0">
+              <span class="summary-label">优惠金额</span>
+              <span class="summary-value text-danger">-¥{{ formatAmount(order.discountAmount) }}</span>
+            </div>
+            <div class="summary-row" v-if="order.taxAmount > 0">
+              <span class="summary-label">税费</span>
+              <span class="summary-value">¥{{ formatAmount(order.taxAmount) }}</span>
+            </div>
+            <a-divider style="margin: 12px 0" />
+            <div class="summary-row total">
+              <span class="summary-label">订单总额</span>
+              <span class="summary-value total-amount">¥{{ formatAmount(order.totalAmount) }}</span>
+            </div>
+            <div class="summary-row" v-if="paidAmount > 0">
+              <span class="summary-label">已支付</span>
+              <span class="summary-value text-success">¥{{ formatAmount(paidAmount) }}</span>
+            </div>
+            <div class="summary-row" v-if="unpaidAmount > 0">
+              <span class="summary-label">待支付</span>
+              <span class="summary-value text-warning">¥{{ formatAmount(unpaidAmount) }}</span>
+            </div>
+          </div>
+        </a-tab-pane>
+
+        <a-tab-pane key="shipments" title="发货记录">
+          <template #extra>
+            <a-space>
+              <a-button type="primary" status="warning" size="small" @click="handleReissue">
+                <template #icon><icon-refresh /></template>
+                补发商品
+              </a-button>
+              <a-button v-if="order.shipStatus === 'partial'" type="primary" size="small" @click="handleShip">
+                继续发货
+              </a-button>
+            </a-space>
+          </template>
+
+          <a-table :data="allShipmentRecords" :pagination="false">
+            <template #columns>
+              <a-table-column title="发货单号" data-index="shipmentNo" :width="180" />
+              <a-table-column title="发货时间" data-index="shipTime" :width="160" />
+              <a-table-column title="发货数量" :width="100" align="right">
+                <template #cell="{ record }">
+                  {{ record.items?.reduce((sum: number, item: any) => sum + item.quantity, 0) }}
+                </template>
+              </a-table-column>
+              <a-table-column title="发货状态" :width="100">
+                <template #cell="{ record }">
+                  <a-tag :color="getShipmentStatusColor(record.status)">
+                    {{ getShipmentStatusText(record.status) }}
+                  </a-tag>
+                </template>
+              </a-table-column>
+              <a-table-column title="备注" data-index="remark" :width="150" ellipsis />
+              <a-table-column title="操作" :width="100" fixed="right">
+                <template #cell="{ record }">
+                  <a-link @click="handleViewShipment(record)">详情</a-link>
+                </template>
+              </a-table-column>
             </template>
-          </a-table-column>
-          <a-table-column title="补发原因" :width="150">
-            <template #cell="{ record }">
-              {{ record.reissueReason ? getReissueReasonText(record.reissueReason) : '-' }}
+          </a-table>
+        </a-tab-pane>
+
+        <a-tab-pane key="payments" title="付款记录">
+          <template #extra>
+            <div class="pay-summary">
+              <span>订单金额：<strong>¥{{ order.totalAmount?.toLocaleString() }}</strong></span>
+              <span class="paid">已到账：<strong>¥{{ paidAmount.toLocaleString() }}</strong></span>
+              <span class="unpaid">待结算：<strong>¥{{ unpaidAmount.toLocaleString() }}</strong></span>
+            </div>
+          </template>
+
+          <a-table :data="paymentRecords" :pagination="false">
+            <template #columns>
+              <a-table-column title="付款单号" data-index="paymentNo" :width="160" />
+              <a-table-column title="付款金额" :width="120" align="right">
+                <template #cell="{ record }">
+                  <strong>¥{{ record.amount.toLocaleString() }}</strong>
+                </template>
+              </a-table-column>
+              <a-table-column title="付款方式" :width="100">
+                <template #cell="{ record }">
+                  <a-tag color="blue">银行转账</a-tag>
+                </template>
+              </a-table-column>
+              <a-table-column title="转账凭证" :width="120">
+                <template #cell="{ record }">
+                  <a-link v-if="record.voucher" @click="handleViewVoucher(record)">
+                    <icon-file /> 查看凭证
+                  </a-link>
+                  <span v-else>-</span>
+                </template>
+              </a-table-column>
+              <a-table-column title="到账时间" data-index="payTime" :width="160" />
+              <a-table-column title="备注" data-index="remark" :width="200" />
+              <a-table-column title="状态" :width="100">
+                <template #cell="{ record }">
+                  <a-tag color="green">已确认</a-tag>
+                </template>
+              </a-table-column>
             </template>
-          </a-table-column>
-          <a-table-column title="发货状态" :width="100">
-            <template #cell="{ record }">
-              <a-tag :color="getShipmentStatusColor(record.status)">
-                {{ getShipmentStatusText(record.status) }}
-              </a-tag>
+          </a-table>
+        </a-tab-pane>
+
+        <a-tab-pane key="invoice" title="发票信息">
+          <a-card :bordered="true" size="small" style="margin-bottom: 16px">
+            <template #title>
+              <icon-file /> 发票信息
             </template>
-          </a-table-column>
-          <a-table-column title="备注" data-index="remark" :width="150" ellipsis />
-          <a-table-column title="操作" :width="150" fixed="right">
-            <template #cell="{ record }">
+            <template #extra>
               <a-space>
-                <a-link @click="handleTrackLogistics(record)">物流跟踪</a-link>
-                <a-link @click="handleViewShipment(record)">详情</a-link>
+                <a-button v-if="order.status === 'completed' && (!order.invoice || order.invoice.status !== 'issued')" type="primary" size="small" @click="handleOpenInvoice">
+                  开具发票
+                </a-button>
+                <a-button v-if="order.invoice && order.invoice.status === 'issued'" type="outline" size="small" @click="handleDownloadInvoice">
+                  下载发票
+                </a-button>
+                <a-button type="text" size="small" @click="handleViewInvoiceList">
+                  <template #icon><icon-list /></template>
+                  发票列表
+                </a-button>
               </a-space>
             </template>
-          </a-table-column>
-        </template>
-      </a-table>
-    </a-card>
+            <a-empty v-if="!order.invoice" description="暂未开具发票">
+              <template #description>
+                <div>订单完成后可开具发票</div>
+              </template>
+            </a-empty>
+            <a-descriptions :column="3" bordered v-if="order.invoice">
+              <a-descriptions-item label="发票状态">
+                <a-tag color="green">已开具</a-tag>
+              </a-descriptions-item>
+              <a-descriptions-item label="发票类型">{{ order.invoice.invoiceTypeText }}</a-descriptions-item>
+              <a-descriptions-item label="发票号码">{{ order.invoice.invoiceNo }}</a-descriptions-item>
+              <a-descriptions-item label="发票代码">{{ order.invoice.invoiceCode || '-' }}</a-descriptions-item>
+              <a-descriptions-item label="开票日期">{{ order.invoice.invoiceDate }}</a-descriptions-item>
+              <a-descriptions-item label="价税合计">¥{{ order.invoice.invoiceAmount?.toLocaleString() }}</a-descriptions-item>
+              <a-descriptions-item label="税率">{{ order.invoice.taxRate }}</a-descriptions-item>
+              <a-descriptions-item label="开票方式">{{ order.invoice.issueTypeText }}</a-descriptions-item>
+              <a-descriptions-item label="备注" :span="3">{{ order.invoice.remark || '-' }}</a-descriptions-item>
+            </a-descriptions>
+          </a-card>
+        </a-tab-pane>
 
-    <a-alert type="info" class="mt-16">
-      <template #message>
-        <icon-info-circle />
-        <span>【支付与发货解耦】：支付状态不影响发货流程，发货无需等待支付完成，但订单最终完成前需结清全部款项。当前支持分批支付</span>
+        <a-tab-pane key="aftersale" title="售后记录">
+          <a-card :bordered="true" size="small">
+            <template #title>
+              <icon-history /> 售后记录
+            </template>
+            <a-table :data="afterSaleRecords" :pagination="false">
+              <template #columns>
+                <a-table-column title="售后单号" data-index="afterSaleNo" :width="200">
+                  <template #cell="{ record }">
+                    <a-link @click="handleViewAfterSaleDetail(record)">{{ record.afterSaleNo }}</a-link>
+                  </template>
+                </a-table-column>
+                <a-table-column title="关联订单" :width="200">
+                  <template #cell="{ record }">
+                    <span v-if="record.refOrderNos && record.refOrderNos.length > 0">
+                      <a-link v-for="(orderNo, idx) in record.refOrderNos" :key="idx" @click="handleViewRefOrder(orderNo)" style="margin-right: 8px">{{ orderNo }}</a-link>
+                    </span>
+                    <span v-else>-</span>
+                  </template>
+                </a-table-column>
+              </template>
+            </a-table>
+            <a-empty v-if="afterSaleRecords.length === 0" description="暂无售后记录" />
+          </a-card>
+        </a-tab-pane>
+
+        <a-tab-pane key="logs" title="操作记录">
+          <a-timeline>
+            <a-timeline-item v-for="(log, index) in order.logs" :key="index" :label="log.time">
+              {{ log.content }}
+            </a-timeline-item>
+          </a-timeline>
+        </a-tab-pane>
+      </a-tabs>
       </template>
-    </a-alert>
-
-    <a-card title="付款记录" class="mt-16">
-      <template #extra>
-        <div class="pay-summary">
-          <span>订单金额：<strong>¥{{ order.totalAmount?.toLocaleString() }}</strong></span>
-          <span class="paid">已到账：<strong>¥{{ paidAmount.toLocaleString() }}</strong></span>
-          <span class="unpaid">待结算：<strong>¥{{ unpaidAmount.toLocaleString() }}</strong></span>
-        </div>
-      </template>
-
-      <a-table :data="paymentRecords" :pagination="false">
-        <template #columns>
-          <a-table-column title="付款单号" data-index="paymentNo" :width="160" />
-          <a-table-column title="付款金额" :width="120" align="right">
-            <template #cell="{ record }">
-              <strong>¥{{ record.amount.toLocaleString() }}</strong>
-            </template>
-          </a-table-column>
-          <a-table-column title="付款方式" :width="100">
-            <template #cell="{ record }">
-              <a-tag color="blue">银行转账</a-tag>
-            </template>
-          </a-table-column>
-          <a-table-column title="转账凭证" :width="120">
-            <template #cell="{ record }">
-              <a-link v-if="record.voucher" @click="handleViewVoucher(record)">
-                <icon-file /> 查看凭证
-              </a-link>
-              <span v-else>-</span>
-            </template>
-          </a-table-column>
-          <a-table-column title="到账时间" data-index="payTime" :width="160" />
-          <a-table-column title="备注" data-index="remark" :width="200" />
-          <a-table-column title="状态" :width="100">
-            <template #cell="{ record }">
-              <a-tag color="green">已确认</a-tag>
-            </template>
-          </a-table-column>
-        </template>
-      </a-table>
     </a-card>
-
-    <a-modal
-      v-model:visible="voucherVisible"
-      title="转账凭证"
-      :width="500"
-      :footer="false"
-    >
-      <div class="voucher-preview">
-        <img src="https://picsum.photos/400/500" style="width: 100%; border-radius: 4px" />
-      </div>
-    </a-modal>
 
     <a-modal
       v-model:visible="reissueModalVisible"
       title="补发商品"
-      :width="800"
-      @ok="handleReissueSubmit"
-      @cancel="reissueModalVisible = false"
+      :width="1100"
+      :footer="false"
     >
       <a-alert type="warning" style="margin-bottom: 16px">
         补发用于处理运输破损、数量损耗等场景，补发记录将关联至原订单
       </a-alert>
+
+      <a-descriptions :column="3" bordered size="small" style="margin-bottom: 16px">
+        <a-descriptions-item label="订单编号">{{ order.orderNo }}</a-descriptions-item>
+        <a-descriptions-item label="采购方">{{ order.warehouseName }}</a-descriptions-item>
+        <a-descriptions-item label="要求交货日期">{{ order.deliveryDate || '-' }}</a-descriptions-item>
+      </a-descriptions>
+
+      <a-divider>收货信息</a-divider>
+
+      <a-descriptions :column="3" bordered size="small" style="margin-bottom: 16px">
+        <a-descriptions-item label="收货人">{{ order.receiverName || '张工' }}</a-descriptions-item>
+        <a-descriptions-item label="联系电话">{{ order.receiverPhone || '13800138000' }}</a-descriptions-item>
+        <a-descriptions-item label="收货仓库">{{ order.warehouseName }}</a-descriptions-item>
+        <a-descriptions-item label="收货地址" :span="3">{{ order.buyerAddress || order.warehouseName }}</a-descriptions-item>
+      </a-descriptions>
+
+      <a-divider>补发商品</a-divider>
 
       <a-form :model="reissueForm" layout="vertical">
         <a-form-item label="补发原因" required>
@@ -260,17 +364,25 @@
         <a-form-item label="选择补发商品" required>
           <a-table :data="reissueForm.items" :pagination="false">
             <template #columns>
-              <a-table-column title="商品名称" data-index="productName" :width="200" />
-              <a-table-column title="规格" data-index="spec" :width="120" />
-              <a-table-column title="已发货数量" :width="100" align="right" />
-              <a-table-column title="补发数量" :width="150" align="right">
+              <a-table-column title="商品名称" :width="180">
+                <template #cell="{ record }">
+                  <div>{{ record.productName }}</div>
+                  <div style="color: #86909c; font-size: 12px;">{{ record.spec }}</div>
+                </template>
+              </a-table-column>
+              <a-table-column title="单位" data-index="unit" :width="60" align="center" />
+              <a-table-column title="已发货数量" :width="100" align="right">
+                <template #cell="{ record }">{{ record.shippedQuantity || 0 }}</template>
+              </a-table-column>
+              <a-table-column title="补发数量" :width="140" align="center">
                 <template #cell="{ record }">
                   <a-input-number
                     v-model="record.reissueQuantity"
                     :min="0"
                     :max="record.quantity"
                     :precision="0"
-                    style="width: 120px"
+                    size="small"
+                    style="width: 100px"
                     placeholder="补发数量"
                   />
                 </template>
@@ -279,293 +391,171 @@
           </a-table>
         </a-form-item>
 
-        <a-divider>物流信息（选填）</a-divider>
+        <a-divider>物流信息</a-divider>
 
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-form-item label="物流公司">
-              <a-select v-model="reissueForm.logisticsCompany" placeholder="请选择物流公司（选填）" style="width: 100%" allow-clear>
+        <a-form-item label="是否有物流">
+          <a-radio-group v-model="reissueForm.hasLogistics">
+            <a-radio :value="true">是</a-radio>
+            <a-radio :value="false">否（自提/无需物流）</a-radio>
+          </a-radio-group>
+        </a-form-item>
+
+        <template v-if="reissueForm.hasLogistics">
+          <a-form-item
+            v-for="(logistics, index) in reissueForm.logisticsList"
+            :key="index"
+            :label="`物流 ${Number(index) + 1}`"
+          >
+            <a-space style="width: 100%">
+              <a-select v-model="logistics.company" placeholder="物流公司" style="width: 150px">
                 <a-option value="顺丰速运">顺丰速运</a-option>
                 <a-option value="京东物流">京东物流</a-option>
                 <a-option value="中通快递">中通快递</a-option>
                 <a-option value="圆通速递">圆通速递</a-option>
-                <a-option value="德邦快递">德邦快递</a-option>
+                <a-option value="申通快递">申通快递</a-option>
+                <a-option value="韵达快递">韵达快递</a-option>
+                <a-option value="EMS">EMS</a-option>
               </a-select>
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item label="物流单号">
-              <a-input v-model="reissueForm.logisticsNo" placeholder="请输入物流单号（选填）" />
-            </a-form-item>
-          </a-col>
-        </a-row>
+              <a-input v-model="logistics.no" placeholder="物流单号" style="width: 200px" />
+              <a-button v-if="reissueForm.logisticsList.length > 1" status="danger" @click="reissueForm.logisticsList.splice(index, 1)">
+                删除
+              </a-button>
+            </a-space>
+          </a-form-item>
+
+          <a-form-item>
+            <a-button type="outline" @click="reissueForm.logisticsList.push({ company: '', no: '' })">
+              <template #icon><icon-plus /></template>
+              添加物流
+            </a-button>
+          </a-form-item>
+        </template>
 
         <a-form-item label="补发备注">
-          <a-textarea v-model="reissueForm.remark" placeholder="详细说明补发原因及处理方案" :max-length="200" />
+          <a-textarea v-model="reissueForm.remark" placeholder="详细说明补发原因及处理方案" :max-length="200" :rows="2" />
         </a-form-item>
       </a-form>
-    </a-modal>
 
-    <a-card title="发票信息" class="mt-16">
-      <template #extra>
-        <a-button 
-          v-if="order.status === 'completed' && (!order.invoice || order.invoice.status !== 'issued')" 
-          type="primary" 
-          @click="handleOpenInvoice"
-        >
-          <template #icon><icon-file-add /></template>
-          开具发票
-        </a-button>
-        <a-space v-if="order.invoice && order.invoice.status === 'issued'">
-          <a-button size="small" @click="handleDownloadInvoice">
-            <template #icon><icon-download /></template>
-            下载发票
-          </a-button>
+      <div style="text-align: right; margin-top: 16px">
+        <a-space>
+          <a-button @click="reissueModalVisible = false">取消</a-button>
+          <a-button type="primary" status="warning" @click="handleReissueSubmit">提交补发</a-button>
         </a-space>
-      </template>
-
-      <a-empty v-if="!order.invoice" description="暂未开具发票">
-        <template #description>
-          <div>订单完成后可开具发票</div>
-        </template>
-      </a-empty>
-
-      <a-descriptions :column="3" bordered v-if="order.invoice">
-        <a-descriptions-item label="发票状态">
-          <a-tag color="green">已开具</a-tag>
-        </a-descriptions-item>
-        <a-descriptions-item label="发票类型">{{ order.invoice.invoiceTypeText }}</a-descriptions-item>
-        <a-descriptions-item label="发票号码">{{ order.invoice.invoiceNo }}</a-descriptions-item>
-        <a-descriptions-item label="发票代码">{{ order.invoice.invoiceCode || '-' }}</a-descriptions-item>
-        <a-descriptions-item label="开票日期">{{ order.invoice.invoiceDate }}</a-descriptions-item>
-        <a-descriptions-item label="价税合计">¥{{ order.invoice.invoiceAmount?.toLocaleString() }}</a-descriptions-item>
-        <a-descriptions-item label="税率">{{ order.invoice.taxRate }}</a-descriptions-item>
-        <a-descriptions-item label="开票方式">{{ order.invoice.issueTypeText }}</a-descriptions-item>
-        <a-descriptions-item label="备注" :span="3">{{ order.invoice.remark || '-' }}</a-descriptions-item>
-      </a-descriptions>
-    </a-card>
-
-    <a-card title="退款记录" class="mt-16">
-      <template #extra>
-        <a-button type="primary" status="danger" @click="handleApplyRefund">
-          <template #icon><icon-refund /></template>
-          申请退款
-        </a-button>
-      </template>
-
-      <a-empty v-if="refundRecords.length === 0" description="暂无退款记录" />
-
-      <a-table :data="refundRecords" :pagination="false" v-else>
-        <template #columns>
-          <a-table-column title="退款单号" :width="180">
-            <template #cell="{ record }">
-              <a-link @click="handleViewRefundDetail(record)">{{ record.refundNo }}</a-link>
-            </template>
-          </a-table-column>
-          <a-table-column title="退款类型" :width="100">
-            <template #cell="{ record }">
-              {{ getRefundTypeText(record.type) }}
-            </template>
-          </a-table-column>
-          <a-table-column title="退款状态" :width="100">
-            <template #cell="{ record }">
-              <a-tag :color="getRefundStatusColor(record.status)">
-                {{ getRefundStatusText(record.status) }}
-              </a-tag>
-            </template>
-          </a-table-column>
-          <a-table-column title="退款商品" :width="200">
-            <template #cell="{ record }">
-              <div class="text-truncate" :title="record.items?.map((i: any) => i.productName).join('、')">
-                {{ record.items?.map((i: any) => i.productName).join('、') || '-' }}
-              </div>
-            </template>
-          </a-table-column>
-          <a-table-column title="退款金额" :width="120" align="right">
-            <template #cell="{ record }">
-              <span class="text-danger">¥{{ record.totalRefundAmount?.toLocaleString() }}</span>
-            </template>
-          </a-table-column>
-          <a-table-column title="申请时间" data-index="createTime" :width="160" />
-          <a-table-column title="操作" :width="100">
-            <template #cell="{ record }">
-              <a-link @click="handleViewRefundDetail(record)">详情</a-link>
-            </template>
-          </a-table-column>
-        </template>
-      </a-table>
-    </a-card>
-
-    <a-modal
-      v-model:visible="refundModalVisible"
-      title="申请退款"
-      :width="800"
-      @ok="handleRefundSubmit"
-      @cancel="refundModalVisible = false"
-    >
-      <a-alert type="warning" style="margin-bottom: 16px">
-        退款申请提交后将进入审批流程，请如实填写退款原因
-      </a-alert>
-
-      <a-form :model="refundForm" layout="vertical">
-        <a-form-item label="退款类型" required>
-          <a-radio-group v-model="refundForm.type">
-            <a-radio value="quantity">数量损耗</a-radio>
-            <a-radio value="quality">质量问题</a-radio>
-            <a-radio value="miss">错发漏发</a-radio>
-            <a-radio value="price">价格差异</a-radio>
-            <a-radio value="other">其他原因</a-radio>
-          </a-radio-group>
-        </a-form-item>
-
-        <a-form-item label="选择退款商品">
-          <a-table :data="refundForm.items" :pagination="false">
-            <template #columns>
-              <a-table-column title="商品名称" data-index="productName" :width="200" />
-              <a-table-column title="规格" data-index="spec" :width="120" />
-              <a-table-column title="订购数量" :width="100" align="right" />
-              <a-table-column title="单价" :width="100" align="right">
-                <template #cell="{ record }">
-                  ¥{{ record.price?.toLocaleString() }}
-                </template>
-              </a-table-column>
-              <a-table-column title="退款数量" :width="150" align="right">
-                <template #cell="{ record }">
-                  <a-input-number
-                    v-model="record.refundQuantity"
-                    :min="0"
-                    :max="record.quantity"
-                    :precision="0"
-                    style="width: 120px"
-                    placeholder="退款数量"
-                    @change="calcRefundAmount"
-                  />
-                </template>
-              </a-table-column>
-              <a-table-column title="退款金额" :width="150" align="right">
-                <template #cell="{ record }">
-                  <a-input-number
-                    v-model="record.refundAmount"
-                    :min="0"
-                    :precision="2"
-                    style="width: 120px"
-                    placeholder="退款金额"
-                  />
-                </template>
-              </a-table-column>
-            </template>
-          </a-table>
-        </a-form-item>
-
-        <a-form-item label="退款总金额">
-          <span class="text-danger text-xl">¥{{ totalRefundAmount.toLocaleString() }}</span>
-        </a-form-item>
-
-        <a-form-item label="退款原因" required>
-          <a-textarea v-model="refundForm.reason" placeholder="详细说明退款原因" :max-length="500" :rows="3" />
-        </a-form-item>
-
-        <a-form-item label="备注说明">
-          <a-textarea v-model="refundForm.remark" placeholder="其他补充说明（选填）" :max-length="200" />
-        </a-form-item>
-      </a-form>
+      </div>
     </a-modal>
-
-    <a-card title="操作日志" class="mt-16">
-      <a-timeline>
-        <a-timeline-item v-for="(log, index) in order.logs" :key="index" :label="log.time">
-          {{ log.content }}
-        </a-timeline-item>
-      </a-timeline>
-    </a-card>
 
     <a-modal
       v-model:visible="shipModalVisible"
       title="发货"
-      :width="800"
-      @ok="handleShipConfirm"
-      @cancel="cancelShip"
+      :width="1100"
+      :footer="false"
     >
       <a-alert type="info" style="margin-bottom: 16px">
-        <template #message>
-          <div>支持分批发货，可选择部分商品发货</div>
-        </template>
+        请填写发货信息，支持多次发货。已发货商品无需重复发货。
       </a-alert>
 
-      <a-form :model="shipForm" layout="vertical">
-        <a-form-item label="发货商品" required>
-          <a-table :data="shipForm.items" :pagination="false">
-            <template #columns>
-              <a-table-column title="商品名称" data-index="productName" :width="200" />
-              <a-table-column title="规格" data-index="spec" :width="120" />
-              <a-table-column title="待发货数量" :width="120" align="right">
-                <template #cell="{ record }">
-                  <span class="text-danger">{{ record.pendingQuantity }}</span>
-                </template>
-              </a-table-column>
-              <a-table-column title="本次发货数量" :width="150" align="right">
-                <template #cell="{ record }">
-                  <a-input-number
-                    v-model="record.shipQuantity"
-                    :min="0"
-                    :max="record.pendingQuantity"
-                    :precision="0"
-                    style="width: 120px"
-                  />
-                </template>
-              </a-table-column>
+      <a-descriptions :column="3" bordered size="small" style="margin-bottom: 16px">
+        <a-descriptions-item label="订单编号">{{ order.orderNo }}</a-descriptions-item>
+        <a-descriptions-item label="采购方">{{ order.warehouseName }}</a-descriptions-item>
+        <a-descriptions-item label="要求交货日期">{{ order.deliveryDate || '-' }}</a-descriptions-item>
+      </a-descriptions>
+
+      <a-divider>收货信息</a-divider>
+
+      <a-descriptions :column="3" bordered size="small" style="margin-bottom: 16px">
+        <a-descriptions-item label="收货人">{{ order.receiverName || '张工' }}</a-descriptions-item>
+        <a-descriptions-item label="联系电话">{{ order.receiverPhone || '13800138000' }}</a-descriptions-item>
+        <a-descriptions-item label="收货仓库">{{ order.warehouseName }}</a-descriptions-item>
+        <a-descriptions-item label="收货地址" :span="3">{{ order.buyerAddress || order.warehouseName }}</a-descriptions-item>
+      </a-descriptions>
+
+      <a-divider>发货商品</a-divider>
+
+      <a-table :data="shipForm.items" :pagination="false">
+        <template #columns>
+          <a-table-column title="商品名称" :width="180">
+            <template #cell="{ record }">
+              <div>{{ record.productName }}</div>
+              <div style="color: #86909c; font-size: 12px;">{{ record.spec }}</div>
             </template>
-          </a-table>
+          </a-table-column>
+          <a-table-column title="单位" data-index="unit" :width="60" align="center" />
+          <a-table-column title="购买数量" :width="80" align="right">
+            <template #cell="{ record }">{{ record.quantity }}</template>
+          </a-table-column>
+          <a-table-column title="待发货数量" :width="100" align="right">
+            <template #cell="{ record }">
+              <span style="color: #ff7d00; font-weight: 600;">{{ record.pendingShipQuantity }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="本次发货数量" :width="140" align="center">
+            <template #cell="{ record }">
+              <a-input-number
+                v-model="record.shipQuantity"
+                :min="0"
+                :max="record.pendingShipQuantity"
+                :precision="0"
+                size="small"
+                style="width: 100px"
+              />
+            </template>
+          </a-table-column>
+        </template>
+      </a-table>
+
+      <a-divider>物流信息</a-divider>
+
+      <a-form :model="shipForm" layout="vertical">
+        <a-form-item label="是否有物流">
+          <a-radio-group v-model="shipForm.hasLogistics">
+            <a-radio :value="true">是</a-radio>
+            <a-radio :value="false">否（自配送）</a-radio>
+          </a-radio-group>
         </a-form-item>
 
-        <a-divider>物流信息（选填）</a-divider>
+        <template v-if="shipForm.hasLogistics">
+          <a-form-item
+            v-for="(logistics, index) in shipForm.logisticsList"
+            :key="index"
+            :label="`物流 ${index + 1}`"
+          >
+            <a-space style="width: 100%">
+              <a-select v-model="logistics.company" placeholder="物流公司" style="width: 150px">
+                <a-option value="顺丰速运">顺丰速运</a-option>
+                <a-option value="京东物流">京东物流</a-option>
+                <a-option value="中通快递">中通快递</a-option>
+                <a-option value="圆通速递">圆通速递</a-option>
+                <a-option value="申通快递">申通快递</a-option>
+                <a-option value="韵达快递">韵达快递</a-option>
+                <a-option value="EMS">EMS</a-option>
+              </a-select>
+              <a-input v-model="logistics.no" placeholder="物流单号" style="width: 200px" />
+              <a-button v-if="shipForm.logisticsList.length > 1" status="danger" @click="removeLogistics(index)">
+                删除
+              </a-button>
+            </a-space>
+          </a-form-item>
 
-        <a-form-item label="物流公司">
-          <a-select v-model="shipForm.logisticsCompany" placeholder="请选择物流公司（选填）" style="width: 300px" allow-clear>
-            <a-option value="顺丰速运">顺丰速运</a-option>
-            <a-option value="中通快递">中通快递</a-option>
-            <a-option value="圆通速递">圆通速递</a-option>
-            <a-option value="韵达快递">韵达快递</a-option>
-            <a-option value="申通快递">申通快递</a-option>
-            <a-option value="京东物流">京东物流</a-option>
-            <a-option value="德邦快递">德邦快递</a-option>
-          </a-select>
-        </a-form-item>
-
-        <a-form-item label="物流单号">
-          <a-input v-model="shipForm.logisticsNo" placeholder="请输入物流单号（选填）" style="width: 300px" />
-          <a-button type="text" @click="handleAddLogistics" style="margin-left: 8px">
-            <template #icon><icon-plus /></template>
-            添加物流单号
-          </a-button>
-        </a-form-item>
-
-        <div v-if="shipForm.additionalLogistics.length > 0" style="margin-bottom: 16px">
-          <div v-for="(logistics, index) in shipForm.additionalLogistics" :key="index" style="margin-bottom: 8px">
-            <a-select v-model="logistics.company" placeholder="物流公司" style="width: 150px; margin-right: 8px">
-              <a-option value="顺丰速运">顺丰速运</a-option>
-              <a-option value="中通快递">中通快递</a-option>
-              <a-option value="圆通速递">圆通速递</a-option>
-              <a-option value="韵达快递">韵达快递</a-option>
-              <a-option value="申通快递">申通快递</a-option>
-              <a-option value="京东物流">京东物流</a-option>
-              <a-option value="德邦快递">德邦快递</a-option>
-            </a-select>
-            <a-input v-model="logistics.no" placeholder="物流单号" style="width: 200px; margin-right: 8px" />
-            <a-button type="text" status="danger" @click="handleRemoveLogistics(index)">
-              <template #icon><icon-delete /></template>
+          <a-form-item>
+            <a-button type="outline" @click="addLogistics">
+              <template #icon><icon-plus /></template>
+              添加物流
             </a-button>
-          </div>
-        </div>
+          </a-form-item>
+        </template>
 
         <a-form-item label="发货备注">
-          <a-textarea
-            v-model="shipForm.remark"
-            placeholder="请输入发货备注（选填）"
-            :max-length="200"
-          />
+          <a-textarea v-model="shipForm.remark" placeholder="发货备注（选填）" :max-length="200" :rows="2" />
         </a-form-item>
       </a-form>
+
+      <div style="text-align: right; margin-top: 16px">
+        <a-space>
+          <a-button @click="shipModalVisible = false">取消</a-button>
+          <a-button @click="handleShipPartial">本次发货</a-button>
+          <a-button type="primary" status="success" @click="handleShipAll">已全部发货</a-button>
+        </a-space>
+      </div>
     </a-modal>
 
     <a-modal
@@ -717,47 +707,348 @@
     </a-modal>
 
     <a-modal
-      v-model:visible="shipmentDetailVisible"
-      title="发货单详情"
-      :width="700"
+      v-model:visible="voucherVisible"
+      title="转账凭证"
+      :width="500"
       :footer="false"
     >
-      <a-descriptions :column="2" bordered>
-        <a-descriptions-item label="发货单号">{{ currentShipment.shipmentNo }}</a-descriptions-item>
-        <a-descriptions-item label="发货时间">{{ currentShipment.shipTime }}</a-descriptions-item>
-        <a-descriptions-item label="物流公司">{{ currentShipment.logisticsCompany }}</a-descriptions-item>
-        <a-descriptions-item label="物流单号">{{ currentShipment.logisticsNo }}</a-descriptions-item>
-        <a-descriptions-item label="发货状态">
-          <a-tag :color="getShipmentStatusColor(currentShipment.status)">
-            {{ getShipmentStatusText(currentShipment.status) }}
-          </a-tag>
-        </a-descriptions-item>
-        <a-descriptions-item label="发货人">{{ currentShipment.operator }}</a-descriptions-item>
-        <a-descriptions-item label="备注" :span="2">{{ currentShipment.remark || '-' }}</a-descriptions-item>
+      <div class="voucher-preview">
+        <img src="https://picsum.photos/400/500" style="width: 100%; border-radius: 4px" />
+      </div>
+    </a-modal>
+
+    <a-modal
+      v-model:visible="shipmentDetailVisible"
+      title="发货详情"
+      :width="1100"
+      :footer="false"
+    >
+      <a-alert type="info" style="margin-bottom: 16px">
+        <template #message>
+          发货单号：{{ currentShipment.shipmentNo }} | 发货时间：{{ currentShipment.shipTime }}
+        </template>
+      </a-alert>
+
+      <a-divider>订单信息</a-divider>
+
+      <a-descriptions :column="3" bordered size="small" style="margin-bottom: 16px">
+        <a-descriptions-item label="订单编号">{{ order.orderNo }}</a-descriptions-item>
+        <a-descriptions-item label="采购方">{{ order.warehouseName }}</a-descriptions-item>
+        <a-descriptions-item label="要求交货日期">{{ order.deliveryDate || '-' }}</a-descriptions-item>
       </a-descriptions>
 
-      <a-divider />
+      <a-divider>收货信息</a-divider>
 
-      <h4>发货商品</h4>
-      <a-table :data="currentShipment.items" :pagination="false">
+      <a-descriptions :column="3" bordered size="small" style="margin-bottom: 16px">
+        <a-descriptions-item label="收货人">{{ order.receiverName || '张工' }}</a-descriptions-item>
+        <a-descriptions-item label="联系电话">{{ order.receiverPhone || '13800138000' }}</a-descriptions-item>
+        <a-descriptions-item label="收货仓库">{{ order.warehouseName }}</a-descriptions-item>
+        <a-descriptions-item label="收货地址" :span="3">{{ order.buyerAddress || order.warehouseName }}</a-descriptions-item>
+      </a-descriptions>
+
+      <a-divider>发货商品</a-divider>
+
+      <a-table :data="currentShipment.items" :pagination="false" style="margin-bottom: 16px">
         <template #columns>
-          <a-table-column title="商品名称" data-index="productName" />
-          <a-table-column title="规格" data-index="spec" />
-          <a-table-column title="发货数量" data-index="quantity" align="right" />
+          <a-table-column title="商品名称" :width="180">
+            <template #cell="{ record }">
+              <div>{{ record.productName }}</div>
+              <div style="color: #86909c; font-size: 12px;">{{ record.spec }}</div>
+            </template>
+          </a-table-column>
+          <a-table-column title="单位" :width="60" align="center">
+            <template #cell="{ record }">{{ record.unit || '件' }}</template>
+          </a-table-column>
+          <a-table-column title="购买数量" :width="90" align="right">
+            <template #cell="{ record }">{{ record.purchaseQuantity }}</template>
+          </a-table-column>
+          <a-table-column title="待发货数量" :width="100" align="right">
+            <template #cell="{ record }">
+              <span style="color: #ff7d00; font-weight: 600;">{{ record.pendingShipQuantity }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="本次发货数量" :width="110" align="right">
+            <template #cell="{ record }">{{ record.quantity }}</template>
+          </a-table-column>
         </template>
       </a-table>
+
+      <a-divider>物流信息</a-divider>
+
+      <a-descriptions :column="2" size="small" style="margin-bottom: 16px">
+        <a-descriptions-item label="物流公司">
+          {{ currentShipment.logisticsCompany || '-' }}
+        </a-descriptions-item>
+        <a-descriptions-item label="物流单号">
+          <span>{{ currentShipment.logisticsNo || '-' }}</span>
+        </a-descriptions-item>
+      </a-descriptions>
+
+      <a-form>
+        <a-form-item label="发货备注">
+          <span>{{ currentShipment.remark || '无' }}</span>
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <a-modal
+      v-model:visible="confirmVisible"
+      title="订单确认"
+      :width="1100"
+      :footer="false"
+    >
+      <div style="margin-bottom: 16px; color: #333; font-size: 14px;">
+        请确认订单商品信息，可对每个商品填写可供应数量和备注说明。
+      </div>
+
+      <a-descriptions :column="3" bordered size="small" style="margin-bottom: 16px">
+        <a-descriptions-item label="订单编号">{{ order.orderNo }}</a-descriptions-item>
+        <a-descriptions-item label="采购方">{{ order.warehouseName }}</a-descriptions-item>
+        <a-descriptions-item label="订单金额">¥{{ order.totalAmount?.toLocaleString() }}</a-descriptions-item>
+        <a-descriptions-item label="收货地址" :span="3">{{ order.buyerAddress || order.warehouseName }}</a-descriptions-item>
+      </a-descriptions>
+
+      <a-divider>商品清单</a-divider>
+
+      <a-table :data="confirmItems" :pagination="false">
+        <template #columns>
+          <a-table-column title="是否接单" :width="100" align="center">
+            <template #cell="{ record }">
+              <a-radio-group v-model="record.accepted" size="small" @change="(val: boolean) => handleAcceptChange(record, val)">
+                <a-radio :value="true" style="font-size: 12px;">接单</a-radio>
+                <a-radio :value="false" style="font-size: 12px;">不接单</a-radio>
+              </a-radio-group>
+            </template>
+          </a-table-column>
+          <a-table-column title="商品名称" :width="160">
+            <template #cell="{ record }">
+              <div>{{ record.productName }}</div>
+              <div style="color: #86909c; font-size: 12px;">{{ record.spec }}</div>
+            </template>
+          </a-table-column>
+          <a-table-column title="采购数量" :width="80" align="center">
+            <template #cell="{ record }">{{ record.quantity }} {{ record.unit || '件' }}</template>
+          </a-table-column>
+          <a-table-column title="可供应数量" :width="110" align="center">
+            <template #cell="{ record }">
+              <a-input-number
+                v-model="record.supplyQuantity"
+                :min="0"
+                :max="record.quantity"
+                :precision="0"
+                size="small"
+                style="width: 90px"
+                :disabled="!record.accepted"
+              />
+            </template>
+          </a-table-column>
+          <a-table-column title="供应不足原因" :width="180">
+            <template #cell="{ record }">
+              <a-input
+                v-if="record.accepted && record.supplyQuantity < record.quantity"
+                v-model="record.shortageReason"
+                size="small"
+                placeholder="请填写供应不足原因"
+                :max-length="50"
+              />
+              <span v-else-if="record.accepted && record.supplyQuantity >= record.quantity" style="color: #00b42a;">充足</span>
+              <span v-else style="color: #86909c;">-</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="单价" :width="100" align="right">
+            <template #cell="{ record }">¥{{ record.unitPrice?.toLocaleString() || '-' }}</template>
+          </a-table-column>
+          <a-table-column title="金额" :width="120" align="right">
+            <template #cell="{ record }">
+              <span class="text-danger">¥{{ (record.accepted ? (record.supplyQuantity || 0) * (record.unitPrice || 0) : 0).toLocaleString() || '-' }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="备注" :width="160">
+            <template #cell="{ record }">
+              <a-input
+                v-model="record.remark"
+                size="small"
+                placeholder="商品备注（选填）"
+                :max-length="100"
+                :disabled="!record.accepted"
+              />
+            </template>
+          </a-table-column>
+        </template>
+      </a-table>
+
+      <a-form :model="confirmForm" layout="vertical" style="margin-top: 16px">
+        <a-form-item label="订单备注">
+          <a-textarea v-model="confirmForm.remark" placeholder="订单备注说明（选填）" :max-length="200" />
+        </a-form-item>
+      </a-form>
+
+      <div style="text-align: right; margin-top: 16px; border-top: 1px solid #e5e6eb; padding-top: 16px;">
+        <a-space>
+          <a-button @click="confirmVisible = false">取消</a-button>
+          <a-button status="danger" @click="handleRejectOrder">驳回订单</a-button>
+          <a-button type="primary" @click="handleConfirmSubmit">确认接单</a-button>
+        </a-space>
+      </div>
+    </a-modal>
+
+    <a-modal
+      v-model:visible="auditPaymentVisible"
+      title="审核支付凭证"
+      :width="800"
+      :footer="false"
+    >
+      <a-descriptions :column="3" bordered size="small" style="margin-bottom: 16px">
+        <a-descriptions-item label="订单编号">{{ order.orderNo }}</a-descriptions-item>
+        <a-descriptions-item label="采购方">{{ order.warehouseName }}</a-descriptions-item>
+        <a-descriptions-item label="订单金额">
+          <span style="color: #165dff; font-weight: 600;">¥{{ order.totalAmount?.toLocaleString() }}</span>
+        </a-descriptions-item>
+        <a-descriptions-item label="已付金额">
+          <span style="color: #00b42a; font-weight: 600;">¥{{ paidAmount.toLocaleString() }}</span>
+        </a-descriptions-item>
+        <a-descriptions-item label="待付金额">
+          <span style="color: #ff7d00; font-weight: 600;">¥{{ unpaidAmount.toLocaleString() }}</span>
+        </a-descriptions-item>
+        <a-descriptions-item label="待审核笔数">
+          <a-tag color="orange">{{ paymentRecords.filter((r: any) => r.status === 'pending').length }} 笔</a-tag>
+        </a-descriptions-item>
+      </a-descriptions>
+
+      <a-divider>转账凭证记录</a-divider>
+
+      <a-table
+        :data="paymentRecords.filter((r: any) => r.status !== 'rejected')"
+        :pagination="false"
+        style="margin-bottom: 16px"
+      >
+        <template #columns>
+          <a-table-column title="支付流水号" data-index="paymentNo" :width="180" />
+          <a-table-column title="转账金额" :width="140" align="right">
+            <template #cell="{ record }">
+              <span style="color: #f53f3f; font-weight: 600;">¥{{ record.amount.toLocaleString() }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="审核状态" :width="100">
+            <template #cell="{ record }">
+              <a-tag :color="getPaymentStatusColor(record.status)">
+                {{ getPaymentStatusText(record.status) }}
+              </a-tag>
+            </template>
+          </a-table-column>
+          <a-table-column title="转账时间" data-index="payTime" :width="160" />
+          <a-table-column title="操作" :width="120">
+            <template #cell="{ record }">
+              <a-button
+                type="text"
+                size="small"
+                @click="handleViewVoucher(record)"
+                v-if="record.voucher"
+              >
+                查看凭证
+              </a-button>
+              <span v-else style="color: #86909c;">-</span>
+            </template>
+          </a-table-column>
+        </template>
+      </a-table>
+
+      <a-divider>审核操作</a-divider>
+
+      <a-form :model="auditPaymentForm" layout="vertical">
+        <a-form-item label="收款确认" required>
+          <a-radio-group v-model="auditPaymentForm.result">
+            <a-radio value="partial">部分收款（确认已收到的金额）</a-radio>
+            <a-radio value="full">全部收款（确认支付完成）</a-radio>
+          </a-radio-group>
+        </a-form-item>
+        <a-form-item label="确认收款金额" v-if="auditPaymentForm.result === 'partial'" required>
+          <a-input-number
+            v-model="auditPaymentForm.confirmedAmount"
+            :min="0"
+            :max="paymentRecords.filter((r: any) => r.status === 'pending').reduce((sum: number, r: any) => sum + r.amount, 0)"
+            :precision="2"
+            style="width: 200px"
+          />
+          <span style="margin-left: 8px; color: #86909c;">元</span>
+        </a-form-item>
+        <a-form-item label="备注">
+          <a-textarea v-model="auditPaymentForm.remark" placeholder="审核备注（选填）" :max-length="200" />
+        </a-form-item>
+      </a-form>
+
+      <div style="text-align: right; margin-top: 16px">
+        <a-space>
+          <a-button @click="auditPaymentVisible = false">取消</a-button>
+          <a-button type="primary" @click="handleAuditPaymentSubmit">确认审核</a-button>
+        </a-space>
+      </div>
+    </a-modal>
+
+    <a-modal
+      v-model:visible="exportPendingVisible"
+      title="导出待发货单"
+      :width="1400"
+      :footer="false"
+    >
+      <a-table :data="exportPendingData" :pagination="{ pageSize: 10 }" row-key="id">
+        <template #columns>
+          <a-table-column title="订单编号" data-index="orderNo" :width="140" />
+          <a-table-column title="采购方" data-index="warehouseName" :width="140" />
+          <a-table-column title="收货人" data-index="receiverName" :width="100" />
+          <a-table-column title="手机号" data-index="receiverPhone" :width="120" />
+          <a-table-column title="收货地址" :width="200">
+            <template #cell="{ record }">
+              <span style="color: #86909c;">{{ record.address }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="商品名称" data-index="productName" :width="150" />
+          <a-table-column title="规格" data-index="specification" :width="120" />
+          <a-table-column title="单位" data-index="unit" :width="60" align="center" />
+          <a-table-column title="订购数量" :width="100" align="center">
+            <template #cell="{ record }">{{ record.orderQuantity }}</template>
+          </a-table-column>
+          <a-table-column title="待发货数量" :width="100" align="center">
+            <template #cell="{ record }">
+              {{ record.pendingQuantity }}
+            </template>
+          </a-table-column>
+        </template>
+      </a-table>
+
+      <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e6eb; display: flex; justify-content: space-between; align-items: center;">
+        <span>合计：共 <strong>{{ exportPendingData.length }}</strong> 条记录</span>
+        <a-space>
+          <a-button @click="exportPendingVisible = false">关闭</a-button>
+          <a-button type="primary" @click="handleExportPendingConfirm">
+            <template #icon><icon-download /></template>
+            下载Excel
+          </a-button>
+        </a-space>
+      </div>
     </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, reactive, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 
 const route = useRoute()
 const router = useRouter()
 
+const pageLoading = ref(true)
+
+onMounted(() => {
+  nextTick(() => {
+    setTimeout(() => {
+      pageLoading.value = false
+    }, 50)
+  })
+})
+
+const activeTab = ref('products')
 const orderId = route.params.id || '1'
 
 const order = ref<any>({
@@ -765,11 +1056,24 @@ const order = ref<any>({
   orderNo: 'PO202401150001',
   warehouseName: '深圳湾科技园项目仓',
   totalAmount: 205000,
-  status: 'completed',
+  productAmount: 203000,
+  freight: 2000,
+  discountAmount: 0,
+  taxAmount: 0,
+  status: 'confirmed',
   paymentStatus: 'paid',
   shipStatus: 'shipped',
   createTime: '2024-01-15 10:30:00',
   paymentTime: '2024-01-15 16:30:00',
+  afterSaleStatus: 'processing',
+  afterSaleType: '货损售后',
+  buyerContact: '张三',
+  buyerPhone: '13800138001',
+  buyerAddress: '广东省深圳市南山区深圳湾科技园',
+  supplierName: '默认供应商',
+  supplierContact: '李四',
+  supplierPhone: '13900139001',
+  supplierAddress: '江苏省南京市建邺区建材市场A区',
   items: [
     {
       id: '1',
@@ -816,15 +1120,15 @@ const order = ref<any>({
   ],
 })
 
-const receiveBatches = ref([
+const afterSaleRecords = ref<any[]>([
   {
-    batchNo: 'B202401160001',
-    shipmentNo: 'SH202401160001',
-    productName: 'C30混凝土',
-    receiveQuantity: 50,
-    warehouseName: '深圳湾科技园仓',
-    receiveTime: '2024-01-16 14:30:00',
-    inspector: '验收员A',
+    afterSaleNo: 'AS202401200001',
+    type: '货损售后',
+    reason: '部分混凝土在运输途中出现破损',
+    status: 'completed',
+    refOrderNos: ['SO202401200001'],
+    applyTime: '2024-01-20 09:30:00',
+    handleTime: '2024-01-22 14:00:00',
   },
 ])
 
@@ -832,6 +1136,7 @@ const paymentRecords = ref([
   {
     paymentNo: 'PAY202401150001',
     amount: 100000,
+    status: 'approved',
     voucher: true,
     payTime: '2024-01-15 16:30:00',
     remark: '首付款50%',
@@ -839,9 +1144,18 @@ const paymentRecords = ref([
   {
     paymentNo: 'PAY202401160002',
     amount: 50000,
+    status: 'approved',
     voucher: true,
     payTime: '2024-01-16 10:00:00',
     remark: '进度款',
+  },
+  {
+    paymentNo: 'PAY202401200003',
+    amount: 55000,
+    status: 'pending',
+    voucher: true,
+    payTime: '2024-01-20 14:00:00',
+    remark: '尾款-待审核',
   },
 ])
 
@@ -853,13 +1167,9 @@ const unpaidAmount = computed(() => {
   return (order.value.totalAmount || 0) - paidAmount.value
 })
 
-order.value.paymentStatus = computed(() => {
-  if (unpaidAmount.value === 0) return 'paid'
-  if (paidAmount.value > 0) return 'partial'
-  return 'pending'
-}).value
-
-order.value.status = 'confirmed'
+const hasPendingPaymentRecords = computed(() => {
+  return paymentRecords.value.some((r: any) => r.status === 'pending')
+})
 
 const voucherVisible = ref(false)
 
@@ -917,7 +1227,7 @@ const reissueShipments = ref([
 ])
 
 const allShipmentRecords = computed(() => {
-  return [...normalShipments.value, ...reissueShipments.value]
+  return [...normalShipments.value]
     .sort((a, b) => new Date(b.shipTime).getTime() - new Date(a.shipTime).getTime())
 })
 
@@ -934,9 +1244,9 @@ function getReissueReasonText(reason: string) {
 
 const reissueModalVisible = ref(false)
 const reissueForm = ref<any>({
-  reason: '',
-  logisticsCompany: '',
-  logisticsNo: '',
+  reason: 'damage',
+  hasLogistics: true,
+  logisticsList: [{ company: '', no: '' }],
   remark: '',
   items: [] as any[],
 })
@@ -944,8 +1254,8 @@ const reissueForm = ref<any>({
 function handleReissue() {
   reissueForm.value = {
     reason: 'damage',
-    logisticsCompany: '',
-    logisticsNo: '',
+    hasLogistics: true,
+    logisticsList: [{ company: '', no: '' }],
     remark: '',
     items: order.value.items
       .filter((item: any) => item.confirmStatus !== 'reject')
@@ -959,17 +1269,14 @@ function handleReissue() {
 
 function handleReissueSubmit() {
   const hasReissueItem = reissueForm.value.items.some((item: any) => item.reissueQuantity > 0)
-  
+
   if (!hasReissueItem) {
     Message.warning('请至少选择一个商品并填写补发数量')
     return
   }
-  if (!reissueForm.value.logisticsCompany) {
-    Message.warning('请选择物流公司')
-    return
-  }
-  if (!reissueForm.value.logisticsNo) {
-    Message.warning('请输入物流单号')
+  const hasInvalidLogistics = reissueForm.value.hasLogistics && reissueForm.value.logisticsList.some((l: any) => !l.company || !l.no)
+  if (hasInvalidLogistics) {
+    Message.warning('请填写完整的物流信息')
     return
   }
 
@@ -981,12 +1288,13 @@ function handleReissueSubmit() {
       quantity: item.reissueQuantity,
     }))
 
+  const firstLogistics = reissueForm.value.logisticsList[0] || { company: '', no: '' }
   const newReissue = {
     id: `R${Date.now()}`,
     shipmentNo: `BF${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${String(reissueShipments.value.length + 1).padStart(4, '0')}`,
     shipTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
-    logisticsCompany: reissueForm.value.logisticsCompany,
-    logisticsNo: reissueForm.value.logisticsNo,
+    logisticsCompany: firstLogistics.company || '-',
+    logisticsNo: firstLogistics.no || '-',
     status: 'shipping',
     operator: '当前用户',
     reissueReason: reissueForm.value.reason,
@@ -997,189 +1305,26 @@ function handleReissueSubmit() {
 
   reissueShipments.value.push(newReissue)
 
-  const reasonText = getReissueReasonText(reissueForm.value.reason)
-  reissueItems.forEach((item: any) => {
-    console.log('[库存自动记账] 补发扣减库存', {
-      recordNo: `INV${Date.now()}`,
-      skuName: item.productName,
-      spec: item.spec,
-      changeType: 'replenish_ship',
-      changeQty: -item.quantity,
-      orderNo: order.value.orderNo,
-      bizType: '补发',
-      operator: '当前用户',
-      changeTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
-      remark: reasonText,
-    })
+  const newOrderNo = `SO${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${String(afterSaleRecords.value.length + 1).padStart(4, '0')}`
+  afterSaleRecords.value.push({
+    afterSaleNo: `AS${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${String(afterSaleRecords.value.length + 1).padStart(4, '0')}`,
+    type: '补发售后',
+    reason: reissueForm.value.reason === 'damage' ? '运输破损补发' : reissueForm.value.reason === 'loss' ? '数量损耗补发' : '质量问题补发',
+    status: 'completed',
+    refOrderNos: [order.value.orderNo, newOrderNo],
+    applyTime: new Date().toLocaleString(),
+    handleTime: new Date().toLocaleString(),
   })
 
   reissueModalVisible.value = false
-  Message.success('补发申请已提交，商品已发出，库存已自动扣减')
-}
-
-const refundRecords = ref([
-  {
-    id: '1',
-    refundNo: 'TK202401180001',
-    type: 'quantity',
-    status: 'pending',
-    items: [
-      { productName: 'C30混凝土', spec: 'C30', quantity: 5, refundAmount: 1900 },
-    ],
-    totalRefundAmount: 1900,
-    reason: '运输过程罐体漏浆，实收95方，约定损耗2%，超出3%部分退款',
-    remark: '',
-    operator: '李经理',
-    createTime: '2024-01-18 09:30:00',
-  },
-  {
-    id: '2',
-    refundNo: 'TK202401170002',
-    type: 'quality',
-    status: 'confirmed',
-    items: [
-      { productName: 'HRB400钢筋', spec: 'Φ16mm', quantity: 2, refundAmount: 8600 },
-    ],
-    totalRefundAmount: 8600,
-    reason: '部分批次检验不合格，协商退款',
-    remark: '质量问题已确认',
-    operator: '王主管',
-    createTime: '2024-01-17 14:20:00',
-  },
-  {
-    id: '3',
-    refundNo: 'TK202401160003',
-    type: 'other',
-    status: 'rejected',
-    items: [
-      { productName: 'PC42.5水泥', spec: 'PC42.5', quantity: 10, refundAmount: 5500 },
-    ],
-    totalRefundAmount: 5500,
-    reason: '价格差异协商退款',
-    remark: '价格在约定范围内，不予退款',
-    operator: '张经理',
-    createTime: '2024-01-16 11:00:00',
-  },
-])
-
-function getRefundTypeText(type: string) {
-  const map: Record<string, string> = {
-    quantity: '数量损耗',
-    quality: '质量问题',
-    miss: '错发漏发',
-    price: '价格差异',
-    other: '其他原因',
-  }
-  return map[type] || type
-}
-
-function getRefundStatusText(status: string) {
-  const map: Record<string, string> = {
-    processing: '待处理',
-    pending: '待确认',
-    confirmed: '已完成',
-    rejected: '已拒绝',
-    refunded: '已退款',
-  }
-  return map[status] || status
-}
-
-function getRefundStatusColor(status: string) {
-  const map: Record<string, string> = {
-    processing: 'orange',
-    pending: 'orange',
-    confirmed: 'green',
-    rejected: 'red',
-    refunded: 'green',
-  }
-  return map[status] || 'gray'
-}
-
-const refundModalVisible = ref(false)
-const refundForm = ref<any>({
-  type: 'quantity',
-  reason: '',
-  remark: '',
-  items: [] as any[],
-})
-
-const totalRefundAmount = computed(() => {
-  return refundForm.value.items.reduce((sum: number, item: any) => sum + (item.refundAmount || 0), 0)
-})
-
-function calcRefundAmount() {
-  refundForm.value.items.forEach((item: any) => {
-    if (item.refundQuantity && item.price) {
-      item.refundAmount = item.refundQuantity * item.price
-    }
-  })
-}
-
-function handleApplyRefund() {
-  refundForm.value = {
-    type: 'quantity',
-    reason: '',
-    remark: '',
-    items: order.value.items
-      .filter((item: any) => item.confirmStatus !== 'reject')
-      .map((item: any) => ({
-        ...item,
-        refundQuantity: 0,
-        refundAmount: 0,
-      })),
-  }
-  refundModalVisible.value = true
-}
-
-function handleRefundSubmit() {
-  const hasRefundItem = refundForm.value.items.some((item: any) => item.refundAmount > 0)
-  
-  if (!hasRefundItem) {
-    Message.warning('请至少选择一个商品并填写退款金额')
-    return
-  }
-  if (!refundForm.value.reason) {
-    Message.warning('请填写退款原因')
-    return
-  }
-
-  const refundItems = refundForm.value.items
-    .filter((item: any) => item.refundAmount > 0)
-    .map((item: any) => ({
-      productName: item.productName,
-      spec: item.spec,
-      quantity: item.refundQuantity,
-      refundAmount: item.refundAmount,
-    }))
-
-  const newRefund = {
-    id: `${Date.now()}`,
-    refundNo: `TK${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${String(refundRecords.value.length + 1).padStart(4, '0')}`,
-    type: refundForm.value.type,
-    status: 'pending',
-    items: refundItems,
-    totalRefundAmount: totalRefundAmount.value,
-    reason: refundForm.value.reason,
-    remark: refundForm.value.remark,
-    operator: '当前用户',
-    createTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
-  }
-
-  refundRecords.value.unshift(newRefund)
-  refundModalVisible.value = false
-  Message.success('退款申请已提交，请等待审批')
-}
-
-function handleViewRefundDetail(record: any) {
-  Message.info('查看退款详情：' + record.refundNo)
+  Message.success('补发申请已提交，商品已发出，生成关联订单：' + newOrderNo)
 }
 
 const shipModalVisible = ref(false)
 const shipForm = ref({
   items: [] as any[],
-  logisticsCompany: '',
-  logisticsNo: '',
-  additionalLogistics: [] as any[],
+  hasLogistics: true,
+  logisticsList: [{ company: '', no: '' }] as { company: string; no: string }[],
   remark: '',
 })
 
@@ -1266,6 +1411,7 @@ function getRejectReasonText(reason: string) {
 function getPaymentStatusColor(status: string) {
   const colors: Record<string, string> = {
     pending: 'orange',
+    approved: 'green',
     partial: 'orange',
     paid: 'green',
   }
@@ -1274,7 +1420,8 @@ function getPaymentStatusColor(status: string) {
 
 function getPaymentStatusText(status: string) {
   const texts: Record<string, string> = {
-    pending: '待支付',
+    pending: '待审核',
+    approved: '已通过',
     partial: '部分支付',
     paid: '已支付',
   }
@@ -1315,6 +1462,33 @@ function getShipmentStatusText(status: string) {
     delivered: '已签收',
   }
   return texts[status] || status
+}
+
+function getAfterSaleStatusColor(status: string) {
+  const colors: Record<string, string> = {
+    none: 'gray',
+    pending: 'orange',
+    processing: 'blue',
+    completed: 'green',
+    rejected: 'red',
+  }
+  return colors[status] || 'gray'
+}
+
+function getAfterSaleStatusText(status: string) {
+  const texts: Record<string, string> = {
+    none: '无售后',
+    pending: '待处理',
+    processing: '处理中',
+    completed: '已完成',
+    rejected: '已拒绝',
+  }
+  return texts[status] || status
+}
+
+function formatAmount(amount: number | undefined) {
+  if (amount === undefined || amount === null) return '0.00'
+  return amount.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 const invoiceModalVisible = ref(false)
@@ -1410,12 +1584,10 @@ async function handleInvoiceSubmit() {
       fileUrl: '#',
     }
 
-    order.value.invoiceStatus = 'issued'
-
     invoiceModalVisible.value = false
     Message.success(
-      invoiceForm.value.issueType === 'online' 
-        ? '电子发票开具成功，PDF已自动生成' 
+      invoiceForm.value.issueType === 'online'
+        ? '电子发票开具成功，PDF已自动生成'
         : '发票信息保存成功'
     )
   } catch (error) {
@@ -1428,87 +1600,218 @@ function handleDownloadInvoice() {
   Message.success('正在下载发票文件...')
 }
 
+function handleViewInvoiceList() {
+  router.push('/supplier/finance/invoice')
+}
+
+function handleViewAfterSaleDetail(record: any) {
+  router.push(`/supplier/order/after-sales/detail/${record.afterSaleNo}`)
+}
+
+function handleViewRefOrder(orderNo: string) {
+  window.open(`/supplier/order/detail/${orderNo}`, '_blank')
+}
+
+function handleViewAfterSales() {
+  router.push('/supplier/order/after-sales')
+}
+
+const confirmVisible = ref(false)
+const confirmForm = reactive({
+  estimatedShipDate: '',
+  remark: ''
+})
+const confirmItems = ref<any[]>([])
+
+function handleConfirm() {
+  confirmItems.value = order.value.items.map((item: any) => ({
+    id: item.id,
+    productName: item.productName,
+    spec: item.spec || '',
+    unit: item.unit,
+    quantity: item.quantity,
+    supplyQuantity: item.quantity,
+    accepted: true,
+    unitPrice: item.price,
+    remark: '',
+    shortageReason: '',
+  }))
+  confirmForm.estimatedShipDate = ''
+  confirmForm.remark = ''
+  confirmVisible.value = true
+}
+
+function handleAcceptChange(record: any, val: boolean) {
+  if (!val) {
+    record.supplyQuantity = 0
+  } else if (record.supplyQuantity === 0) {
+    record.supplyQuantity = record.quantity
+  }
+}
+
+function handleConfirmSubmit() {
+  const acceptItems = confirmItems.value.filter(i => i.accepted && i.supplyQuantity > 0)
+  if (acceptItems.length === 0) {
+    Message.warning('请至少选择并设置一个可供应商品')
+    return
+  }
+  order.value.status = 'confirmed'
+  order.value.confirmTime = new Date().toLocaleString()
+  confirmVisible.value = false
+  Message.success('订单确认成功')
+}
+
+function handleRejectOrder() {
+  order.value.status = 'cancelled'
+  confirmVisible.value = false
+  Message.warning('订单已驳回')
+}
+
+const auditPaymentVisible = ref(false)
+const auditPaymentForm = reactive({
+  result: '',
+  confirmedAmount: 0,
+  remark: '',
+})
+
+function handleAuditPayment() {
+  auditPaymentForm.result = ''
+  auditPaymentForm.confirmedAmount = 0
+  auditPaymentForm.remark = ''
+  auditPaymentVisible.value = true
+}
+
+function handleAuditPaymentSubmit() {
+  if (!auditPaymentForm.result) {
+    Message.warning('请选择收款确认方式')
+    return
+  }
+  if (auditPaymentForm.result === 'partial' && !auditPaymentForm.confirmedAmount) {
+    Message.warning('请输入确认收款金额')
+    return
+  }
+
+  const pendingTotal = paymentRecords.value
+    .filter((r: any) => r.status === 'pending')
+    .reduce((sum: number, r: any) => sum + r.amount, 0)
+
+  paymentRecords.value.forEach((r: any) => {
+    if (r.status === 'pending') {
+      r.status = 'approved'
+    }
+  })
+
+  if (auditPaymentForm.result === 'full') {
+    order.value.paymentStatus = 'paid'
+  } else {
+    order.value.paymentStatus = 'partial'
+  }
+
+  auditPaymentVisible.value = false
+  Message.success(`支付审核通过，已确认到账 ¥${(auditPaymentForm.result === 'full' ? pendingTotal : auditPaymentForm.confirmedAmount).toLocaleString()}`)
+}
+
+const exportPendingVisible = ref(false)
+const exportPendingData = ref<any[]>([])
+
+function handleExportPending() {
+  const items = order.value.items || []
+  if (items.length === 0) {
+    Message.warning('该订单暂无商品数据')
+    return
+  }
+  exportPendingData.value = items.map((item: any, index: number) => ({
+    id: index + 1,
+    orderNo: order.value.orderNo,
+    warehouseName: order.value.warehouseName,
+    receiverName: order.value.buyerContact || '张工',
+    receiverPhone: order.value.buyerPhone || '13800138000',
+    address: order.value.buyerAddress || '',
+    productName: item.productName,
+    specification: item.spec || '',
+    unit: item.unit || '件',
+    orderQuantity: item.quantity,
+    pendingQuantity: item.quantity - (item.shippedQuantity || 0),
+  }))
+  exportPendingVisible.value = true
+}
+
+function handleExportPendingConfirm() {
+  Message.success('待发货单导出成功')
+  exportPendingVisible.value = false
+}
+
 function handleBack() {
   router.back()
 }
 
 function handleShip() {
-  shipForm.value.items = order.value.items.map(item => ({
+  shipForm.value.items = order.value.items.map((item: any) => ({
     ...item,
-    pendingQuantity: item.quantity - (item.shippedQuantity || 0),
-    shipQuantity: 0,
+    pendingShipQuantity: item.quantity - (item.shippedQuantity || 0),
+    shipQuantity: item.quantity - (item.shippedQuantity || 0),
   }))
-  shipForm.value.logisticsCompany = ''
-  shipForm.value.logisticsNo = ''
-  shipForm.value.additionalLogistics = []
+  shipForm.value.hasLogistics = true
+  shipForm.value.logisticsList = [{ company: '', no: '' }]
   shipForm.value.remark = ''
   shipModalVisible.value = true
 }
 
-function handleAddLogistics() {
-  shipForm.value.additionalLogistics.push({
+function addLogistics() {
+  shipForm.value.logisticsList.push({
     company: '',
     no: '',
   })
 }
 
-function handleRemoveLogistics(index: number) {
-  shipForm.value.additionalLogistics.splice(index, 1)
+function removeLogistics(index: number) {
+  shipForm.value.logisticsList.splice(index, 1)
 }
 
-async function handleShipConfirm() {
+async function handleShipPartial() {
   const hasItems = shipForm.value.items.some(item => item.shipQuantity > 0)
   if (!hasItems) {
     Message.warning('请至少选择一个商品发货')
     return
   }
 
-  if (!shipForm.value.logisticsCompany) {
-    Message.warning('请选择物流公司')
-    return
-  }
-
-  if (!shipForm.value.logisticsNo) {
-    Message.warning('请输入物流单号')
+  const hasInvalidLogistics = shipForm.value.hasLogistics && shipForm.value.logisticsList.some(l => !l.company || !l.no)
+  if (hasInvalidLogistics) {
+    Message.warning('请填写完整的物流信息')
     return
   }
 
   try {
+    Message.loading('正在提交发货...')
     await new Promise(resolve => setTimeout(resolve, 1000))
+    Message.clear()
 
     const shipmentNo = `SH${Date.now()}`
     const shippedItems = shipForm.value.items
-      .filter(item => item.shipQuantity > 0)
-      .map(item => ({
+      .filter((item: any) => item.shipQuantity > 0)
+      .map((item: any) => ({
         productName: item.productName,
         spec: item.spec,
         quantity: item.shipQuantity,
       }))
 
-    order.value.items.forEach(item => {
-      const shipItem = shipForm.value.items.find(s => s.id === item.id)
+    order.value.items.forEach((item: any) => {
+      const shipItem = shipForm.value.items.find((s: any) => s.id === item.id)
       if (shipItem) {
         item.shippedQuantity = (item.shippedQuantity || 0) + shipItem.shipQuantity
       }
     })
 
-    const allShipped = order.value.items.every(
-      item => item.shippedQuantity >= item.quantity
-    )
+    order.value.shipStatus = 'partial_shipped'
+    order.value.status = 'shipped'
 
-    if (allShipped) {
-      order.value.shipStatus = 'shipped'
-      order.value.status = 'shipped'
-    } else {
-      order.value.shipStatus = 'partial'
-    }
-
+    const firstLogistics = shipForm.value.logisticsList[0]
     normalShipments.value.unshift({
       id: Date.now().toString(),
       shipmentNo,
       shipTime: new Date().toLocaleString(),
-      logisticsCompany: shipForm.value.logisticsCompany,
-      logisticsNo: shipForm.value.logisticsNo,
+      logisticsCompany: firstLogistics?.company || '-',
+      logisticsNo: firstLogistics?.no || '-',
       status: 'shipped',
       operator: '当前用户',
       remark: shipForm.value.remark,
@@ -1517,32 +1820,86 @@ async function handleShipConfirm() {
 
     order.value.logs.unshift({
       time: new Date().toLocaleString(),
-      content: `发货成功，发货单号：${shipmentNo}，物流：${shipForm.value.logisticsCompany} ${shipForm.value.logisticsNo}`,
-    })
-
-    shippedItems.forEach(item => {
-      console.log('[库存自动记账] 正常发货扣减库存', {
-        recordNo: `INV${Date.now()}`,
-        skuName: item.productName,
-        spec: item.spec,
-        changeType: 'normal_ship',
-        changeQty: -item.quantity,
-        orderNo: order.value.orderNo,
-        bizType: '订单发货',
-        operator: '当前用户',
-        changeTime: new Date().toLocaleString(),
-      })
+      content: `部分发货成功，发货单号：${shipmentNo}`,
     })
 
     shipModalVisible.value = false
-    Message.success('发货成功，库存已自动扣减')
+    const totalShipQty = shippedItems.reduce((sum: number, i: any) => sum + i.quantity, 0)
+    Message.success(`本次发货成功，共发货 ${totalShipQty} 件`)
   } catch (error) {
+    Message.clear()
     Message.error('发货失败，请重试')
   }
 }
 
-function cancelShip() {
-  shipModalVisible.value = false
+async function handleShipAll() {
+  const hasItems = shipForm.value.items.some(item => item.shipQuantity > 0)
+  if (!hasItems) {
+    Message.warning('请至少选择一个商品发货')
+    return
+  }
+
+  const hasInvalidLogistics = shipForm.value.hasLogistics && shipForm.value.logisticsList.some(l => !l.company || !l.no)
+  if (hasInvalidLogistics) {
+    Message.warning('请填写完整的物流信息')
+    return
+  }
+
+  const allShipped = shipForm.value.items.every(item => item.shipQuantity >= item.pendingShipQuantity)
+  if (!allShipped) {
+    Message.warning('已全部发货需将所有商品待发货数量清零，请调整发货数量')
+    return
+  }
+
+  try {
+    Message.loading('正在提交发货...')
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    Message.clear()
+
+    const shipmentNo = `SH${Date.now()}`
+    const shippedItems = shipForm.value.items
+      .filter((item: any) => item.shipQuantity > 0)
+      .map((item: any) => ({
+        productName: item.productName,
+        spec: item.spec,
+        quantity: item.shipQuantity,
+      }))
+
+    order.value.items.forEach((item: any) => {
+      const shipItem = shipForm.value.items.find((s: any) => s.id === item.id)
+      if (shipItem) {
+        item.shippedQuantity = (item.shippedQuantity || 0) + shipItem.shipQuantity
+      }
+    })
+
+    order.value.shipStatus = 'shipped'
+    order.value.status = 'shipped'
+
+    const firstLogistics = shipForm.value.logisticsList[0]
+    normalShipments.value.unshift({
+      id: Date.now().toString(),
+      shipmentNo,
+      shipTime: new Date().toLocaleString(),
+      logisticsCompany: firstLogistics?.company || '-',
+      logisticsNo: firstLogistics?.no || '-',
+      status: 'shipped',
+      operator: '当前用户',
+      remark: shipForm.value.remark,
+      items: shippedItems,
+    })
+
+    order.value.logs.unshift({
+      time: new Date().toLocaleString(),
+      content: `全部发货成功，发货单号：${shipmentNo}`,
+    })
+
+    shipModalVisible.value = false
+    const totalShipQty = shippedItems.reduce((sum: number, i: any) => sum + i.quantity, 0)
+    Message.success(`已全部发货成功，共发货 ${totalShipQty} 件`)
+  } catch (error) {
+    Message.clear()
+    Message.error('发货失败，请重试')
+  }
 }
 
 function handleViewLogistics() {
@@ -1564,13 +1921,28 @@ function handleTrackLogistics(record: any) {
 }
 
 function handleViewShipment(record: any) {
-  currentShipment.value = record
+  const enrichedItems = (record.items || []).map((item: any) => {
+    const orderItem = order.value.items.find((oi: any) =>
+      oi.productName === item.productName && oi.spec === item.spec
+    )
+    return {
+      ...item,
+      unit: item.unit || orderItem?.unit || '件',
+      purchaseQuantity: orderItem?.quantity || item.quantity,
+      shippedQuantity: orderItem?.shippedQuantity || item.quantity,
+      pendingShipQuantity: (orderItem?.quantity || 0) - (orderItem?.shippedQuantity || 0),
+    }
+  })
+  currentShipment.value = {
+    ...record,
+    items: enrichedItems,
+  }
   shipmentDetailVisible.value = true
 }
 </script>
 
-<style scoped lang="less">
-.order-detail {
+<style lang="less" scoped>
+.page-container {
   padding: 16px;
 }
 
@@ -1578,21 +1950,21 @@ function handleViewShipment(record: any) {
   margin-top: 16px;
 }
 
-.amount {
-  color: #f53f3f;
-  font-weight: 600;
-}
-
-.text-danger {
-  color: #f53f3f;
-}
-
-.text-warning {
-  color: #ff7d00;
+.text-primary {
+  color: var(--color-primary);
+  font-weight: 500;
 }
 
 .text-success {
-  color: #00b42a;
+  color: var(--color-success);
+}
+
+.text-warning {
+  color: var(--color-warning);
+}
+
+.text-danger {
+  color: var(--color-danger);
 }
 
 .pay-summary {
@@ -1604,11 +1976,46 @@ function handleViewShipment(record: any) {
     font-size: 13px;
 
     &.paid {
-      color: #00b42a;
+      color: var(--color-success);
     }
 
     &.unpaid {
-      color: #f53f3f;
+      color: var(--color-danger);
+    }
+  }
+}
+
+.order-summary {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--color-fill-1);
+  border-radius: 4px;
+
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+
+    .summary-label {
+      color: var(--color-text-2);
+    }
+
+    .summary-value {
+      font-weight: 500;
+    }
+
+    &.total {
+      .summary-label {
+        font-weight: 600;
+        font-size: 16px;
+      }
+
+      .total-amount {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--color-danger);
+      }
     }
   }
 }

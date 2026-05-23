@@ -150,15 +150,22 @@
                   </a-table-column>
                   <a-table-column title="提现银行" data-index="bankCard" :width="160" />
                   <a-table-column title="申请时间" data-index="applyTime" :width="160" />
-                  <a-table-column title="审核状态" :width="120">
+                  <a-table-column title="提现状态" :width="120">
                     <template #cell="{ record }">
                       <a-tag :color="getWithdrawStatusColor(record.status)">
-                        {{ record.statusText }}
+                        {{ getWithdrawStatusText(record.status) }}
                       </a-tag>
                     </template>
                   </a-table-column>
                   <a-table-column title="失败原因" data-index="failReason" />
                   <a-table-column title="完成时间" data-index="completeTime" :width="160" />
+                  <a-table-column title="操作" :width="100">
+                    <template #cell="{ record }">
+                      <a-button v-if="record.status === 'failed'" type="link" size="small" @click="handleRetryWithdraw(record)">
+                        重试
+                      </a-button>
+                    </template>
+                  </a-table-column>
                 </template>
               </a-table>
             </a-tab-pane>
@@ -229,10 +236,11 @@
     <a-modal v-model:visible="withdrawVisible" title="账户提现" :width="500" @ok="handleWithdrawConfirm">
       <a-form :model="withdrawForm" layout="vertical">
         <a-form-item label="可提现金额">
-          <span class="available-amount">¥ {{ formatAmount(accountInfo.availableBalance) }}</span>
+          <span class="available-amount">¥ {{ formatAmount(actualAvailableBalance) }}</span>
+          <span v-if="pendingWithdrawAmount > 0" class="pending-tip">（已扣除正在提现的 ¥{{ formatAmount(pendingWithdrawAmount) }}）</span>
         </a-form-item>
         <a-form-item label="提现金额" required>
-          <a-input-number v-model="withdrawForm.amount" :min="1" :max="accountInfo.availableBalance" :precision="2" placeholder="请输入提现金额" style="width: 100%">
+          <a-input-number v-model="withdrawForm.amount" :min="1" :max="actualAvailableBalance" :precision="2" placeholder="请输入提现金额" style="width: 100%">
             <template #prefix>¥</template>
           </a-input-number>
         </a-form-item>
@@ -290,10 +298,10 @@ const flowRecords = ref([
 ])
 
 const withdrawRecords = ref([
-  { id: 1, amount: '50,000.00', bankCard: '中国工商银行 (****8901)', applyTime: '2024-01-14 10:00:00', status: 'success', statusText: '审核成功', failReason: '', completeTime: '2024-01-14 14:30:00' },
-  { id: 2, amount: '30,000.00', bankCard: '中国工商银行 (****8901)', applyTime: '2024-01-12 16:00:00', status: 'failed', statusText: '提现失败', failReason: '银行卡信息有误，请核对后重新提交', completeTime: '2024-01-12 17:30:00' },
-  { id: 3, amount: '20,000.00', bankCard: '中国工商银行 (****8901)', applyTime: '2024-01-10 09:30:00', status: 'success', statusText: '审核成功', failReason: '', completeTime: '2024-01-10 11:00:00' },
-  { id: 4, amount: '100,000.00', bankCard: '中国工商银行 (****8901)', applyTime: '2024-01-08 14:00:00', status: 'pending', statusText: '审核中', failReason: '', completeTime: '' },
+  { id: 1, amount: '50,000.00', bankCard: '中国工商银行 (****8901)', applyTime: '2024-01-14 10:00:00', status: 'success', statusText: '成功', failReason: '', completeTime: '2024-01-14 14:30:00' },
+  { id: 2, amount: '30,000.00', bankCard: '中国工商银行 (****8901)', applyTime: '2024-01-12 16:00:00', status: 'failed', statusText: '失败', failReason: '银行卡信息有误，请核对后重新提交', completeTime: '2024-01-12 17:30:00' },
+  { id: 3, amount: '20,000.00', bankCard: '中国工商银行 (****8901)', applyTime: '2024-01-10 09:30:00', status: 'success', statusText: '成功', failReason: '', completeTime: '2024-01-10 11:00:00' },
+  { id: 4, amount: '100,000.00', bankCard: '中国工商银行 (****8901)', applyTime: '2024-01-08 14:00:00', status: 'pending', statusText: '处理中', failReason: '', completeTime: '' },
 ])
 
 const searchForm = ref({
@@ -343,6 +351,16 @@ const filteredFlowRecords = computed(() => {
   return records.slice(start, start + pagination.value.pageSize)
 })
 
+const pendingWithdrawAmount = computed(() => {
+  return withdrawRecords.value
+    .filter(record => record.status === 'pending')
+    .reduce((sum, record) => sum + parseFloat(record.amount.replace(/,/g, '')), 0)
+})
+
+const actualAvailableBalance = computed(() => {
+  return accountInfo.value.availableBalance - pendingWithdrawAmount.value
+})
+
 const buildExtraContent = computed(() => {
   if (currentTab.value === 'flow') {
     return `共 ${pagination.value.total} 条记录`
@@ -358,6 +376,24 @@ function getWithdrawStatusColor(status: string): string {
     pending: 'orange',
   }
   return colorMap[status] || 'gray'
+}
+
+function getWithdrawStatusText(status: string): string {
+  const textMap: Record<string, string> = {
+    success: '成功',
+    failed: '失败',
+    pending: '处理中',
+  }
+  return textMap[status] || status
+}
+
+function handleRetryWithdraw(record: any) {
+  withdrawForm.value = { 
+    amount: parseFloat(record.amount.replace(/,/g, '')), 
+    bankCard: record.bankCard, 
+    remark: '' 
+  }
+  withdrawVisible.value = true
 }
 
 function formatAmount(amount: number): string {
@@ -705,6 +741,12 @@ function handleWithdrawConfirm() {
   font-size: 20px;
   font-weight: 600;
   color: #165dff;
+}
+
+.pending-tip {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #86909c;
 }
 
 .frozen-amount {

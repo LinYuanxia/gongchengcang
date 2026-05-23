@@ -42,20 +42,35 @@ export interface SupplierSku {
   updatedAt?: string
 }
 
+export interface PaymentRecord {
+  id: string
+  paymentNo: string
+  paymentMethod: string
+  amount: number
+  status: 'pending' | 'approved' | 'rejected'
+  paymentTime: string
+  paymentSerial: string
+  paymentVoucher: string
+  remark?: string
+}
+
 export interface SupplierOrder {
   id: string
   orderNo: string
+  orderType?: 'purchase' | 'after_sales'
   warehouseId: string
   warehouseName: string
   skuCount: number
   totalAmount: number
+  paidAmount?: number
   deliveryDate: string
   status: 'pending' | 'confirmed' | 'shipped' | 'completed' | 'cancelled' | 'refunded'
-  paymentStatus: 'unpaid' | 'paid' | 'refunded'
+  paymentStatus: 'unpaid' | 'paid' | 'partial_paid' | 'refunded'
   paymentMethod?: string
   paymentTime?: string
   paymentSerial?: string
   paymentVoucher?: string
+  paymentRecords?: PaymentRecord[]
   paymentAuditStatus?: 'pending' | 'approved' | 'rejected'
   paymentAuditRemark?: string
   createTime: string
@@ -284,6 +299,7 @@ export const MOCK_SUPPLIER_ORDERS: SupplierOrder[] = [
   {
     id: '1',
     orderNo: 'PO202401001',
+    orderType: 'purchase',
     warehouseId: 'WH001',
     warehouseName: '深圳宝安工程仓',
     skuCount: 5,
@@ -302,6 +318,7 @@ export const MOCK_SUPPLIER_ORDERS: SupplierOrder[] = [
   {
     id: '6',
     orderNo: 'PO202401006',
+    orderType: 'purchase',
     warehouseId: 'WH001',
     warehouseName: '深圳南山工程仓',
     skuCount: 10,
@@ -320,6 +337,7 @@ export const MOCK_SUPPLIER_ORDERS: SupplierOrder[] = [
   {
     id: '7',
     orderNo: 'PO202401007',
+    orderType: 'after_sales',
     warehouseId: 'WH006',
     warehouseName: '中山火炬工程仓',
     skuCount: 15,
@@ -346,6 +364,7 @@ export const MOCK_SUPPLIER_ORDERS: SupplierOrder[] = [
   {
     id: '8',
     orderNo: 'PO202401008',
+    orderType: 'purchase',
     warehouseId: 'WH007',
     warehouseName: '珠海香洲工程仓',
     skuCount: 6,
@@ -372,6 +391,7 @@ export const MOCK_SUPPLIER_ORDERS: SupplierOrder[] = [
   {
     id: '2',
     orderNo: 'PO202401002',
+    orderType: 'purchase',
     warehouseId: 'WH002',
     warehouseName: '广州天河工程仓',
     skuCount: 8,
@@ -390,8 +410,86 @@ export const MOCK_SUPPLIER_ORDERS: SupplierOrder[] = [
     ],
   },
   {
+    id: '9',
+    orderNo: 'PO202401009',
+    orderType: 'purchase',
+    warehouseId: 'WH008',
+    warehouseName: '厦门湖里工程仓',
+    skuCount: 7,
+    totalAmount: 98000,
+    paidAmount: 70000,
+    deliveryDate: '2024-02-10',
+    status: 'confirmed',
+    paymentStatus: 'partial_paid',
+    paymentMethod: '银行转账',
+    createTime: '2024-01-19 09:00:00',
+    confirmTime: '2024-01-19 11:00:00',
+    address: '厦门市湖里区XX路XX号',
+    remark: '分批支付',
+    paymentRecords: [
+      {
+        id: 'pay001',
+        paymentNo: 'PAY20240119001',
+        paymentMethod: '银行转账',
+        amount: 49000,
+        status: 'approved',
+        paymentTime: '2024-01-19 10:00:00',
+        paymentSerial: 'BT202401191000009',
+        paymentVoucher: 'https://picsum.photos/600/400?random=9',
+        remark: '第一笔付款'
+      },
+      {
+        id: 'pay002',
+        paymentNo: 'PAY20240120001',
+        paymentMethod: '银行转账',
+        amount: 21000,
+        status: 'pending',
+        paymentTime: '2024-01-20 14:00:00',
+        paymentSerial: 'BT202401201400009',
+        paymentVoucher: 'https://picsum.photos/600/400?random=11',
+        remark: '第二笔付款'
+      }
+    ],
+    invoiceStatus: undefined,
+    logs: [
+      { time: '2024-01-19 09:00:00', content: '订单创建' },
+      { time: '2024-01-19 11:00:00', content: '订单已确认' },
+      { time: '2024-01-19 12:00:00', content: '已收到款项：¥49,000.00' },
+      { time: '2024-01-20 15:00:00', content: '采购方提交第二笔转账凭证：¥21,000.00，等待审核' },
+    ],
+  },
+  {
+    id: '10',
+    orderNo: 'PO202401010',
+    orderType: 'purchase',
+    warehouseId: 'WH009',
+    warehouseName: '福州鼓楼工程仓',
+    skuCount: 9,
+    totalAmount: 75000,
+    paidAmount: 30000,
+    deliveryDate: '2024-02-08',
+    status: 'confirmed',
+    paymentStatus: 'partial_paid',
+    paymentMethod: '银行转账',
+    paymentTime: '2024-01-20 15:00:00',
+    paymentSerial: 'BT202401201500010',
+    paymentVoucher: 'https://picsum.photos/600/400?random=10',
+    paymentAuditStatus: 'approved',
+    createTime: '2024-01-20 14:00:00',
+    confirmTime: '2024-01-20 16:00:00',
+    address: '福州市鼓楼区XX路XX号',
+    remark: '预付款30%',
+    invoiceStatus: undefined,
+    logs: [
+      { time: '2024-01-20 14:00:00', content: '订单创建' },
+      { time: '2024-01-20 16:00:00', content: '订单已确认' },
+      { time: '2024-01-20 17:00:00', content: '已收到部分款项：¥30,000.00，待收：¥45,000.00' },
+    ],
+  },
+  {
     id: '3',
     orderNo: 'PO202401003',
+    orderType: 'purchase',
     warehouseId: 'WH003',
     warehouseName: '东莞南城工程仓',
     skuCount: 12,
@@ -421,6 +519,7 @@ export const MOCK_SUPPLIER_ORDERS: SupplierOrder[] = [
   {
     id: '4',
     orderNo: 'PO202401004',
+    orderType: 'purchase',
     warehouseId: 'WH004',
     warehouseName: '佛山禅城工程仓',
     skuCount: 3,
@@ -446,6 +545,7 @@ export const MOCK_SUPPLIER_ORDERS: SupplierOrder[] = [
   {
     id: '5',
     orderNo: 'PO202401005',
+    orderType: 'after_sales',
     warehouseId: 'WH005',
     warehouseName: '惠州惠城工程仓',
     skuCount: 6,

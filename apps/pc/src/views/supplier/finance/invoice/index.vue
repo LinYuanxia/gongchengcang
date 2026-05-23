@@ -83,6 +83,11 @@
               <div class="invoice-title">{{ record.invoiceTitle }}</div>
             </template>
           </a-table-column>
+          <a-table-column title="纳税人识别号" :width="160">
+            <template #cell="{ record }">
+              {{ record.taxNumber || '-' }}
+            </template>
+          </a-table-column>
           <a-table-column title="开票金额" :width="120" align="right">
             <template #cell="{ record }">
               <span>¥{{ record.invoiceAmount?.toLocaleString() }}</span>
@@ -423,6 +428,7 @@ interface SupplierInvoice {
   id: string
   orderNo: string
   invoiceTitle: string
+  taxNumber?: string
   invoiceAmount: number
   actualInvoiceAmount?: number
   invoiceStatus: 'pending' | 'issued' | 'voided'
@@ -483,6 +489,7 @@ const invoiceList = ref<SupplierInvoice[]>([
     id: '1',
     orderNo: 'PO20240520001',
     invoiceTitle: '深圳建筑工程有限公司',
+    taxNumber: '91440300MA5GXXXXXX',
     invoiceAmount: 128600,
     actualInvoiceAmount: 128600,
     invoiceStatus: 'issued',
@@ -501,6 +508,7 @@ const invoiceList = ref<SupplierInvoice[]>([
     id: '2',
     orderNo: 'PO20240519002',
     invoiceTitle: '广州建设集团',
+    taxNumber: '91440101MA5YXXXXXX',
     invoiceAmount: 86000,
     actualInvoiceAmount: 86000,
     invoiceStatus: 'issued',
@@ -520,6 +528,7 @@ const invoiceList = ref<SupplierInvoice[]>([
     id: '3',
     orderNo: 'PO20240518003',
     invoiceTitle: '深圳建筑工程有限公司',
+    taxNumber: '91440300MA5GXXXXXX',
     invoiceAmount: 50000,
     invoiceStatus: 'pending',
     taxType: 'general',
@@ -535,6 +544,7 @@ const invoiceList = ref<SupplierInvoice[]>([
     id: '4',
     orderNo: 'PO20240517001',
     invoiceTitle: '东莞建材贸易公司',
+    taxNumber: '441900MA7ZXXXXXX',
     invoiceAmount: 22000,
     invoiceStatus: 'voided',
     taxType: 'special',
@@ -546,6 +556,7 @@ const invoiceList = ref<SupplierInvoice[]>([
     id: '5',
     orderNo: 'PO20240516001',
     invoiceTitle: '深圳建筑工程有限公司',
+    taxNumber: '91440300MA5GXXXXXX',
     invoiceAmount: 35000,
     actualInvoiceAmount: 35000,
     invoiceStatus: 'issued',

@@ -12,7 +12,7 @@
         </a-descriptions-item>
         <a-descriptions-item label="应扣状态" :span="1">
           <a-tag :color="deductionInfo.status === 'deducted' ? 'green' : 'orange'">
-            {{ deductionInfo.status === 'deducted' ? '已扣款' : '待扣款' }}
+            {{ deductionInfo.status === 'deducted' ? '已分账' : '待分账' }}
           </a-tag>
         </a-descriptions-item>
         <a-descriptions-item label="订单编号" :span="1">

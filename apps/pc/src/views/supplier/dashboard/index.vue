@@ -82,10 +82,6 @@
               <icon-file :size="32" />
               <span>合同列表</span>
             </div>
-            <div class="quick-link-item" @click="handleNavigate('/supplier/finance/custody')">
-              <icon-safe :size="32" />
-              <span>托管账户</span>
-            </div>
           </div>
         </a-card>
 

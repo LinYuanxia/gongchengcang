@@ -460,10 +460,16 @@ const routes: RouteRecordRaw[] = [
             meta: { title: '订单列表' },
           },
           {
-            path: 'refund',
-            name: 'SupplierOrderRefund',
-            component: () => import('@/views/supplier/order/refund.vue'),
+            path: 'after-sales',
+            name: 'SupplierAfterSales',
+            component: () => import('@/views/supplier/order/after-sales/index.vue'),
             meta: { title: '售后管理' },
+          },
+          {
+            path: 'after-sales/detail/:id',
+            name: 'SupplierAfterSalesDetail',
+            component: () => import('@/views/supplier/order/after-sales/detail.vue'),
+            meta: { title: '售后详情', hideInMenu: true },
           },
           {
             path: 'detail/:id',
@@ -490,32 +496,6 @@ const routes: RouteRecordRaw[] = [
             name: 'SupplierFinanceInvoiceDetail',
             component: () => import('@/views/supplier/finance/invoice/detail.vue'),
             meta: { title: '发票详情', hideInMenu: true },
-          },
-        ],
-      },
-      {
-        path: 'system',
-        name: 'SupplierSystem',
-        redirect: '/supplier/system/account',
-        meta: { title: '系统设置', icon: 'icon-settings' },
-        children: [
-          {
-            path: 'account',
-            name: 'SupplierAccount',
-            component: () => import('@/views/supplier/account/index.vue'),
-            meta: { title: '账号列表' },
-          },
-          {
-            path: 'staff',
-            name: 'SupplierStaff',
-            component: () => import('@/views/supplier/staff/index.vue'),
-            meta: { title: '员工管理' },
-          },
-          {
-            path: 'role',
-            name: 'SupplierRole',
-            component: () => import('@/views/supplier/role/index.vue'),
-            meta: { title: '角色列表' },
           },
         ],
       },
@@ -864,6 +844,10 @@ router.beforeEach((to, from, next) => {
   }
   
   next()
+})
+
+router.onError((error) => {
+  console.warn('[Router Error]', error.message)
 })
 
 export default router

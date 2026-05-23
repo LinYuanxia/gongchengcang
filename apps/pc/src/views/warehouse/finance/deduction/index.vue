@@ -38,9 +38,9 @@
             style="width: 280px"
             @search="handleSearch"
           />
-          <a-select v-model="searchForm.status" placeholder="扣款状态" style="width: 140px" allow-clear>
-            <a-option value="deducted">已扣款</a-option>
-            <a-option value="pending">待扣款</a-option>
+          <a-select v-model="searchForm.status" placeholder="分账状态" style="width: 140px" allow-clear>
+            <a-option value="deducted">已分账</a-option>
+            <a-option value="pending">待分账</a-option>
           </a-select>
           <a-range-picker v-model="searchForm.dateRange" style="width: 260px" allow-clear />
         </a-space>
@@ -91,10 +91,10 @@
               <span class="text-danger text-xl">¥{{ record.deductAmount?.toLocaleString() }}</span>
             </template>
           </a-table-column>
-          <a-table-column title="扣款状态" :width="100">
+          <a-table-column title="分账状态" :width="100">
             <template #cell="{ record }">
               <a-tag :color="record.status === 'deducted' ? 'green' : 'orange'">
-                {{ record.status === 'deducted' ? '已扣款' : '待扣款' }}
+                {{ record.status === 'deducted' ? '已分账' : '待分账' }}
               </a-tag>
             </template>
           </a-table-column>

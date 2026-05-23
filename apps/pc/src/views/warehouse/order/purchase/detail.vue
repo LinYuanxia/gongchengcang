@@ -3,26 +3,14 @@
     <a-card>
       <template #extra>
         <a-space>
-          <a-button v-if="['received', 'completed'].includes(order.status)" @click="handleOpenAfterSalesModal">
-            申请售后
-          </a-button>
-          <a-button v-if="['received', 'completed'].includes(order.status)" @click="handleViewAfterSales">
-            售后记录
-          </a-button>
-          <a-button v-if="order.paymentStatus !== 'paid' && order.status !== 'cancelled'" @click="handleOpenPay">
-            付款
+          <a-button v-if="order.paymentStatus !== 'paid' && ['pending', 'shipping', 'receiving'].includes(order.status)" @click="handleOpenPay">
+            立即支付
           </a-button>
           <a-button v-if="order.status === 'pending'" @click="handleCancelOrder">
             取消订单
           </a-button>
-          <a-button v-if="order.status === 'pending'" type="primary" @click="handleEditAddress">
-            编辑收货地址
-          </a-button>
-          <a-button v-if="order.status === 'shipped'" type="primary" @click="handleReceive">
-            确认收货
-          </a-button>
-          <a-button v-if="['shipped', 'received'].includes(order.status)" @click="handleViewLogistics">
-            物流跟踪
+          <a-button v-if="order.status === 'receiving'" type="primary" @click="handleReceive">
+            收货
           </a-button>
           <a-button @click="handleBack">返回</a-button>
         </a-space>
@@ -34,6 +22,11 @@
             {{ order.orderNo }}
           </a-space>
         </a-descriptions-item>
+        <a-descriptions-item label="订单类型">
+          <a-tag :color="order.orderType === 'purchase' ? 'blue' : 'orange'">
+            {{ order.orderType === 'purchase' ? '采购订单' : '售后订单' }}
+          </a-tag>
+        </a-descriptions-item>
         <a-descriptions-item label="供应商">{{ order.supplierName }}</a-descriptions-item>
         <a-descriptions-item label="订单状态">
           <a-tag :color="getStatusColor(order.status)">{{ getStatusText(order.status) }}</a-tag>
@@ -41,20 +34,12 @@
         <a-descriptions-item label="支付状态">
           <a-tag :color="getPaymentStatusColor(order.paymentStatus)">{{ getPaymentStatusText(order.paymentStatus) }}</a-tag>
         </a-descriptions-item>
-        <a-descriptions-item label="收货状态">
-          <a-tag :color="getReceiveStatusColor(order.receiveStatus)">{{ getReceiveStatusText(order.receiveStatus) }}</a-tag>
-        </a-descriptions-item>
         <a-descriptions-item label="订单金额">¥{{ order.totalAmount?.toLocaleString() }}</a-descriptions-item>
         <a-descriptions-item label="应付金额">¥{{ payableAmount.toLocaleString() }}</a-descriptions-item>
         <a-descriptions-item label="实付金额">¥{{ paidAmount.toLocaleString() }}</a-descriptions-item>
         <a-descriptions-item label="创建时间">{{ order.createTime }}</a-descriptions-item>
         <a-descriptions-item label="创建人">{{ order.createBy }}</a-descriptions-item>
-        <a-descriptions-item label="支付时间">{{ order.paymentTime || '-' }}</a-descriptions-item>
       </a-descriptions>
-
-      <a-alert v-if="order.pendingDamageAmount > 0" type="warning" style="margin-top: 16px">
-        待供应商售后确认货损金额：<strong>¥{{ order.pendingDamageAmount?.toLocaleString() }}</strong>（确认后自动调减应付金额）
-      </a-alert>
 
       <a-divider />
 
@@ -83,43 +68,50 @@
           <a-table-column title="商品名称" data-index="productName" :width="200" />
           <a-table-column title="规格" data-index="spec" :width="120" />
           <a-table-column title="单位" data-index="unit" :width="80" />
-          <a-table-column title="采购数量" data-index="quantity" :width="100" align="right" />
-          <a-table-column title="供应商确认数量" :width="140" align="right">
+          <a-table-column title="购买数量" data-index="quantity" :width="100" align="right" />
+          <a-table-column title="供应商确认" :width="120" align="right">
             <template #cell="{ record }">
-              <span :class="record.confirmedQuantity < record.quantity ? 'text-warning' : 'text-success'">
+              <span :style="{ color: record.confirmedQuantity < record.quantity ? '#ff7d00' : '#00b42a' }">
                 {{ record.confirmedQuantity || record.quantity }}
               </span>
             </template>
           </a-table-column>
-          <a-table-column title="确认差异" :width="120" align="right">
+          <a-table-column title="确认差异" :width="100" align="right">
             <template #cell="{ record }">
-              <span :class="record.quantity - (record.confirmedQuantity || record.quantity) > 0 ? 'text-danger' : 'text-success'">
+              <span :style="{ color: record.quantity - (record.confirmedQuantity || record.quantity) > 0 ? '#f53f3f' : '#00b42a' }">
                 {{ record.quantity - (record.confirmedQuantity || record.quantity) }}
               </span>
             </template>
           </a-table-column>
-          <a-table-column title="已发货数量" :width="120" align="right">
+          <a-table-column title="待发数量" :width="100" align="right">
             <template #cell="{ record }">
-              <span :class="record.shippedQuantity < record.quantity ? 'text-warning' : 'text-success'">
-                {{ record.shippedQuantity || 0 }}
+              <span :style="{ color: '#86909c' }">
+                {{ record.quantity - (record.shippedQuantity || 0) }}
               </span>
             </template>
           </a-table-column>
-          <a-table-column title="已收货数量" :width="120" align="right">
+          <a-table-column title="已收数量" :width="100" align="right">
             <template #cell="{ record }">
-              <span :class="record.receivedQuantity < record.shippedQuantity ? 'text-warning' : 'text-success'">
+              <span :style="{ color: '#00b42a' }">
                 {{ record.receivedQuantity || 0 }}
+              </span>
+            </template>
+          </a-table-column>
+          <a-table-column title="货损数量" :width="100" align="right">
+            <template #cell="{ record }">
+              <span :style="{ color: '#f53f3f' }">
+                {{ record.damageQuantity || 0 }}
               </span>
             </template>
           </a-table-column>
           <a-table-column title="单价" :width="100" align="right">
             <template #cell="{ record }">
-              ¥{{ record.price?.toLocaleString() }}
+              <span style="color: #165dff; font-weight: 600;">¥{{ record.price?.toLocaleString() }}</span>
             </template>
           </a-table-column>
           <a-table-column title="金额" :width="120" align="right">
             <template #cell="{ record }">
-              ¥{{ (record.quantity * record.price)?.toLocaleString() }}
+              <span style="color: #165dff; font-weight: 600;">¥{{ (record.quantity * record.price)?.toLocaleString() }}</span>
             </template>
           </a-table-column>
           <a-table-column title="供应商备注" :width="180">
@@ -131,278 +123,31 @@
           </a-table-column>
         </template>
       </a-table>
-      <a-divider />
 
-      <h3>
-        供应商确认信息
-        <a-space style="margin-left: 12px">
-          <a-tag color="blue">确认商品：{{ supplierConfirmSummary.acceptCount }} 种</a-tag>
-          <a-tag v-if="supplierConfirmSummary.partialCount > 0" color="orange">部分供应：{{ supplierConfirmSummary.partialCount }} 种</a-tag>
-          <a-tag v-if="supplierConfirmSummary.rejectCount > 0" color="red">无法供货：{{ supplierConfirmSummary.rejectCount }} 种</a-tag>
-          <span class="text-subtle">确认时间：{{ order.confirmTime || '-' }}</span>
-        </a-space>
-      </h3>
-
-      <a-descriptions :column="3" class="mb-16">
-        <a-descriptions-item label="采购商品总数">
-          <strong>{{ supplierConfirmSummary.totalPurchaseQuantity }}</strong>
+      <a-descriptions :column="4" bordered size="small" style="margin-top: 16px;">
+        <a-descriptions-item label="商品数">
+          <strong style="color: #165dff;">{{ order.items.length }} 种</strong>
         </a-descriptions-item>
-        <a-descriptions-item label="供应商确认总数">
-          <strong>{{ supplierConfirmSummary.totalConfirmedQuantity }}</strong>
+        <a-descriptions-item label="购买量">
+          <strong style="color: #165dff;">{{ totalQuantity }}</strong>
         </a-descriptions-item>
-        <a-descriptions-item label="总差异数量">
-          <strong class="text-danger">{{ supplierConfirmSummary.totalDiffQuantity }}</strong>
+        <a-descriptions-item label="订单金额">
+          <strong style="color: #165dff;">¥{{ order.totalAmount?.toLocaleString() }}</strong>
+        </a-descriptions-item>
+        <a-descriptions-item label="实付金额">
+          <strong style="color: #00b42a;">¥{{ paidAmount.toLocaleString() }}</strong>
         </a-descriptions-item>
       </a-descriptions>
 
-      <a-alert v-if="order.confirmRemark" type="info" class="mb-16">
-        <template #message>
-          <icon-info-circle />
-          <span>供应商备注：{{ order.confirmRemark }}</span>
-        </template>
-      </a-alert>
-
-      <a-table v-if="supplierConfirmSummary.rejectItems.length > 0" :data="supplierConfirmSummary.rejectItems" :pagination="false" class="mb-16">
-        <template #columns>
-          <a-table-column title="无法供货商品" data-index="productName" :width="200" />
-          <a-table-column title="规格" data-index="spec" :width="120" />
-          <a-table-column title="采购数量" data-index="purchaseQuantity" :width="100" align="right" />
-          <a-table-column title="供应商原因" data-index="remark" />
-        </template>
-      </a-table>
       <a-divider />
 
-      <h3>发货记录</h3>
-      <a-table :data="shipments" :pagination="false">
-        <template #columns>
-          <a-table-column title="发货单号" data-index="shipmentNo" :width="180" />
-          <a-table-column title="发货时间" data-index="shipTime" :width="160" />
-          <a-table-column title="物流公司" data-index="logisticsCompany" :width="120" />
-          <a-table-column title="物流单号" :width="180">
-            <template #cell="{ record }">
-              <a-link @click="handleTrackLogistics(record)">{{ record.logisticsNo }}</a-link>
-            </template>
-          </a-table-column>
-          <a-table-column title="发货数量" :width="100" align="right">
-            <template #cell="{ record }">
-              {{ record.items?.reduce((sum: number, item: any) => sum + item.quantity, 0) }}
-            </template>
-          </a-table-column>
-          <a-table-column title="收货状态" :width="100">
-            <template #cell="{ record }">
-              <a-tag :color="getShipmentReceiveColor(record.receiveStatus)">
-                {{ getShipmentReceiveText(record.receiveStatus) }}
-              </a-tag>
-            </template>
-          </a-table-column>
-          <a-table-column title="入库单号" :width="180">
-            <template #cell="{ record }">
-              <a-link v-if="record.inboundNo" @click="handleViewInbound(record)">
-                {{ record.inboundNo }}
-              </a-link>
-              <span v-else>-</span>
-            </template>
-          </a-table-column>
-          <a-table-column title="操作" :width="200" fixed="right">
-            <template #cell="{ record }">
-              <a-space>
-                <a-link v-if="record.receiveStatus === 'pending'" @click="handleReceiveShipment(record)">
-                  收货
-                </a-link>
-                <a-link @click="handleTrackLogistics(record)">物流信息</a-link>
-                <a-link @click="handleViewShipment(record)">详情</a-link>
-              </a-space>
-            </template>
-          </a-table-column>
-        </template>
-      </a-table>
-      <a-divider />
-
-      <h3>入库记录
-        <a-button size="small" style="margin-left: 12px" @click="handleViewAllInbound">
-          查看全部入库单
-        </a-button>
-      </h3>
-      <a-table :data="inboundRecords" :pagination="false">
-        <template #columns>
-          <a-table-column title="入库单号" data-index="inboundNo" :width="180" />
-          <a-table-column title="入库时间" data-index="inboundTime" :width="160" />
-          <a-table-column title="入库类型" :width="100">
-            <template #cell="{ record }">
-              <a-tag color="blue">{{ record.inboundType }}</a-tag>
-            </template>
-          </a-table-column>
-          <a-table-column title="来源单据" :width="180">
-            <template #cell="{ record }">
-              {{ record.orderNo }}
-            </template>
-          </a-table-column>
-          <a-table-column title="入库商品数" :width="100" align="right">
-            <template #cell="{ record }">
-              {{ record.items?.length || 0 }}
-            </template>
-          </a-table-column>
-          <a-table-column title="商品库存数" :width="100" align="right">
-            <template #cell="{ record }">
-              {{ record.items?.reduce((sum: number, item: any) => sum + item.quantity, 0) }}
-            </template>
-          </a-table-column>
-          <a-table-column title="状态" :width="80">
-            <template #cell="{ record }">
-              <a-tag color="green">已完成</a-tag>
-            </template>
-          </a-table-column>
-          <a-table-column title="操作" :width="120" fixed="right">
-            <template #cell="{ record }">
-              <a-link @click="handleViewInboundDetail(record)">详情</a-link>
-            </template>
-          </a-table-column>
-        </template>
-      </a-table>
-      <a-divider />
-
-      <h3>收货批次</h3>
-      <a-table :data="receiveBatches" :pagination="false">
-        <template #columns>
-          <a-table-column title="批次号" :width="180">
-            <template #cell="{ record }">
-              <a-link>{{ record.batchNo }}</a-link>
-            </template>
-          </a-table-column>
-          <a-table-column title="关联发货单" data-index="shipmentNo" :width="150" />
-          <a-table-column title="关联入库单" data-index="inboundNo" :width="150" />
-          <a-table-column title="商品名称" data-index="productName" :width="200" />
-          <a-table-column title="收货数量" :width="100" align="right">
-            <template #cell="{ record }">
-              {{ record.receiveQuantity }}
-            </template>
-          </a-table-column>
-          <a-table-column title="收货仓库" data-index="warehouseName" :width="150" />
-          <a-table-column title="收货时间" data-index="receiveTime" :width="160" />
-          <a-table-column title="验收人" data-index="inspector" :width="100" />
-          <a-table-column title="当前库存" :width="100" align="right">
-            <template #cell="{ record }">
-              <a-tag :color="record.currentStock > 0 ? 'green' : 'grey'" size="small">
-                {{ record.currentStock }}
-              </a-tag>
-            </template>
-          </a-table-column>
-          <a-table-column title="操作" :width="100">
-            <template #cell="{ record }">
-              <a-link @click="handleTrace(record)">追溯</a-link>
-            </template>
-          </a-table-column>
-        </template>
-      </a-table>
-
-    <a-modal
-      v-model:visible="traceModalVisible"
-      title="📊 批次全链路追溯"
-      :width="900"
-      :footer="false"
-    >
-      <div class="trace-header">
-        <div class="trace-batch-info">
-          <span class="batch-no">批次号：{{ currentTraceBatch?.batchNo }}</span>
-          <a-tag color="blue">{{ currentTraceBatch?.skuName }}</a-tag>
-          <a-tag color="green">{{ currentTraceBatch?.quantity }}{{ currentTraceBatch?.unit }}</a-tag>
-        </div>
-      </div>
-
-      <div class="trace-timeline">
-        <div class="timeline-item success">
-          <div class="timeline-dot"></div>
-          <div class="timeline-content">
-            <div class="timeline-title">
-              <component :is="IconCheckCircle" />
-              <span>采购订单创建</span>
-              <span class="timeline-time">2024-01-10 09:30:00</span>
-            </div>
-            <div class="timeline-detail">
-              <p>订单号：{{ order.orderNo }}</p>
-              <p>供应商：{{ order.supplierName }}</p>
-              <p>下单人：{{ order.createBy }}</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="timeline-item success">
-          <div class="timeline-dot"></div>
-          <div class="timeline-content">
-            <div class="timeline-title">
-              <component :is="IconCheckCircle" />
-              <span>供应商确认接单</span>
-              <span class="timeline-time">2024-01-10 14:20:00</span>
-            </div>
-            <div class="timeline-detail">
-              <p>供应商已确认，安排发货</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="timeline-item success">
-          <div class="timeline-dot"></div>
-          <div class="timeline-content">
-            <div class="timeline-title">
-              <component :is="IconCheckCircle" />
-              <span>批次生成 & 验收入库</span>
-              <span class="timeline-time">2024-01-15 11:45:00</span>
-            </div>
-            <div class="timeline-detail">
-              <p>入库单号：IN20240115001</p>
-              <p>入库仓库：{{ currentTraceBatch?.warehouseName || '1号原材料仓' }}</p>
-              <p>库位：A-01-03</p>
-              <p>验收人：王仓管</p>
-              <p>实收数量：{{ currentTraceBatch?.quantity }}{{ currentTraceBatch?.unit }}</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="timeline-item warning" v-if="currentTraceBatch?.outQuantity > 0">
-          <div class="timeline-dot"></div>
-          <div class="timeline-content">
-            <div class="timeline-title">
-              <component :is="IconExclamationCircle" />
-              <span>部分出库领用</span>
-              <span class="timeline-time">2024-01-20 08:30:00</span>
-            </div>
-            <div class="timeline-detail">
-              <p>出库单号：OUT20240120001</p>
-              <p>领用项目：3号施工现场</p>
-              <p>领用人：李工长</p>
-              <p>出库数量：200{{ currentTraceBatch?.unit }}</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="timeline-item current">
-          <div class="timeline-dot"></div>
-          <div class="timeline-content">
-            <div class="timeline-title">
-              <component :is="IconInfoCircle" />
-              <span>当前库存状态</span>
-              <span class="timeline-time">实时</span>
-            </div>
-            <div class="timeline-detail">
-              <p>当前库存：<a-tag color="green">{{ (currentTraceBatch?.quantity || 0) - (currentTraceBatch?.outQuantity || 200) }}{{ currentTraceBatch?.unit }}</a-tag></p>
-              <p>已出库：<a-tag color="orange">{{ currentTraceBatch?.outQuantity || 200 }}{{ currentTraceBatch?.unit }}</a-tag></p>
-              <p>库位状态：正常存储中</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </a-modal>
-
-      <a-divider />
-
-      <h3>付款记录
+      <h3>支付记录
         <a-button type="primary" size="small" style="margin-left: 12px" @click="handleOpenPay">
           付款
         </a-button>
       </h3>
       <div class="pay-summary" style="margin-bottom: 12px">
         <span>订单金额：<strong>¥{{ order.totalAmount?.toLocaleString() }}</strong></span>
-        <span class="damage">货损调减：<strong>-¥{{ (order.confirmedDamageAmount || 0).toLocaleString() }}</strong></span>
         <span class="payable">应付金额：<strong>¥{{ payableAmount.toLocaleString() }}</strong></span>
         <span class="paid">已付：<strong>¥{{ paidAmount.toLocaleString() }}</strong></span>
         <span class="unpaid">待付：<strong>¥{{ unpaidAmount.toLocaleString() }}</strong></span>
@@ -410,13 +155,13 @@
 
       <a-table :data="paymentRecords" :pagination="false">
         <template #columns>
-          <a-table-column title="付款单号" data-index="paymentNo" :width="160" />
-          <a-table-column title="付款金额" :width="120" align="right">
+          <a-table-column title="支付单号" data-index="paymentNo" :width="160" />
+          <a-table-column title="支付金额" :width="120" align="right">
             <template #cell="{ record }">
               <strong>¥{{ record.amount.toLocaleString() }}</strong>
             </template>
           </a-table-column>
-          <a-table-column title="付款方式" :width="100">
+          <a-table-column title="支付方式" :width="100">
             <template #cell="{ record }">
               <a-tag color="blue">银行转账</a-tag>
             </template>
@@ -429,11 +174,67 @@
               <span v-else>-</span>
             </template>
           </a-table-column>
-          <a-table-column title="付款时间" data-index="payTime" :width="160" />
-          <a-table-column title="备注" data-index="remark" :width="200" />
-          <a-table-column title="状态" :width="100">
+          <a-table-column title="支付时间" data-index="payTime" :width="160" />
+          <a-table-column title="备注" data-index="remark" :width="150" />
+          <a-table-column title="状态" :width="120">
             <template #cell="{ record }">
-              <a-tag color="green">已到账</a-tag>
+              <template v-if="record.status === 'rejected'">
+                <a-tag color="red">已驳回</a-tag>
+              </template>
+              <a-tag v-else-if="record.status === 'pending'" color="orange">待审核</a-tag>
+              <a-tag v-else color="green">已到账</a-tag>
+            </template>
+          </a-table-column>
+          <a-table-column title="驳回原因" :width="180">
+            <template #cell="{ record }">
+              <span v-if="record.status === 'rejected'" class="text-danger">
+                {{ record.rejectReason || '未填写驳回原因' }}
+              </span>
+              <span v-else style="color: #86909c;">-</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="操作" :width="100">
+            <template #cell="{ record }">
+              <a-button 
+                v-if="record.status === 'rejected'" 
+                type="primary" 
+                size="small"
+                @click="handleReuploadPayment(record)"
+              >
+                重新上传
+              </a-button>
+              <span v-else>-</span>
+            </template>
+          </a-table-column>
+        </template>
+      </a-table>
+
+      <a-divider />
+
+      <h3>收货记录</h3>
+      <a-table :data="receiveRecords" :pagination="false">
+        <template #columns>
+          <a-table-column title="入库单号" data-index="inboundNo" :width="160" />
+          <a-table-column title="收货时间" data-index="receiveTime" :width="160" />
+          <a-table-column title="收货仓库" data-index="warehouse" :width="140" />
+          <a-table-column title="收货数量" :width="100" align="right">
+            <template #cell="{ record }">
+              <span style="color: #00b42a; font-weight: 600;">{{ record.totalQuantity }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="货损数量" :width="100" align="right">
+            <template #cell="{ record }">
+              <span style="color: #f53f3f;">{{ record.damageQuantity || 0 }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="实际入库" :width="100" align="right">
+            <template #cell="{ record }">
+              <span style="color: #165dff; font-weight: 600;">{{ record.actualInbound }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="操作" :width="80" fixed="right">
+            <template #cell="{ record }">
+              <a-link @click="handleViewReceiveDetail(record)">查看</a-link>
             </template>
           </a-table-column>
         </template>
@@ -496,6 +297,21 @@
     </a-modal>
 
       <a-divider />
+
+      <a-descriptions :column="4" bordered size="small" v-if="(order.afterSalesNos && order.afterSalesNos.length > 0) || (order.relatedAfterSalesOrders && order.relatedAfterSalesOrders.length > 0)">
+        <a-descriptions-item v-if="order.afterSalesNos && order.afterSalesNos.length > 0" label="售后记录">
+          <a-space :wrap="true">
+            <a-link v-for="no in order.afterSalesNos" :key="no">{{ no }}</a-link>
+          </a-space>
+        </a-descriptions-item>
+        <a-descriptions-item v-if="order.relatedAfterSalesOrders && order.relatedAfterSalesOrders.length > 0" label="关联售后订单">
+          <a-space :wrap="true">
+            <a-link v-for="item in order.relatedAfterSalesOrders" :key="item.id" @click="handleJumpToOrder(item.id)">
+              {{ item.orderNo }}
+            </a-link>
+          </a-space>
+        </a-descriptions-item>
+      </a-descriptions>
 
       <h3>操作日志</h3>
       <a-timeline>
@@ -743,6 +559,69 @@
     </a-modal>
 
     <a-modal
+      v-model:visible="viewReceiveModalVisible"
+      title="采购收货"
+      :width="1100"
+      :footer="false"
+    >
+      <a-descriptions :column="4" bordered size="small" style="margin-bottom: 16px">
+        <a-descriptions-item label="入库单号" :span="2">
+          <a-tag color="arcoblue">{{ currentReceiveRecord?.inboundNo }}</a-tag>
+        </a-descriptions-item>
+        <a-descriptions-item label="收货时间">{{ currentReceiveRecord?.receiveTime }}</a-descriptions-item>
+        <a-descriptions-item label="收货仓库">{{ currentReceiveRecord?.warehouse }}</a-descriptions-item>
+      </a-descriptions>
+
+      <a-table :data="order.items" :pagination="false">
+        <template #columns>
+          <a-table-column title="商品信息" :width="180">
+            <template #cell="{ record }">
+              <div><strong>{{ record.productName }}</strong></div>
+              <div style="color: #86909c; font-size: 12px;">{{ record.spec }} / {{ record.unit }}</div>
+            </template>
+          </a-table-column>
+          <a-table-column title="购买量" :width="70" align="right">
+            <template #cell="{ record }">{{ record.quantity }}</template>
+          </a-table-column>
+          <a-table-column title="待发货" :width="70" align="right">
+            <template #cell="{ record }">
+              <span style="color: #ff7d00;">{{ record.quantity - (record.shippedQuantity || 0) }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="已收货" :width="70" align="right">
+            <template #cell="{ record }">
+              <span style="color: #00b42a;">{{ record.receivedQuantity || 0 }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="本次收货" :width="110" align="right">
+            <template #cell="{ record }">
+              <span style="font-weight: 600;">{{ record.receivedQuantity || 0 }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="货损" :width="70" align="right">
+            <template #cell="{ record }">
+              <span style="color: #f53f3f;">{{ record.damageQuantity || 0 }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="实际入库" :width="80" align="right">
+            <template #cell="{ record }">
+              <span style="color: #165dff; font-weight: 600;">
+                {{ (record.receivedQuantity || 0) - (record.damageQuantity || 0) }}
+              </span>
+            </template>
+          </a-table-column>
+          <a-table-column title="备注" :width="180">
+            <template #cell="{ record }">{{ record.supplierRemark || '-' }}</template>
+          </a-table-column>
+        </template>
+      </a-table>
+
+      <a-descriptions :column="2" bordered size="small" style="margin-top: 16px">
+        <a-descriptions-item label="收货备注">{{ currentReceiveRecord?.remark || '-' }}</a-descriptions-item>
+      </a-descriptions>
+    </a-modal>
+
+    <a-modal
       v-model:visible="editAddressModalVisible"
       title="编辑收货地址"
       :width="500"
@@ -863,6 +742,7 @@ const handleTrace = (record: any) => {
 const order = ref<any>({
   id: route.params.id || '1',
   orderNo: 'PO202401150001',
+  orderType: 'purchase',
   supplierName: '广东建材有限公司',
   totalAmount: 205000,
   confirmedDamageAmount: 5000,
@@ -875,6 +755,7 @@ const order = ref<any>({
   paymentTime: '',
   confirmTime: '2024-01-15 14:30:00',
   confirmRemark: '水泥目前库存紧张，正在加急生产，预计3天内可补发',
+  afterSalesNos: ['AS202401200001', 'AS202401250002'],
   receiverName: '张工',
   receiverPhone: '13800138001',
   receiverAddress: '广东省深圳市南山区科技园南一道1号',
@@ -887,8 +768,9 @@ const order = ref<any>({
       quantity: 100,
       confirmedQuantity: 100,
       supplierRemark: '',
-      shippedQuantity: 0,
-      receivedQuantity: 0,
+      shippedQuantity: 80,
+      receivedQuantity: 75,
+      damageQuantity: 2,
       price: 380,
     },
     {
@@ -899,8 +781,9 @@ const order = ref<any>({
       quantity: 50,
       confirmedQuantity: 40,
       supplierRemark: '部分缺货，后续优先安排',
-      shippedQuantity: 0,
-      receivedQuantity: 0,
+      shippedQuantity: 40,
+      receivedQuantity: 38,
+      damageQuantity: 0,
       price: 4200,
     },
     {
@@ -909,10 +792,11 @@ const order = ref<any>({
       spec: 'P.O42.5',
       unit: '吨',
       quantity: 20,
-      confirmedQuantity: 5,
+      confirmedQuantity: 15,
       supplierRemark: '库存不足',
-      shippedQuantity: 0,
-      receivedQuantity: 0,
+      shippedQuantity: 15,
+      receivedQuantity: 14,
+      damageQuantity: 1,
       price: 500,
     },
   ],
@@ -922,6 +806,24 @@ const order = ref<any>({
     { time: '2024-01-15 16:30:00', content: '订单支付成功' },
     { time: '2024-01-15 14:30:00', content: '供应商确认订单：确认3种商品，部分供应2种' },
     { time: '2024-01-15 10:30:00', content: '订单创建成功' },
+  ],
+  relatedAfterSalesOrders: [
+    {
+      id: '2',
+      orderNo: 'PO202401200002',
+      orderType: 'after_sales',
+      totalAmount: 15000,
+      status: 'completed',
+      createTime: '2024-01-20 10:00:00',
+    },
+    {
+      id: '3',
+      orderNo: 'PO202401250003',
+      orderType: 'after_sales',
+      totalAmount: 8000,
+      status: 'pending',
+      createTime: '2024-01-25 15:30:00',
+    },
   ],
 })
 
@@ -981,6 +883,27 @@ const shipments = ref([
       { productName: '水泥 P.O 42.5', spec: '42.5级', unit: '吨', quantity: 100 },
       { productName: '黄砂 中砂', spec: '中砂', unit: '方', quantity: 200 },
     ],
+  },
+])
+
+const receiveRecords = ref([
+  {
+    id: '1',
+    inboundNo: 'IB202401160001',
+    receiveTime: '2024-01-16 14:30:00',
+    warehouse: '深圳南山仓',
+    totalQuantity: 127,
+    damageQuantity: 3,
+    actualInbound: 124,
+  },
+  {
+    id: '2',
+    inboundNo: 'IB202401180002',
+    receiveTime: '2024-01-18 16:00:00',
+    warehouse: '广州白云仓',
+    totalQuantity: 50,
+    damageQuantity: 0,
+    actualInbound: 50,
   },
 ])
 
@@ -1131,6 +1054,7 @@ const paymentRecords = ref([
     payTime: '2024-01-15 16:30:00',
     remark: '首付款50%',
     operator: '财务张',
+    status: 'approved',
   },
   {
     paymentNo: 'PAY202401160002',
@@ -1139,11 +1063,26 @@ const paymentRecords = ref([
     payTime: '2024-01-16 10:00:00',
     remark: '进度款',
     operator: '财务张',
+    status: 'rejected',
+    rejectReason: '转账凭证模糊，无法辨认转账金额和账户信息',
+  },
+  {
+    paymentNo: 'PAY202401180003',
+    amount: 30000,
+    voucher: true,
+    payTime: '2024-01-18 09:00:00',
+    remark: '尾款',
+    operator: '财务张',
+    status: 'pending',
   },
 ])
 
 const paidAmount = computed(() => {
   return paymentRecords.value.reduce((sum, r) => sum + r.amount, 0)
+})
+
+const totalQuantity = computed(() => {
+  return order.value.items?.reduce((sum, item: any) => sum + item.quantity, 0) || 0
 })
 
 const payableAmount = computed(() => {
@@ -1167,9 +1106,17 @@ function handlePayConfirm() {
     payTime: new Date().toLocaleString(),
     remark: payForm.value.remark || '银行转账',
     operator: '当前用户',
+    status: 'pending',
   })
   payModalVisible.value = false
   Message.success('付款登记成功')
+}
+
+function handleReuploadPayment(record: any) {
+  record.status = 'pending'
+  record.rejectReason = ''
+  record.payTime = new Date().toLocaleString()
+  Message.success('支付凭证已重新上传，等待供应商审核')
 }
 
 function handleViewVoucher(record: any) {
@@ -1197,16 +1144,17 @@ function getStatusColor(status: string) {
 
 function getStatusText(status: string) {
   const texts: Record<string, string> = {
-    to_confirm: '待确认',
-    pending: '供应商待确认',
-    paid: '已支付',
-    confirmed: '已确认',
-    shipped: '已发货',
-    received: '已收货',
+    pending: '待确认',
+    shipping: '待发货',
+    receiving: '待收货',
     completed: '已完成',
     cancelled: '已取消',
   }
   return texts[status] || status
+}
+
+function handleJumpToOrder(orderId: string) {
+  router.push(`/warehouse/order/purchase/detail/${orderId}`)
 }
 
 function getPaymentStatusColor(status: string) {
@@ -1272,6 +1220,14 @@ function handleReceive() {
   if (pendingShipment) {
     handleReceiveShipment(pendingShipment)
   }
+}
+
+const viewReceiveModalVisible = ref(false)
+const currentReceiveRecord = ref<any>(null)
+
+function handleViewReceiveDetail(record: any) {
+  currentReceiveRecord.value = record
+  viewReceiveModalVisible.value = true
 }
 
 const batchItemModalVisible = ref(false)

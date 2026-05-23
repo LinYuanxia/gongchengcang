@@ -143,18 +143,11 @@
                   @click="handleComplete(record)"
                 >完成</a-link>
 
-                <!-- 采购售后：编辑 + 取消（申请中状态） -->
-                <a-link
-                  v-if="record.orderType === 'purchase' && record.status === 'applying'"
-                  @click="handleEditApply(record)"
-                >编辑售后</a-link>
+                <!-- 采购售后：取消（申请中状态） -->
                 <a-link
                   v-if="record.orderType === 'purchase' && record.status === 'applying'"
                   @click="handleCancelApply(record)"
                 >取消售后</a-link>
-
-                <!-- 采购订单：查看采购订单 -->
-                <a-link v-if="record.orderType === 'purchase'" @click="handleViewPurchase(record)">查看采购订单</a-link>
               </a-space>
             </template>
           </a-table-column>
@@ -534,20 +527,12 @@ function handleViewOriginalOrder(record: any) {
   }
 }
 
-function handleViewPurchase(record: any) {
-  router.push(`/warehouse/order/purchase/detail/${record.originalOrderNo}`)
-}
-
 function handleCancelApply(record: any) {
   const order = afterSalesOrders.value.find(o => o.id === record.id)
   if (order) {
     order.status = 'cancelled'
     Message.success('售后申请已取消')
   }
-}
-
-function handleEditApply(record: any) {
-  Message.info('编辑售后功能开发中')
 }
 
 const currentOrder = ref<any>({})
