@@ -36,7 +36,7 @@
       <a-tabs v-model:active-key="activeTab" class="status-tabs" @change="handleStatusChange">
         <a-tab-pane key="all" :title="`全部 (${statusStats.allCount})`" />
         <a-tab-pane key="applying" :title="`申请中 (${statusStats.applyingCount})`" />
-        <a-tab-pane key="approved" :title="`已通过 (${statusStats.approvedCount})`" />
+        <a-tab-pane key="approved" :title="`审核通过 (${statusStats.approvedCount})`" />
         <a-tab-pane key="completed" :title="`已完成 (${statusStats.completedCount})`" />
         <a-tab-pane key="rejected" :title="`已拒绝 (${statusStats.rejectedCount})`" />
         <a-tab-pane key="cancelled" :title="`已取消 (${statusStats.cancelledCount})`" />
@@ -54,6 +54,7 @@
               <a-link @click="handleViewOriginalOrder(record)">{{ record.originalOrderNo }}</a-link>
             </template>
           </a-table-column>
+          <a-table-column title="项目名称" data-index="projectName" :width="130" ellipsis />
           <a-table-column title="工程仓信息" :width="160">
             <template #cell="{ record }">
               <div>{{ record.warehouseName }}</div>
@@ -68,19 +69,6 @@
           <a-table-column title="售后商品数" :width="100" align="center">
             <template #cell="{ record }">
               {{ record.items.length }}种
-            </template>
-          </a-table-column>
-          <a-table-column title="商品库存数" :width="110" align="center">
-            <template #cell="{ record }">
-              <template v-if="record.items.length > 0">
-                <div v-for="item in record.items" :key="item.productName" class="stock-info">
-                  <span class="text-gray">{{ item.productName }}:</span>
-                  <span :class="item.stockQuantity >= item.quantity ? 'text-success' : 'text-danger'">
-                    {{ item.stockQuantity ?? '-' }}
-                  </span>
-                </div>
-              </template>
-              <span v-else class="text-gray">-</span>
             </template>
           </a-table-column>
           <a-table-column title="售后原因" data-index="reason" :width="160" ellipsis />
@@ -108,10 +96,15 @@
               {{ record.processTime || '-' }}
             </template>
           </a-table-column>
-          <a-table-column title="操作" :width="140" fixed="right">
+          <a-table-column title="操作" :width="190" fixed="right">
             <template #cell="{ record }">
               <a-space>
                 <a-link type="primary" @click="handleViewDetail(record)">详情</a-link>
+                <a-link
+                  v-if="record.status === 'applying'"
+                  type="primary"
+                  @click="handleViewDetail(record)"
+                >审核</a-link>
                 <a-link
                   v-if="record.status === 'approved'"
                   type="primary"
@@ -513,19 +506,5 @@ function handleReissueSubmit() {
 .text-gray {
   color: var(--color-text-3);
   font-size: 12px;
-}
-
-.text-success {
-  color: #00b42a;
-}
-
-.text-danger {
-  color: #f53f3f;
-}
-
-.stock-info {
-  font-size: 12px;
-  line-height: 1.8;
-  white-space: nowrap;
 }
 </style>

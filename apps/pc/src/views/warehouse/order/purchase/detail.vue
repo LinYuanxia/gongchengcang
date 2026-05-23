@@ -34,11 +34,13 @@
         <a-descriptions-item label="支付状态">
           <a-tag :color="getPaymentStatusColor(order.paymentStatus)">{{ getPaymentStatusText(order.paymentStatus) }}</a-tag>
         </a-descriptions-item>
+        <a-descriptions-item label="收货状态">
+          <a-tag :color="getReceiveStatusColor(order.receiveStatus)">{{ getReceiveStatusText(order.receiveStatus) }}</a-tag>
+        </a-descriptions-item>
         <a-descriptions-item label="订单金额">¥{{ order.totalAmount?.toLocaleString() }}</a-descriptions-item>
-        <a-descriptions-item label="应付金额">¥{{ payableAmount.toLocaleString() }}</a-descriptions-item>
         <a-descriptions-item label="实付金额">¥{{ paidAmount.toLocaleString() }}</a-descriptions-item>
         <a-descriptions-item label="创建时间">{{ order.createTime }}</a-descriptions-item>
-        <a-descriptions-item label="创建人">{{ order.createBy }}</a-descriptions-item>
+        <a-descriptions-item label="支付时间">{{ order.paymentTime || '-' }}</a-descriptions-item>
       </a-descriptions>
 
       <a-divider />
@@ -69,20 +71,6 @@
           <a-table-column title="规格" data-index="spec" :width="120" />
           <a-table-column title="单位" data-index="unit" :width="80" />
           <a-table-column title="购买数量" data-index="quantity" :width="100" align="right" />
-          <a-table-column title="供应商确认" :width="120" align="right">
-            <template #cell="{ record }">
-              <span :style="{ color: record.confirmedQuantity < record.quantity ? '#ff7d00' : '#00b42a' }">
-                {{ record.confirmedQuantity || record.quantity }}
-              </span>
-            </template>
-          </a-table-column>
-          <a-table-column title="确认差异" :width="100" align="right">
-            <template #cell="{ record }">
-              <span :style="{ color: record.quantity - (record.confirmedQuantity || record.quantity) > 0 ? '#f53f3f' : '#00b42a' }">
-                {{ record.quantity - (record.confirmedQuantity || record.quantity) }}
-              </span>
-            </template>
-          </a-table-column>
           <a-table-column title="待发数量" :width="100" align="right">
             <template #cell="{ record }">
               <span :style="{ color: '#86909c' }">
@@ -114,13 +102,6 @@
               <span style="color: #165dff; font-weight: 600;">¥{{ (record.quantity * record.price)?.toLocaleString() }}</span>
             </template>
           </a-table-column>
-          <a-table-column title="供应商备注" :width="180">
-            <template #cell="{ record }">
-              <a-tooltip :content="record.supplierRemark || '-'">
-                {{ record.supplierRemark || '-' }}
-              </a-tooltip>
-            </template>
-          </a-table-column>
         </template>
       </a-table>
 
@@ -141,6 +122,21 @@
 
       <a-divider />
 
+      <h3>发货记录</h3>
+      <a-table :data="shipments" :pagination="false">
+        <template #columns>
+          <a-table-column title="发货单号" data-index="shipmentNo" :width="160" />
+          <a-table-column title="发货时间" data-index="shipTime" :width="160" />
+          <a-table-column title="操作" :width="80">
+            <template #cell="{ record }">
+              <a-link @click="handleViewShipment(record)">查看</a-link>
+            </template>
+          </a-table-column>
+        </template>
+      </a-table>
+
+      <a-divider />
+
       <h3>支付记录
         <a-button type="primary" size="small" style="margin-left: 12px" @click="handleOpenPay">
           付款
@@ -148,7 +144,6 @@
       </h3>
       <div class="pay-summary" style="margin-bottom: 12px">
         <span>订单金额：<strong>¥{{ order.totalAmount?.toLocaleString() }}</strong></span>
-        <span class="payable">应付金额：<strong>¥{{ payableAmount.toLocaleString() }}</strong></span>
         <span class="paid">已付：<strong>¥{{ paidAmount.toLocaleString() }}</strong></span>
         <span class="unpaid">待付：<strong>¥{{ unpaidAmount.toLocaleString() }}</strong></span>
       </div>
@@ -471,32 +466,7 @@
       </template>
     </a-modal>
 
-    <!-- batchCreateModal removed, merged into receiveModal -->
 
-    <!-- damageModal removed, no longer needed -->
-
-    <a-modal
-      v-model:visible="logisticsModalVisible"
-      title="物流跟踪"
-      :width="700"
-      :footer="false"
-    >
-      <a-descriptions :column="2" bordered>
-        <a-descriptions-item label="物流公司">{{ currentLogistics.company }}</a-descriptions-item>
-        <a-descriptions-item label="物流单号">{{ currentLogistics.no }}</a-descriptions-item>
-      </a-descriptions>
-
-      <a-divider />
-
-      <a-timeline>
-        <a-timeline-item v-for="(trace, index) in logisticsTraces" :key="index" :label="trace.time">
-          {{ trace.content }}
-          <template #dot v-if="index === 0">
-            <icon-check-circle-fill style="color: #00b42a" />
-          </template>
-        </a-timeline-item>
-      </a-timeline>
-    </a-modal>
 
     <a-modal
       v-model:visible="shipmentDetailVisible"
@@ -507,8 +477,6 @@
       <a-descriptions :column="2" bordered>
         <a-descriptions-item label="发货单号">{{ currentShipment.shipmentNo }}</a-descriptions-item>
         <a-descriptions-item label="发货时间">{{ currentShipment.shipTime }}</a-descriptions-item>
-        <a-descriptions-item label="物流公司">{{ currentShipment.logisticsCompany }}</a-descriptions-item>
-        <a-descriptions-item label="物流单号">{{ currentShipment.logisticsNo }}</a-descriptions-item>
         <a-descriptions-item label="收货状态">
           <a-tag :color="getShipmentReceiveColor(currentShipment.receiveStatus)">
             {{ getShipmentReceiveText(currentShipment.receiveStatus) }}
@@ -526,34 +494,6 @@
           <a-table-column title="商品名称" data-index="productName" />
           <a-table-column title="规格" data-index="spec" />
           <a-table-column title="发货数量" data-index="quantity" align="right" />
-        </template>
-      </a-table>
-    </a-modal>
-
-    <a-modal
-      v-model:visible="inboundDetailVisible"
-      title="收货详情"
-      :width="700"
-      :footer="false"
-    >
-      <a-descriptions :column="2" bordered>
-        <a-descriptions-item label="入库单号">{{ currentInbound.inboundNo }}</a-descriptions-item>
-        <a-descriptions-item label="入库时间">{{ currentInbound.inboundTime }}</a-descriptions-item>
-        <a-descriptions-item label="入库类型">{{ currentInbound.inboundType }}</a-descriptions-item>
-        <a-descriptions-item label="入库仓库">{{ currentInbound.warehouse }}</a-descriptions-item>
-        <a-descriptions-item label="来源单据">{{ currentInbound.orderNo }}</a-descriptions-item>
-        <a-descriptions-item label="操作人">{{ currentInbound.operator }}</a-descriptions-item>
-        <a-descriptions-item label="备注" :span="2">{{ currentInbound.remark || '-' }}</a-descriptions-item>
-      </a-descriptions>
-
-      <a-divider />
-
-      <h4>收货商品</h4>
-      <a-table :data="currentInbound.items" :pagination="false">
-        <template #columns>
-          <a-table-column title="商品名称" data-index="productName" />
-          <a-table-column title="规格" data-index="spec" />
-          <a-table-column title="入库数量" data-index="quantity" align="right" />
         </template>
       </a-table>
     </a-modal>
@@ -609,9 +549,6 @@
                 {{ (record.receivedQuantity || 0) - (record.damageQuantity || 0) }}
               </span>
             </template>
-          </a-table-column>
-          <a-table-column title="备注" :width="180">
-            <template #cell="{ record }">{{ record.supplierRemark || '-' }}</template>
           </a-table-column>
         </template>
       </a-table>
@@ -745,14 +682,12 @@ const order = ref<any>({
   orderType: 'purchase',
   supplierName: '广东建材有限公司',
   totalAmount: 205000,
-  confirmedDamageAmount: 5000,
-  pendingDamageAmount: 8400,
   status: 'pending',
   paymentStatus: 'unpaid',
-  receiveStatus: 'none',
+  receiveStatus: 'pending',
   createTime: '2024-01-15 10:30:00',
   createBy: '张采购',
-  paymentTime: '',
+  paymentTime: '2024-01-15 16:30:00',
   confirmTime: '2024-01-15 14:30:00',
   confirmRemark: '水泥目前库存紧张，正在加急生产，预计3天内可补发',
   afterSalesNos: ['AS202401200001', 'AS202401250002'],
@@ -801,10 +736,11 @@ const order = ref<any>({
     },
   ],
   logs: [
+    { time: '2024-01-18 16:00:00', content: '完成全部收货，订单已完成' },
     { time: '2024-01-16 14:30:00', content: '部分收货成功，生成入库单：IB202401160001' },
-    { time: '2024-01-16 09:00:00', content: '供应商发货，物流：顺丰速运 SF1234567890' },
+    { time: '2024-01-16 09:00:00', content: '供应商发货' },
     { time: '2024-01-15 16:30:00', content: '订单支付成功' },
-    { time: '2024-01-15 14:30:00', content: '供应商确认订单：确认3种商品，部分供应2种' },
+    { time: '2024-01-15 14:30:00', content: '供应商确认订单' },
     { time: '2024-01-15 10:30:00', content: '订单创建成功' },
   ],
   relatedAfterSalesOrders: [
@@ -825,32 +761,6 @@ const order = ref<any>({
       createTime: '2024-01-25 15:30:00',
     },
   ],
-})
-
-const supplierConfirmSummary = computed(() => {
-  const items = order.value.items
-  const acceptItems = items.filter(i => i.confirmedQuantity > 0)
-  const partialItems = items.filter(i => (i.confirmedQuantity || i.quantity) < i.quantity)
-  const rejectItems = items.filter(i => i.confirmedQuantity === 0)
-
-  const totalPurchaseQuantity = items.reduce((sum, i) => sum + i.quantity, 0)
-  const totalConfirmedQuantity = items.reduce((sum, i) => sum + (i.confirmedQuantity || i.quantity), 0)
-  const totalDiffQuantity = totalPurchaseQuantity - totalConfirmedQuantity
-
-  return {
-    acceptCount: acceptItems.length,
-    partialCount: partialItems.length,
-    rejectCount: rejectItems.length,
-    rejectItems: rejectItems.map(i => ({
-      productName: i.productName,
-      spec: i.spec,
-      purchaseQuantity: i.quantity,
-      remark: i.supplierRemark,
-    })),
-    totalPurchaseQuantity,
-    totalConfirmedQuantity,
-    totalDiffQuantity,
-  }
 })
 
 const currentShipmentBatch = ref<any>(null)
@@ -907,24 +817,6 @@ const receiveRecords = ref([
   },
 ])
 
-const inboundRecords = ref([
-  {
-    id: '1',
-    inboundNo: 'IB202401160001',
-    inboundTime: '2024-01-16 14:30:00',
-    shipmentNo: 'SH202401160001',
-    orderNo: 'PO202401150001',
-    inboundType: '采购入库',
-    status: 'completed',
-    warehouse: '主仓库',
-    operator: '张三',
-    remark: '',
-    items: [
-      { productName: 'C30混凝土', spec: 'C30', quantity: 50 },
-    ],
-  },
-])
-
 const receiveModalVisible = ref(false)
 const receiveForm = ref({
   items: [] as any[],
@@ -933,21 +825,8 @@ const receiveForm = ref({
   shipmentId: '',
 })
 
-const logisticsModalVisible = ref(false)
-const currentLogistics = ref<any>({})
-const logisticsTraces = ref([
-  { time: '2024-01-16 14:30', content: '快件已签收，签收人：张三，如有疑问请联系派送员：李师傅(13900139000)' },
-  { time: '2024-01-16 10:20', content: '快件正在派送中，派送员：李师傅(13900139000)' },
-  { time: '2024-01-16 08:15', content: '快件到达【深圳南山营业点】' },
-  { time: '2024-01-15 22:30', content: '快件已发车' },
-  { time: '2024-01-15 20:00', content: '快件已揽收' },
-])
-
 const shipmentDetailVisible = ref(false)
 const currentShipment = ref<any>({})
-
-const inboundDetailVisible = ref(false)
-const currentInbound = ref<any>({})
 
 const editAddressModalVisible = ref(false)
 const editAddressForm = ref({
@@ -1086,7 +965,7 @@ const totalQuantity = computed(() => {
 })
 
 const payableAmount = computed(() => {
-  return (order.value.totalAmount || 0) - (order.value.confirmedDamageAmount || 0)
+  return order.value.totalAmount || 0
 })
 
 const unpaidAmount = computed(() => {
@@ -1130,12 +1009,9 @@ function handleUploadVoucher(options: any) {
 
 function getStatusColor(status: string) {
   const colors: Record<string, string> = {
-    to_confirm: 'gold',
     pending: 'orange',
-    paid: 'blue',
-    confirmed: 'blue',
-    shipped: 'cyan',
-    received: 'green',
+    shipping: 'cyan',
+    receiving: 'blue',
     completed: 'green',
     cancelled: 'red',
   }
@@ -1144,7 +1020,7 @@ function getStatusColor(status: string) {
 
 function getStatusText(status: string) {
   const texts: Record<string, string> = {
-    pending: '待确认',
+    pending: '待供应商确认',
     shipping: '待发货',
     receiving: '待收货',
     completed: '已完成',
@@ -1345,22 +1221,16 @@ async function handleReceiveConfirm() {
     order.value.receiveStatus = 'partial'
   }
 
-  inboundRecords.value.unshift({
+  const totalReceiveQuantity = receiveForm.value.items.reduce((sum: number, item: any) => sum + getItemAllocated(item), 0)
+  const totalDamageQuantity = receiveForm.value.items.reduce((sum: number, item: any) => sum + (item.damageQuantity || 0), 0)
+  receiveRecords.value.unshift({
     id: Date.now().toString(),
     inboundNo,
-    inboundTime: new Date().toLocaleString(),
-    shipmentNo: shipment?.shipmentNo || '',
-    orderNo: order.value.orderNo,
-    inboundType: '采购入库',
-    status: 'completed',
+    receiveTime: new Date().toLocaleString(),
     warehouse: receiveForm.value.warehouse,
-    operator: '当前用户',
-    remark: receiveForm.value.remark,
-    items: receiveForm.value.items.map((item: any) => ({
-      productName: item.productName,
-      spec: item.spec,
-      quantity: getItemAllocated(item),
-    })),
+    totalQuantity: totalReceiveQuantity,
+    damageQuantity: totalDamageQuantity,
+    actualInbound: totalReceiveQuantity - totalDamageQuantity,
   })
 
   const newBatches: any[] = []
@@ -1395,43 +1265,13 @@ function cancelReceive() {
   receiveModalVisible.value = false
 }
 
-function handleViewLogistics() {
-  if (shipments.value.length > 0) {
-    handleTrackLogistics(shipments.value[0])
-  }
-}
-
-function handleTrackLogistics(record: any) {
-  currentLogistics.value = {
-    company: record.logisticsCompany,
-    no: record.logisticsNo,
-  }
-  logisticsModalVisible.value = true
-}
-
 function handleViewShipment(record: any) {
   currentShipment.value = record
   shipmentDetailVisible.value = true
 }
 
 function handleViewInbound(record: any) {
-  const inbound = inboundRecords.value.find(i => i.inboundNo === record.inboundNo)
-  if (inbound) {
-    handleViewInboundDetail(inbound)
-  }
-}
-
-function handleViewInboundDetail(record: any) {
-  currentInbound.value = record
-  inboundDetailVisible.value = true
-}
-
-function handleViewAllInbound() {
-  router.push('/warehouse/stock/inbound')
-}
-
-function handleViewAfterSales() {
-  router.push('/warehouse/order/after-sales')
+  handleViewReceiveDetail(record)
 }
 
 function handleCancelOrder() {
