@@ -126,10 +126,15 @@
                   <a-tag v-else color="green">确认供货</a-tag>
                 </template>
               </a-table-column>
+              <a-table-column title="接单数量" :width="90" align="center">
+                <template #cell="{ record }">
+                  <span style="color: #00b42a;">{{ record.confirmedQuantity || record.quantity }}</span>
+                </template>
+              </a-table-column>
               <a-table-column title="已发货数量" :width="100" align="center">
                 <template #cell="{ record }">
-                  <span :class="record.shippedQuantity === record.quantity ? 'text-success' : 'text-warning'">
-                    {{ record.shippedQuantity || 0 }} / {{ record.quantity }}
+                  <span :class="record.shippedQuantity === (record.confirmedQuantity || record.quantity) ? 'text-success' : 'text-warning'">
+                    {{ record.shippedQuantity || 0 }}
                   </span>
                 </template>
               </a-table-column>
@@ -1128,6 +1133,7 @@ const order = ref<any>({
       spec: 'C30',
       unit: 'm³',
       quantity: 100,
+      confirmedQuantity: 100,
       confirmStatus: 'accept',
       estimatedShipDate: '2024-01-16',
       shippedQuantity: 50,
@@ -1140,6 +1146,7 @@ const order = ref<any>({
       spec: 'Φ20',
       unit: '吨',
       quantity: 50,
+      confirmedQuantity: 40,
       confirmStatus: 'accept',
       estimatedShipDate: '2024-01-17',
       shippedQuantity: 25,
@@ -1152,6 +1159,7 @@ const order = ref<any>({
       spec: '20L/桶',
       unit: '桶',
       quantity: 15,
+      confirmedQuantity: 0,
       confirmStatus: 'reject',
       rejectReason: 'stock',
       shippedQuantity: 0,

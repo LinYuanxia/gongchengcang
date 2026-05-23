@@ -208,38 +208,6 @@ const routes: RouteRecordRaw[] = [
         ],
       },
       {
-        path: 'order',
-        name: 'Order',
-        redirect: '/order/list',
-        meta: { title: '订单管理', icon: 'icon-file' },
-        children: [
-          {
-            path: 'list',
-            name: 'OrderList',
-            component: () => import('@/views/order/list/index.vue'),
-            meta: { title: '订单列表' },
-          },
-          {
-            path: 'detail/:id',
-            name: 'OrderDetail',
-            component: () => import('@/views/order/detail/index.vue'),
-            meta: { title: '订单详情', hideInMenu: true },
-          },
-          {
-            path: 'purchase',
-            name: 'PurchaseOrder',
-            component: () => import('@/views/order/purchase/index.vue'),
-            meta: { title: '采购订单' },
-          },
-          {
-            path: 'sale',
-            name: 'SaleOrder',
-            component: () => import('@/views/order/sale/index.vue'),
-            meta: { title: '销售订单' },
-          },
-        ],
-      },
-      {
         path: 'stock',
         name: 'Stock',
         redirect: '/stock/overview',
@@ -784,32 +752,6 @@ const routes: RouteRecordRaw[] = [
             name: 'WarehouseDeductionDetail',
             component: () => import('@/views/warehouse/finance/deduction/detail.vue'),
             meta: { title: '应扣明细', hideInMenu: true },
-          },
-        ],
-      },
-      {
-        path: 'system',
-        name: 'WarehouseSystem',
-        redirect: '/warehouse/system/account',
-        meta: { title: '系统设置', icon: 'icon-settings' },
-        children: [
-          {
-            path: 'account',
-            name: 'WarehouseAccount',
-            component: () => import('@/views/warehouse/account/index.vue'),
-            meta: { title: '账号列表' },
-          },
-          {
-            path: 'staff',
-            name: 'WarehouseStaff',
-            component: () => import('@/views/warehouse/staff/index.vue'),
-            meta: { title: '员工管理' },
-          },
-          {
-            path: 'role',
-            name: 'WarehouseRole',
-            component: () => import('@/views/warehouse/role/index.vue'),
-            meta: { title: '角色列表' },
           },
         ],
       },
