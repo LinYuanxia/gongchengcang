@@ -1873,11 +1873,7 @@ function getPaymentStatusText(status: string) {
   const texts: Record<string, string> = {
     unpaid: '未支付',
     partial_paid: '部分支付',
-    paid: '全部支付',
-    refunded: '已退款',
-    pending: '待审核',
-    approved: '审核通过',
-    rejected: '已驳回'
+    paid: '已支付',
   }
   return texts[status] || status
 }

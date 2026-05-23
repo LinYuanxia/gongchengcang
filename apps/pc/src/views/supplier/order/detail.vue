@@ -1477,8 +1477,7 @@ function getPaymentStatusColor(status: string) {
 
 function getPaymentStatusText(status: string) {
   const texts: Record<string, string> = {
-    pending: '待审核',
-    approved: '已通过',
+    unpaid: '未支付',
     partial: '部分支付',
     paid: '已支付',
   }
