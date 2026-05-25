@@ -14,12 +14,6 @@
         <a-form-item label="BOM名称">
           <a-input v-model="searchForm.name" placeholder="请输入BOM名称" allow-clear style="width: 200px" />
         </a-form-item>
-        <a-form-item label="上架状态">
-          <a-select v-model="searchForm.isOnline" placeholder="全部" allow-clear style="width: 120px">
-            <a-option :value="true">已上架</a-option>
-            <a-option :value="false">已下架</a-option>
-          </a-select>
-        </a-form-item>
         <a-form-item>
           <a-button type="primary" @click="handleSearch">查询</a-button>
         </a-form-item>
@@ -135,17 +129,6 @@
         />
       </div>
 
-      <a-divider />
-
-      <div class="market-config">
-        <div class="config-title">商品市场设置</div>
-        <a-form layout="vertical">
-          <a-form-item label="上架到商品市场">
-            <a-switch v-model="marketConfig.isOnline" />
-            <span class="config-hint">上架后，已授权的工程仓可在商品市场采购该BOM包</span>
-          </a-form-item>
-        </a-form>
-      </div>
     </a-modal>
   </div>
 </template>
@@ -160,7 +143,6 @@ const activeTab = ref('all')
 
 const searchForm = ref({
   name: '',
-  isOnline: undefined as boolean | undefined,
 })
 
 const pagination = ref({
@@ -257,9 +239,6 @@ const permissionModalVisible = ref(false)
 const currentBom = ref<any>(null)
 
 const selectedWarehouseIds = ref<string[]>([])
-const marketConfig = ref({
-  isOnline: true,
-})
 
 const warehouseList = ref([
   { value: 'w1', label: '华东工程仓' },
@@ -288,10 +267,6 @@ function handleSearch() {
     )
   }
   
-  if (searchForm.value.isOnline !== undefined) {
-    filtered = filtered.filter(item => item.isOnline === searchForm.value.isOnline)
-  }
-  
   bomList.value = filtered
   pagination.value.total = filtered.length
   Message.success(`查询完成，共 ${filtered.length} 条记录`)
@@ -312,9 +287,6 @@ function handleEdit(record: any) {
 function handleConfigPermission(record: any) {
   currentBom.value = record
   selectedWarehouseIds.value = record.visibleWarehouses?.map((w: any) => w.id) || []
-  marketConfig.value = {
-    isOnline: record.isOnline,
-  }
   permissionModalVisible.value = true
 }
 
@@ -332,7 +304,6 @@ function handlePermissionConfirm() {
     .map(w => ({ id: w.value, name: w.label }))
   
   currentBom.value.visibleWarehouses = warehouses
-  currentBom.value.isOnline = marketConfig.value.isOnline
   
   Message.success('权限配置成功')
   permissionModalVisible.value = false
@@ -463,16 +434,4 @@ function handleOnlineChange(record: any) {
   }
 }
 
-.market-config {
-  .config-title {
-    font-weight: 500;
-    margin-bottom: 12px;
-  }
-  
-  .config-hint {
-    font-size: 12px;
-    color: var(--color-text-3);
-    margin-left: 8px;
-  }
-}
 </style>

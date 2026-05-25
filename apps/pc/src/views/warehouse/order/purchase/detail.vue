@@ -524,7 +524,7 @@
         <a-descriptions-item label="收货仓库">{{ currentReceiveRecord?.warehouse }}</a-descriptions-item>
       </a-descriptions>
 
-      <a-table :data="order.items" :pagination="false">
+      <a-table :data="viewReceiveItems" :pagination="false" row-key="productName">
         <template #columns>
           <a-table-column title="商品信息" :width="180">
             <template #cell="{ record }">
@@ -537,17 +537,17 @@
           </a-table-column>
           <a-table-column title="待发货" :width="70" align="right">
             <template #cell="{ record }">
-              <span style="color: #ff7d00;">{{ record.quantity - (record.shippedQuantity || 0) }}</span>
+              <span style="color: #ff7d00;">{{ getItemToShip(record) }}</span>
             </template>
           </a-table-column>
           <a-table-column title="已收货" :width="70" align="right">
             <template #cell="{ record }">
-              <span style="color: #00b42a;">{{ record.receivedQuantity || 0 }}</span>
+              <span style="color: #00b42a;">{{ getItemReceived(record) }}</span>
             </template>
           </a-table-column>
           <a-table-column title="本次收货" :width="110" align="right">
             <template #cell="{ record }">
-              <span style="font-weight: 600;">{{ record.receivedQuantity || 0 }}</span>
+              <span style="font-weight: 600;">{{ record.receiveQuantity || 0 }}</span>
             </template>
           </a-table-column>
           <a-table-column title="货损" :width="70" align="right">
@@ -558,8 +558,16 @@
           <a-table-column title="实际入库" :width="80" align="right">
             <template #cell="{ record }">
               <span style="color: #165dff; font-weight: 600;">
-                {{ (record.receivedQuantity || 0) - (record.damageQuantity || 0) }}
+                {{ getItemActualInbound(record) }}
               </span>
+            </template>
+          </a-table-column>
+          <a-table-column title="批次" :width="80" align="center">
+            <template #cell="{ record }">
+              <a-link v-if="record.batches?.length" @click="handleViewBatches(record)">
+                {{ record.batches.length }} 批
+              </a-link>
+              <span v-else style="color: #86909c;">0 批</span>
             </template>
           </a-table-column>
         </template>
@@ -568,6 +576,35 @@
       <a-descriptions :column="2" bordered size="small" style="margin-top: 16px">
         <a-descriptions-item label="收货备注">{{ currentReceiveRecord?.remark || '-' }}</a-descriptions-item>
       </a-descriptions>
+
+      <a-modal
+        v-model:visible="viewBatchModalVisible"
+        :title="`${currentViewBatchItem?.productName || ''} - 批次记录`"
+        :width="700"
+        :footer="false"
+      >
+        <a-table :data="currentViewBatchItem?.batches || []" :pagination="false">
+          <template #columns>
+            <a-table-column title="批次编号" :width="100" data-index="batchNo" />
+            <a-table-column title="入库日期" :width="100" data-index="inDate" />
+            <a-table-column title="批注" :width="120">
+              <template #cell="{ record }">
+                <a-tag color="arcoblue">{{ record.note }}</a-tag>
+              </template>
+            </a-table-column>
+            <a-table-column title="入库数量" :width="100" align="right">
+              <template #cell="{ record }">{{ record.quantity }} {{ currentViewBatchItem?.unit }}</template>
+            </a-table-column>
+            <a-table-column title="状态" :width="80">
+              <template #cell="{ record }">
+                <a-tag :color="record.availableQty > 0 ? 'green' : 'gray'">
+                  {{ record.availableQty > 0 ? '可用' : '已用完' }}
+                </a-tag>
+              </template>
+            </a-table-column>
+          </template>
+        </a-table>
+      </a-modal>
     </a-modal>
 
     <a-modal
@@ -1137,10 +1174,47 @@ function handleReceive() {
 
 const viewReceiveModalVisible = ref(false)
 const currentReceiveRecord = ref<any>(null)
+const viewBatchModalVisible = ref(false)
+const currentViewBatchItem = ref<any>(null)
+
+const viewReceiveItems = computed(() => {
+  return order.value.items?.map((item: any) => {
+    const itemBatches = receiveBatches.value.filter(b => b.productName === item.productName)
+    return {
+      ...item,
+      receiveQuantity: item.receivedQuantity || 0,
+      damageQuantity: item.damageQuantity || 0,
+      batches: itemBatches.map(b => ({
+        batchNo: b.batchNo,
+        quantity: b.quantity,
+        inDate: b.receiveTime,
+        note: b.remark || '正常入库',
+        availableQty: b.currentStock || 0,
+      })),
+    }
+  }) || []
+})
+
+function getItemToShip(record: any) {
+  return record.quantity - (record.shippedQuantity || 0)
+}
+
+function getItemReceived(record: any) {
+  return record.receivedQuantity || 0
+}
+
+function getItemActualInbound(record: any) {
+  return (record.receiveQuantity || 0) - (record.damageQuantity || 0)
+}
 
 function handleViewReceiveDetail(record: any) {
   currentReceiveRecord.value = record
   viewReceiveModalVisible.value = true
+}
+
+function handleViewBatches(item: any) {
+  currentViewBatchItem.value = item
+  viewBatchModalVisible.value = true
 }
 
 const batchItemModalVisible = ref(false)

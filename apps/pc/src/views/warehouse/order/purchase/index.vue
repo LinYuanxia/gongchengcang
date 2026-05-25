@@ -132,13 +132,7 @@
           <a-table-column title="支付状态" :width="140">
             <template #cell="{ record }">
               <template v-if="record.orderType === 'purchase'">
-                <div v-if="record.hasRejectedPayment">
-                  <a-tag color="red">支付驳回</a-tag>
-                  <a-tooltip :content="record.rejectedReason || '支付凭证被驳回，请重新上传'">
-                    <icon-info-circle class="ml-2" style="color: #f53f3f; cursor: help;" />
-                  </a-tooltip>
-                </div>
-                <a-tag v-else :color="getPaymentStatusColor(record.paymentStatus)">
+                <a-tag :color="getPaymentStatusColor(record.paymentStatus)">
                   {{ getPaymentStatusText(record.paymentStatus) }}
                 </a-tag>
               </template>
@@ -586,8 +580,6 @@ const orders = ref([
     status: 'shipping',
     createTime: '2024-01-15 14:20:00',
     totalQuantity: 80,
-    hasRejectedPayment: true,
-    rejectedReason: '转账凭证模糊，无法辨认转账金额和账户信息',
     items: [
       { id: '1', productName: '螺纹钢 HRB400', spec: '16mm', quantity: 80, unit: '吨', pendingQuantity: 80 },
     ]

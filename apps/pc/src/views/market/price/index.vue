@@ -92,23 +92,55 @@
               {{ record.ownerName }}
             </template>
           </a-table-column>
-          <a-table-column title="原价" :width="100" align="right">
+          <a-table-column title="原价" :width="140" align="right">
             <template #cell="{ record }">
-              <span class="old-price">¥{{ record.oldPrice?.toFixed(2) }}</span>
+              <template v-if="record.source === 'platform'">
+                <div class="dual-price">
+                  <div class="price-row">供货价：¥{{ record.supplyOldPrice?.toFixed(2) }}</div>
+                  <div class="price-row">销售价：¥{{ record.saleOldPrice?.toFixed(2) }}</div>
+                </div>
+              </template>
+              <template v-else>
+                <span class="old-price">¥{{ record.oldPrice?.toFixed(2) }}</span>
+              </template>
             </template>
           </a-table-column>
-          <a-table-column title="现价" :width="100" align="right">
+          <a-table-column title="现价" :width="140" align="right">
             <template #cell="{ record }">
-              <span :class="record.newPrice > record.oldPrice ? 'price-up' : 'price-down'">
-                ¥{{ record.newPrice?.toFixed(2) }}
-              </span>
+              <template v-if="record.source === 'platform'">
+                <div class="dual-price">
+                  <div class="price-row" :class="record.supplyAdjustPercent > 0 ? 'price-up' : 'price-down'">
+                    供货价：¥{{ record.supplyNewPrice?.toFixed(2) }}
+                  </div>
+                  <div class="price-row" :class="record.saleAdjustPercent > 0 ? 'price-up' : 'price-down'">
+                    销售价：¥{{ record.saleNewPrice?.toFixed(2) }}
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                <span :class="record.adjustPercent > 0 ? 'price-up' : 'price-down'">
+                  ¥{{ record.newPrice?.toFixed(2) }}
+                </span>
+              </template>
             </template>
           </a-table-column>
-          <a-table-column title="调价幅度" :width="100" align="center">
+          <a-table-column title="调价幅度" :width="140" align="center">
             <template #cell="{ record }">
-              <span :class="record.adjustPercent > 0 ? 'percent-up' : 'percent-down'">
-                {{ record.adjustPercent > 0 ? '+' : '' }}{{ record.adjustPercent }}%
-              </span>
+              <template v-if="record.source === 'platform'">
+                <div class="dual-adjust">
+                  <div class="adjust-row" :class="record.supplyAdjustPercent > 0 ? 'percent-up' : 'percent-down'">
+                    {{ record.supplyAdjustPercent > 0 ? '+' : '' }}{{ record.supplyAdjustPercent }}%
+                  </div>
+                  <div class="adjust-row" :class="record.saleAdjustPercent > 0 ? 'percent-up' : 'percent-down'">
+                    {{ record.saleAdjustPercent > 0 ? '+' : '' }}{{ record.saleAdjustPercent }}%
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                <span :class="record.adjustPercent > 0 ? 'percent-up' : 'percent-down'">
+                  {{ record.adjustPercent > 0 ? '+' : '' }}{{ record.adjustPercent }}%
+                </span>
+              </template>
             </template>
           </a-table-column>
           <a-table-column title="变更原因" :width="180">
@@ -142,45 +174,129 @@
     <a-modal
       v-model:visible="historyVisible"
       :title="`「${currentProduct.productName}」价格历史`"
-      :width="800"
+      :width="900"
       :footer="false"
     >
-      <a-descriptions :column="2" bordered size="small" style="margin-bottom: 16px">
-        <a-descriptions-item label="商品编码">
+      <!-- 商品信息区 -->
+      <a-descriptions :column="3" bordered size="small" style="margin-bottom: 20px">
+        <a-descriptions-item label="SKU编码">
           {{ currentProduct.skuCode }}
         </a-descriptions-item>
         <a-descriptions-item label="规格">
           {{ currentProduct.specValues }}
         </a-descriptions-item>
-        <a-descriptions-item label="当前价格" :span="2">
-          <span class="current-price">¥{{ currentProduct.newPrice?.toFixed(2) }}</span>
+        <a-descriptions-item label="所属主体">
+          {{ currentProduct.ownerName }}
         </a-descriptions-item>
       </a-descriptions>
 
-      <a-table :data="currentProductHistory" :pagination="false">
-        <template #columns>
-          <a-table-column title="变更时间" data-index="changeTime" :width="160" />
-          <a-table-column title="原价" :width="100" align="right">
-            <template #cell="{ record }">
-              ¥{{ record.oldPrice?.toFixed(2) }}
-            </template>
-          </a-table-column>
-          <a-table-column title="现价" :width="100" align="right">
-            <template #cell="{ record }">
-              ¥{{ record.newPrice?.toFixed(2) }}
-            </template>
-          </a-table-column>
-          <a-table-column title="调价幅度" :width="100" align="center">
-            <template #cell="{ record }">
-              <span :class="record.adjustPercent > 0 ? 'percent-up' : 'percent-down'">
-                {{ record.adjustPercent > 0 ? '+' : '' }}{{ record.adjustPercent }}%
+      <!-- 当前价格展示 -->
+      <div class="current-prices" style="margin-bottom: 20px">
+        <div class="current-prices-title">当前价格</div>
+        <a-space size="large">
+          <template v-if="currentProduct.source === 'platform'">
+            <div class="price-item">
+              <span class="price-label blue">● 供货价</span>
+              <span class="price-value">¥{{ currentProduct.supplyNewPrice?.toFixed(2) }}</span>
+            </div>
+            <div class="price-item">
+              <span class="price-label green">● 销售价</span>
+              <span class="price-value">¥{{ currentProduct.saleNewPrice?.toFixed(2) }}</span>
+            </div>
+          </template>
+          <template v-else>
+            <div class="price-item">
+              <span class="price-label">
+                {{ currentProduct.source === 'supplier' ? '● 供货价' : '● 销售价' }}
               </span>
+              <span class="price-value">¥{{ currentProduct.newPrice?.toFixed(2) }}</span>
+            </div>
+          </template>
+        </a-space>
+      </div>
+
+      <!-- 价格变更记录列表 -->
+      <div class="history-table">
+        <div class="table-title">价格变更记录</div>
+        <a-table 
+          :data="currentProductHistory" 
+          :pagination="false"
+          :scroll="{ y: 300 }"
+          size="small"
+        >
+          <template #columns>
+            <a-table-column title="变更时间" data-index="changeTime" :width="160" />
+            <a-table-column title="操作人" data-index="operatorName" :width="100" />
+            
+            <!-- 平台标准价：与列表保持一致，两行展示供货价和销售价 -->
+            <template v-if="currentProduct.source === 'platform'">
+              <a-table-column title="原价" :width="140" align="right">
+                <template #cell="{ record }">
+                  <div class="dual-price">
+                    <div class="price-row">供货价：¥{{ record.supplyOldPrice?.toFixed(2) }}</div>
+                    <div class="price-row">销售价：¥{{ record.saleOldPrice?.toFixed(2) }}</div>
+                  </div>
+                </template>
+              </a-table-column>
+              <a-table-column title="现价" :width="140" align="right">
+                <template #cell="{ record }">
+                  <div class="dual-price">
+                    <div class="price-row" :class="record.supplyAdjustPercent > 0 ? 'price-up' : 'price-down'">
+                      供货价：¥{{ record.supplyNewPrice?.toFixed(2) }}
+                    </div>
+                    <div class="price-row" :class="record.saleAdjustPercent > 0 ? 'price-up' : 'price-down'">
+                      销售价：¥{{ record.saleNewPrice?.toFixed(2) }}
+                    </div>
+                  </div>
+                </template>
+              </a-table-column>
+              <a-table-column title="调价幅度" :width="140" align="center">
+                <template #cell="{ record }">
+                  <div class="dual-adjust">
+                    <div class="adjust-row" :class="record.supplyAdjustPercent > 0 ? 'percent-up' : 'percent-down'">
+                      {{ record.supplyAdjustPercent > 0 ? '+' : '' }}{{ record.supplyAdjustPercent }}%
+                    </div>
+                    <div class="adjust-row" :class="record.saleAdjustPercent > 0 ? 'percent-up' : 'percent-down'">
+                      {{ record.saleAdjustPercent > 0 ? '+' : '' }}{{ record.saleAdjustPercent }}%
+                    </div>
+                  </div>
+                </template>
+              </a-table-column>
             </template>
-          </a-table-column>
-          <a-table-column title="变更原因" data-index="reason" :width="180" />
-          <a-table-column title="操作人" data-index="operatorName" :width="100" />
-        </template>
-      </a-table>
+            
+            <!-- 供应商/工程仓：单行展示 -->
+            <template v-else>
+              <a-table-column title="原价" :width="100" align="right">
+                <template #cell="{ record }">
+                  <span class="old-price">¥{{ record.oldPrice?.toFixed(2) }}</span>
+                </template>
+              </a-table-column>
+              <a-table-column title="现价" :width="100" align="right">
+                <template #cell="{ record }">
+                  <span :class="record.adjustPercent > 0 ? 'price-up' : 'price-down'">
+                    ¥{{ record.newPrice?.toFixed(2) }}
+                  </span>
+                </template>
+              </a-table-column>
+              <a-table-column title="调价幅度" :width="100" align="center">
+                <template #cell="{ record }">
+                  <span :class="record.adjustPercent > 0 ? 'percent-up' : 'percent-down'">
+                    {{ record.adjustPercent > 0 ? '+' : '' }}{{ record.adjustPercent }}%
+                  </span>
+                </template>
+              </a-table-column>
+            </template>
+            
+            <a-table-column title="变更原因" data-index="reason" :width="180">
+              <template #cell="{ record }">
+                <a-tooltip :content="record.reason">
+                  <span class="reason-text">{{ record.reason }}</span>
+                </a-tooltip>
+              </template>
+            </a-table-column>
+          </template>
+        </a-table>
+      </div>
     </a-modal>
   </div>
 </template>
@@ -277,9 +393,13 @@ const priceRecords = ref([
     skuCode: 'SKU001',
     specValues: '50kg/袋',
     ownerName: '平台运营',
-    oldPrice: 26,
-    newPrice: 28,
-    adjustPercent: 7.69,
+    // 平台标准价同时变更供货价和销售价
+    supplyOldPrice: 26.5,
+    supplyNewPrice: 28.0,
+    supplyAdjustPercent: 5.66,
+    saleOldPrice: 27.5,
+    saleNewPrice: 29.5,
+    saleAdjustPercent: 7.27,
     reason: '原材料价格上涨，同步调整平台指导价',
     operatorName: '张经理',
     changeTime: '2024-01-22 10:30:00',
@@ -291,9 +411,12 @@ const priceRecords = ref([
     skuCode: 'SKU002_2',
     specValues: 'Φ16mm',
     ownerName: '平台运营',
-    oldPrice: 4300,
-    newPrice: 4150,
-    adjustPercent: -3.49,
+    supplyOldPrice: 4250,
+    supplyNewPrice: 4100,
+    supplyAdjustPercent: -3.53,
+    saleOldPrice: 4350,
+    saleNewPrice: 4200,
+    saleAdjustPercent: -3.45,
     reason: '钢材市场价格回落',
     operatorName: '李主管',
     changeTime: '2024-01-21 14:20:00',
@@ -361,9 +484,12 @@ const priceRecords = ref([
     skuCode: 'SKU007',
     specValues: 'Φ110mm',
     ownerName: '平台运营',
-    oldPrice: 42,
-    newPrice: 45,
-    adjustPercent: 7.14,
+    supplyOldPrice: 42,
+    supplyNewPrice: 45,
+    supplyAdjustPercent: 7.14,
+    saleOldPrice: 46,
+    saleNewPrice: 49,
+    saleAdjustPercent: 6.52,
     reason: 'Q1季度价格调整',
     operatorName: '张经理',
     changeTime: '2024-01-16 10:00:00',
@@ -404,9 +530,19 @@ const filteredRecords = computed(() => {
   }
 
   if (searchForm.adjustRange === 'up') {
-    result = result.filter(r => r.adjustPercent > 0)
+    result = result.filter(r => {
+      if (r.source === 'platform') {
+        return r.supplyAdjustPercent > 0 || r.saleAdjustPercent > 0
+      }
+      return r.adjustPercent > 0
+    })
   } else if (searchForm.adjustRange === 'down') {
-    result = result.filter(r => r.adjustPercent < 0)
+    result = result.filter(r => {
+      if (r.source === 'platform') {
+        return r.supplyAdjustPercent < 0 || r.saleAdjustPercent < 0
+      }
+      return r.adjustPercent < 0
+    })
   }
 
   return result
@@ -448,24 +584,88 @@ const currentProductHistory = ref<any[]>([])
 
 function handleViewHistory(record: any) {
   currentProduct.value = record
-  currentProductHistory.value = [
-    {
-      oldPrice: 24,
-      newPrice: 26,
-      adjustPercent: 8.33,
-      reason: '首次调价',
-      operatorName: '系统初始化',
-      changeTime: '2024-01-01 00:00:00',
-    },
-    {
-      oldPrice: 26,
-      newPrice: 28,
-      adjustPercent: 7.69,
-      reason: '原材料价格上涨',
-      operatorName: '张经理',
-      changeTime: '2024-01-22 10:30:00',
-    },
-  ]
+  
+  if (record.source === 'platform') {
+    // 平台标准价：同时记录供货价和销售价变更
+    currentProductHistory.value = [
+      {
+        changeTime: '2024-01-08 14:30:00',
+        operatorName: '王专员',
+        reason: '成本微调',
+        supplyOldPrice: 25.5,
+        supplyNewPrice: 26.5,
+        supplyAdjustPercent: 3.92,
+        saleOldPrice: 26.5,
+        saleNewPrice: 27.5,
+        saleAdjustPercent: 3.77,
+        adjustPercent: 3.85,
+      },
+      {
+        changeTime: '2024-01-15 09:00:00',
+        operatorName: '李主管',
+        reason: '销售策略调整',
+        supplyOldPrice: 26.5,
+        supplyNewPrice: 26.5,
+        supplyAdjustPercent: 0,
+        saleOldPrice: 27.5,
+        saleNewPrice: 27.5,
+        saleAdjustPercent: 0,
+        adjustPercent: 0,
+      },
+      {
+        changeTime: '2024-01-22 10:30:00',
+        operatorName: '张经理',
+        reason: '原材料价格上涨，同步调整各级价格',
+        supplyOldPrice: 26.5,
+        supplyNewPrice: 28.0,
+        supplyAdjustPercent: 5.66,
+        saleOldPrice: 27.5,
+        saleNewPrice: 29.5,
+        saleAdjustPercent: 7.27,
+        adjustPercent: 6.47,
+      },
+    ]
+  } else if (record.source === 'supplier') {
+    // 供应商：只记录供货价变更
+    currentProductHistory.value = [
+      {
+        changeTime: '2024-01-10 11:00:00',
+        operatorName: '供应商李总',
+        oldPrice: 340,
+        newPrice: 360,
+        adjustPercent: 5.88,
+        reason: '原材料成本上升',
+      },
+      {
+        changeTime: '2024-01-20 09:15:00',
+        operatorName: '供应商王总',
+        oldPrice: 360,
+        newPrice: 380,
+        adjustPercent: 5.56,
+        reason: '配方升级，成本增加',
+      },
+    ]
+  } else {
+    // 工程仓：只记录销售价变更
+    currentProductHistory.value = [
+      {
+        changeTime: '2024-01-08 10:00:00',
+        operatorName: '仓管张主管',
+        oldPrice: 38,
+        newPrice: 35,
+        adjustPercent: -7.89,
+        reason: '促销活动',
+      },
+      {
+        changeTime: '2024-01-18 11:30:00',
+        operatorName: '仓管刘主管',
+        oldPrice: 32,
+        newPrice: 35,
+        adjustPercent: 9.38,
+        reason: '区域运费上调',
+      },
+    ]
+  }
   historyVisible.value = true
 }
 </script>
@@ -537,9 +737,82 @@ function handleViewHistory(record: any) {
   display: block;
 }
 
+// 双价格展示样式
+.dual-price {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  
+  .price-row {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+}
+
+.dual-adjust {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  
+  .adjust-row {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+}
+
 .current-price {
   font-size: 18px;
   font-weight: 600;
   color: rgb(var(--primary-6));
+}
+
+// 历史弹窗样式
+.current-prices {
+  .current-prices-title {
+    font-weight: 500;
+    margin-bottom: 12px;
+    font-size: 14px;
+  }
+
+  .price-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .price-label {
+    font-size: 12px;
+    &.blue {
+      color: rgb(var(--primary-6));
+    }
+    &.green {
+      color: rgb(var(--success-6));
+    }
+    &.orange {
+      color: rgb(var(--warning-6));
+    }
+  }
+
+  .price-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: rgb(var(--gray-8));
+  }
+}
+
+.history-table {
+  .table-title {
+    font-weight: 500;
+    margin-bottom: 12px;
+    font-size: 14px;
+  }
+  
+  .reason-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 180px;
+    display: block;
+  }
 }
 </style>
