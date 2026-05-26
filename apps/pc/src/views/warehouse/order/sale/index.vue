@@ -42,7 +42,19 @@
               <a-option value="all">全部</a-option>
               <a-option value="sale">销售订单</a-option>
               <a-option value="after_sale">售后订单</a-option>
-              <a-option value="reissue">补发订单</a-option>
+            </a-select>
+          </a-col>
+          <a-col :span="4">
+            <a-select 
+              v-model="searchForm.shipStatus" 
+              placeholder="发货状态" 
+              style="width: 100%" 
+              allow-clear
+            >
+              <a-option value="all">全部</a-option>
+              <a-option value="none">未发货</a-option>
+              <a-option value="partial">部分发货</a-option>
+              <a-option value="completed">已发货</a-option>
             </a-select>
           </a-col>
           <a-col :span="5">
@@ -137,10 +149,10 @@
               <span v-else class="text-gray">-</span>
             </template>
           </a-table-column>
-          <a-table-column title="出库状态" :width="100">
+          <a-table-column title="发货状态" :width="100">
             <template #cell="{ record }">
-              <a-tag :color="getStockOutStatusColor(record.stockOutStatus)">
-                {{ getStockOutStatusText(record.stockOutStatus) }}
+              <a-tag :color="getShipStatusColor(record.stockOutStatus)">
+                {{ getShipStatusText(record.stockOutStatus) }}
               </a-tag>
             </template>
           </a-table-column>
@@ -149,7 +161,7 @@
               <a-tag :color="getStatusColor(record.status)">{{ getStatusText(record.status) }}</a-tag>
             </template>
           </a-table-column>
-          <a-table-column title="收款状态" :width="100">
+          <a-table-column title="支付状态" :width="100">
             <template #cell="{ record }">
               <template v-if="record.orderType === 'sale'">
                 <a-tag :color="getPaymentStatusColor(record.paymentStatus)">
@@ -302,17 +314,22 @@
           <a-table-column title="规格型号" data-index="specification" :width="120" />
           <a-table-column title="单位" data-index="unit" :width="60" align="center" />
           <a-table-column title="批次号" data-index="batchNo" :width="180" />
-          <a-table-column title="批次数量" :width="100" align="right">
+          <a-table-column title="批次库存" :width="100" align="right">
             <template #cell="{ record }">
               {{ record.batchQuantity }}
             </template>
           </a-table-column>
-          <a-table-column title="发货数量" :width="120" align="right">
+          <a-table-column title="剩余库存" :width="100" align="right">
+            <template #cell="{ record }">
+              <span style="color: #00b42a;">{{ record.remainingStock }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="本次发货库存" :width="120" align="right">
             <template #cell="{ record }">
               <a-input-number 
                 v-model="record.shipQuantity" 
                 :min="0" 
-                :max="record.batchQuantity"
+                :max="record.remainingStock"
                 :precision="0"
                 style="width: 100px"
                 @change="handleShipQuantityChange(record)"
@@ -321,12 +338,7 @@
           </a-table-column>
           <a-table-column title="批次备注" :width="160">
             <template #cell="{ record }">
-              <a-input 
-                v-model="record.batchRemark" 
-                placeholder="批次备注" 
-                :max-length="50"
-                size="small"
-              />
+              <span class="batch-remark">{{ record.batchRemark || '-' }}</span>
             </template>
           </a-table-column>
         </template>
@@ -401,6 +413,7 @@ const searchForm = reactive({
   orderNo: '',
   productInfo: '',
   orderType: 'all',
+  shipStatus: 'all',
   receiverInfo: '',
   createDateRange: [] as any[],
   completeDateRange: [] as any[],
@@ -621,34 +634,6 @@ const orders = ref([
       { skuCode: 'SKU006', productName: '砂石骨料', specification: '细砂', unit: '方', quantity: 30, unitPrice: 95.00, amount: 2850.00 },
     ]
   },
-  { 
-    id: '8', 
-    orderNo: 'RE202405180001', 
-    customerName: '深圳建筑工程公司',
-    customerContact: '张经理',
-    customerPhone: '13900139001',
-    warehouseName: '深圳湾科技园主仓',
-    receiverName: '王工',
-    receiverPhone: '13800138001',
-    address: '广东省深圳市南山区科技园北区A栋',
-    itemCount: 1, 
-    totalQuantity: 15,
-    unit: '件',
-    amount: '2,400.00',
-    paidAmount: '0.00',
-    stockOutStatus: 'none', 
-    paymentStatus: '', 
-    status: 'completed', 
-    orderType: 'reissue',
-    createTime: '2024-05-18 10:00:00',
-    completeTime: '2024-05-18 16:30:00',
-    paymentMethod: '',
-    originalOrderNo: 'SO202401150001',
-    afterSalesNo: 'AS202405180001',
-    items: [
-      { skuCode: 'SKU001', productName: '高强度水泥', specification: 'P.O 42.5', unit: '袋', quantity: 15, unitPrice: 160.00, amount: 2400.00 },
-    ]
-  },
 ])
 
 const confirmModalVisible = ref(false)
@@ -719,6 +704,10 @@ const filteredOrders = computed(() => {
     result = result.filter(o => o.orderType === searchForm.orderType)
   }
   
+  if (searchForm.shipStatus !== 'all') {
+    result = result.filter(o => o.stockOutStatus === searchForm.shipStatus)
+  }
+  
   if (searchForm.receiverInfo) {
     result = result.filter(o => 
       o.receiverName.includes(searchForm.receiverInfo) ||
@@ -757,7 +746,7 @@ const filteredOrders = computed(() => {
   return result
 })
 
-function getStockOutStatusColor(status: string) {
+function getShipStatusColor(status: string) {
   const colors: Record<string, string> = {
     none: 'gray',
     partial: 'orange',
@@ -766,11 +755,11 @@ function getStockOutStatusColor(status: string) {
   return colors[status] || 'gray'
 }
 
-function getStockOutStatusText(status: string) {
+function getShipStatusText(status: string) {
   const texts: Record<string, string> = {
-    none: '未出库',
-    partial: '部分出库',
-    completed: '已出库',
+    none: '未发货',
+    partial: '部分发货',
+    completed: '已发货',
   }
   return texts[status] || status
 }
@@ -785,8 +774,8 @@ function getPaymentStatusColor(status: string) {
 
 function getPaymentStatusText(status: string) {
   const texts: Record<string, string> = {
-    pending: '待确认',
-    confirmed: '已确认',
+    pending: '未支付',
+    confirmed: '已支付',
   }
   return status ? (texts[status] || status) : '-'
 }
@@ -795,7 +784,6 @@ function getOrderTypeColor(orderType: string) {
   const colors: Record<string, string> = {
     sale: 'blue',
     after_sale: 'purple',
-    reissue: 'orange',
   }
   return colors[orderType] || 'gray'
 }
@@ -804,7 +792,6 @@ function getOrderTypeText(orderType: string) {
   const texts: Record<string, string> = {
     sale: '销售订单',
     after_sale: '售后订单',
-    reissue: '补发订单',
   }
   return texts[orderType] || orderType
 }
@@ -941,8 +928,8 @@ function handleShip(record: any) {
     pendingQuantity: item.quantity,
     shipQuantity: 0,
     batches: [
-      { batchNo: `BATCH${item.skuCode}001`, quantity: Math.floor(item.quantity * 0.6) },
-      { batchNo: `BATCH${item.skuCode}002`, quantity: Math.ceil(item.quantity * 0.4) },
+      { batchNo: `BATCH${item.skuCode}001`, quantity: Math.floor(item.quantity * 0.6), remark: '原材料优质' },
+      { batchNo: `BATCH${item.skuCode}002`, quantity: Math.ceil(item.quantity * 0.4), remark: '库存充足' },
     ],
   }))
   
@@ -957,8 +944,9 @@ function handleShip(record: any) {
         unit: item.unit,
         batchNo: batch.batchNo,
         batchQuantity: batch.quantity,
+        remainingStock: batch.quantity,
         shipQuantity: 0,
-        batchRemark: '',
+        batchRemark: batch.remark || '',
       })
     })
   })
@@ -1111,5 +1099,10 @@ function handleBatchExportPending() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.batch-remark {
+  color: #8c8c8c;
+  font-size: 12px;
 }
 </style>

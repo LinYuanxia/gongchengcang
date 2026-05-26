@@ -11,18 +11,23 @@
             <a-input-search v-model="searchForm.afterSalesNo" placeholder="售后单号" style="width: 100%" @search="handleSearch" />
           </a-col>
           <a-col :span="5">
-            <a-input-search v-model="searchForm.originalOrderNo" placeholder="原订单编号" style="width: 100%" @search="handleSearch" />
+            <a-input-search v-model="searchForm.originalOrderNo" placeholder="原订单号" style="width: 100%" @search="handleSearch" />
           </a-col>
           <a-col :span="5">
-            <a-input-search v-model="searchForm.projectName" placeholder="项目名称" style="width: 100%" @search="handleSearch" />
+            <a-select 
+              v-model="searchForm.warehouseId" 
+              placeholder="所属工程仓" 
+              style="width: 100%" 
+              allow-clear
+            >
+              <a-option value="all">全部</a-option>
+              <a-option value="wh001">深圳湾科技园主仓</a-option>
+              <a-option value="wh002">福田CBD分仓</a-option>
+              <a-option value="wh003">广州天河仓</a-option>
+            </a-select>
           </a-col>
-          <a-col :span="5">
-            <a-input-search v-model="searchForm.warehouseInfo" placeholder="工程仓信息（名称/联系人/电话）" style="width: 100%" @search="handleSearch" />
-          </a-col>
-        </a-row>
-        <a-row :gutter="16" style="margin-top: 12px">
           <a-col :span="6">
-            <a-range-picker v-model="searchForm.applyDateRange" format="YYYY-MM-DD" placeholder="申请日期" style="width: 100%" />
+            <a-range-picker v-model="searchForm.applyDateRange" format="YYYY-MM-DD" placeholder="申请时间" style="width: 100%" />
           </a-col>
           <a-col :span="4" style="text-align: right">
             <a-space>
@@ -54,21 +59,22 @@
               <a-link @click="handleViewOriginalOrder(record)">{{ record.originalOrderNo }}</a-link>
             </template>
           </a-table-column>
-          <a-table-column title="项目名称" data-index="projectName" :width="130" ellipsis />
-          <a-table-column title="工程仓信息" :width="160">
+          <a-table-column title="所属工程仓" data-index="warehouseName" :width="140" />
+          <a-table-column title="售后类型" :width="100">
             <template #cell="{ record }">
-              <div>{{ record.warehouseName }}</div>
-              <div class="text-gray">{{ record.contactPerson }} {{ record.contactPhone }}</div>
-            </template>
-          </a-table-column>
-          <a-table-column title="售后类型" :width="90">
-            <template #cell>
-              <a-tag color="orange">物流售后</a-tag>
+              <a-tag :color="record.afterSalesType === 'logistics' ? 'orange' : 'red'">
+                {{ record.afterSalesType === 'logistics' ? '物流售后' : '质量售后' }}
+              </a-tag>
             </template>
           </a-table-column>
           <a-table-column title="售后商品数" :width="100" align="center">
             <template #cell="{ record }">
               {{ record.items.length }}种
+            </template>
+          </a-table-column>
+          <a-table-column title="售后商品库存" :width="120" align="center">
+            <template #cell="{ record }">
+              {{ record.afterSalesType === 'quality' ? '-' : record.totalStockQuantity }}
             </template>
           </a-table-column>
           <a-table-column title="售后原因" data-index="reason" :width="160" ellipsis />
@@ -258,8 +264,7 @@ const activeTab = ref('all')
 const searchForm = reactive({
   afterSalesNo: '',
   originalOrderNo: '',
-  projectName: '',
-  warehouseInfo: '',
+  warehouseId: 'all',
   applyDateRange: [] as any[],
 })
 
@@ -268,11 +273,13 @@ const afterSalesOrders = ref<any[]>([
     id: '1',
     afterSalesNo: 'AS202401250001',
     originalOrderNo: 'PO202401200001',
-    projectName: '龙华仓储中心',
-    warehouseName: '龙华仓储中心',
+    warehouseId: 'wh001',
+    warehouseName: '深圳湾科技园主仓',
     contactPerson: '李工',
     contactPhone: '13800138001',
     address: '深圳市龙华区观澜街道环观南路',
+    afterSalesType: 'logistics',
+    totalStockQuantity: 150,
     items: [
       { productName: 'C30混凝土', spec: 'C30', unit: 'm³', purchaseQuantity: 100, quantity: 20, price: 380, stockQuantity: 150 },
     ],
@@ -286,11 +293,13 @@ const afterSalesOrders = ref<any[]>([
     id: '2',
     afterSalesNo: 'AS202401240001',
     originalOrderNo: 'PO202401180001',
-    projectName: '南山科技园项目',
-    warehouseName: '南山科技园项目部',
+    warehouseId: 'wh002',
+    warehouseName: '福田CBD分仓',
     contactPerson: '张工',
     contactPhone: '13900139002',
     address: '深圳市南山区科技园南区',
+    afterSalesType: 'quality',
+    totalStockQuantity: 0,
     items: [
       { productName: '螺纹钢 HRB400', spec: '16mm', unit: '吨', purchaseQuantity: 50, quantity: 5, price: 4200, stockQuantity: 30 },
     ],
@@ -304,11 +313,13 @@ const afterSalesOrders = ref<any[]>([
     id: '3',
     afterSalesNo: 'AS202401230001',
     originalOrderNo: 'PO202401150001',
-    projectName: '福田CBD项目',
-    warehouseName: '福田CBD项目仓',
+    warehouseId: 'wh001',
+    warehouseName: '深圳湾科技园主仓',
     contactPerson: '王工',
     contactPhone: '13700137003',
     address: '深圳市福田区福华路',
+    afterSalesType: 'logistics',
+    totalStockQuantity: 200,
     items: [
       { productName: '水泥 P.O 42.5', spec: '50kg/袋', unit: '袋', purchaseQuantity: 500, quantity: 30, price: 28, stockQuantity: 200 },
     ],
@@ -322,11 +333,13 @@ const afterSalesOrders = ref<any[]>([
     id: '4',
     afterSalesNo: 'AS202401220001',
     originalOrderNo: 'PO202401120001',
-    projectName: '宝安机场扩建',
-    warehouseName: '宝安机场项目仓',
+    warehouseId: 'wh003',
+    warehouseName: '广州天河仓',
     contactPerson: '刘工',
     contactPhone: '13600136004',
     address: '深圳市宝安区宝安机场',
+    afterSalesType: 'quality',
+    totalStockQuantity: 0,
     items: [
       { productName: '砂石料', spec: '中砂', unit: 'm³', purchaseQuantity: 200, quantity: 10, price: 120, stockQuantity: 500 },
     ],
@@ -340,11 +353,13 @@ const afterSalesOrders = ref<any[]>([
     id: '5',
     afterSalesNo: 'AS202401210001',
     originalOrderNo: 'PO202401100001',
-    projectName: '光明科学城',
-    warehouseName: '光明科学城仓',
+    warehouseId: 'wh002',
+    warehouseName: '福田CBD分仓',
     contactPerson: '陈工',
     contactPhone: '13500135005',
     address: '深圳市光明区科学城',
+    afterSalesType: 'logistics',
+    totalStockQuantity: 800,
     items: [
       { productName: '加气砖', spec: '600×200×200', unit: '块', purchaseQuantity: 2000, quantity: 100, price: 6, stockQuantity: 800 },
     ],
@@ -381,15 +396,8 @@ const filteredOrders = computed(() => {
   if (searchForm.originalOrderNo) {
     result = result.filter(o => o.originalOrderNo.includes(searchForm.originalOrderNo))
   }
-  if (searchForm.projectName) {
-    result = result.filter(o => o.projectName?.includes(searchForm.projectName))
-  }
-  if (searchForm.warehouseInfo) {
-    result = result.filter(o =>
-      o.warehouseName?.includes(searchForm.warehouseInfo) ||
-      o.contactPerson?.includes(searchForm.warehouseInfo) ||
-      o.contactPhone?.includes(searchForm.warehouseInfo)
-    )
+  if (searchForm.warehouseId !== 'all') {
+    result = result.filter(o => o.warehouseId === searchForm.warehouseId)
   }
 
   return result

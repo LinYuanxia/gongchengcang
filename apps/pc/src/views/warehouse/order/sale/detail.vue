@@ -34,19 +34,27 @@
         <a-descriptions-item label="订单状态">
           <a-tag :color="getStatusColor(order.status)">{{ getStatusText(order.status) }}</a-tag>
         </a-descriptions-item>
-        <a-descriptions-item label="出库状态">
+        <a-descriptions-item label="发货状态">
           <a-tag :color="getStockOutStatusColor(order.stockOutStatus)">{{ getStockOutStatusText(order.stockOutStatus) }}</a-tag>
         </a-descriptions-item>
         <a-descriptions-item label="支付状态">
           <a-tag :color="getPaymentStatusColor(order.paymentStatus)">{{ getPaymentStatusText(order.paymentStatus) }}</a-tag>
         </a-descriptions-item>
         <a-descriptions-item label="下单时间">{{ order.createTime }}</a-descriptions-item>
+        <a-descriptions-item label="完成时间">{{ order.completeTime || '-' }}</a-descriptions-item>
         <a-descriptions-item label="买家信息">
           {{ order.customerName }} / {{ order.customerContact }} / {{ order.customerPhone }}
         </a-descriptions-item>
         <a-descriptions-item label="收货信息" :span="2">
           {{ order.address }} / {{ order.receiverName }} / {{ order.receiverPhone }}
           <icon-copy class="copy-icon" @click="handleCopyAddress" />
+        </a-descriptions-item>
+        <a-descriptions-item label="所属仓库">{{ order.warehouseName }}</a-descriptions-item>
+        <a-descriptions-item label="订单金额" :span="2">
+          <span class="price-large">¥{{ order.amount }}</span>
+        </a-descriptions-item>
+        <a-descriptions-item label="实付金额" :span="2">
+          <span class="price-large">¥{{ order.paidAmount }}</span>
         </a-descriptions-item>
       </a-descriptions>
 
@@ -55,22 +63,32 @@
       <h3>商品明细</h3>
       <a-table :data="order.items" :pagination="false">
         <template #columns>
-          <a-table-column title="SKU名称" data-index="productName" :width="200" />
-          <a-table-column title="SKU编码" data-index="skuCode" :width="120" />
+          <a-table-column title="SKU名称（编码）" :width="220">
+            <template #cell="{ record }">
+              <div>{{ record.productName }}</div>
+              <div class="text-sm text-gray">{{ record.skuCode }}</div>
+            </template>
+          </a-table-column>
+          <a-table-column title="所属SPU" data-index="spuName" :width="150" />
           <a-table-column title="单价" :width="100" align="right">
             <template #cell="{ record }">
               <span class="price">¥{{ record.price }}</span>
             </template>
           </a-table-column>
           <a-table-column title="数量" data-index="quantity" :width="80" align="center" />
-          <a-table-column title="小计" :width="100" align="right">
+          <a-table-column title="小记" :width="100" align="right">
             <template #cell="{ record }">
               <span class="price">¥{{ record.subtotal }}</span>
             </template>
           </a-table-column>
-          <a-table-column title="分账系数" data-index="sharingRatio" :width="100" align="center">
+          <a-table-column title="分账系数" :width="100" align="center">
             <template #cell="{ record }">
               {{ record.sharingRatio }}%
+            </template>
+          </a-table-column>
+          <a-table-column title="计算金额" :width="100" align="right">
+            <template #cell="{ record }">
+              <span class="price">¥{{ record.calculatedAmount }}</span>
             </template>
           </a-table-column>
           <a-table-column title="交易撮合费" :width="120" align="right">
@@ -84,31 +102,52 @@
         商品合计：¥{{ order.productAmount }} | 交易撮合费合计：¥{{ order.totalMatchingFee }} | <strong>实付金额：¥{{ order.totalAmount }}</strong>
       </div>
 
-      <template v-if="order.orderType !== 'reissue' && order.orderType !== 'after_sale'">
-        <a-divider />
+      <a-divider />
 
-        <a-descriptions :column="2" title="支付方式">
-          <a-descriptions-item label="支付方式">
-            <a-tag color="blue">线下转账</a-tag>
-          </a-descriptions-item>
-        </a-descriptions>
-
-        <a-descriptions :column="4" title="转账凭证" style="margin-top: 16px">
-          <a-descriptions-item label="凭证状态">
-            <a-tag :color="order.paymentVoucher ? 'success' : 'default'">{{ order.paymentVoucher ? '已上传' : '未上传' }}</a-tag>
-          </a-descriptions-item>
-          <a-descriptions-item label="上传时间">{{ order.voucherUploadTime || '-' }}</a-descriptions-item>
-          <a-descriptions-item label="审核状态">
-            <a-tag :color="getVoucherAuditStatusColor(order.voucherAuditStatus)">{{ getVoucherAuditStatusText(order.voucherAuditStatus) }}</a-tag>
-          </a-descriptions-item>
-          <a-descriptions-item label="凭证上传备注">
-            {{ order.voucherRemark || '-' }}
-          </a-descriptions-item>
-        </a-descriptions>
-        <div v-if="order.paymentVoucher" style="margin-top: 12px">
-          <a-button @click="handleViewVoucher">查看凭证</a-button>
-        </div>
-      </template>
+      <h3>支付方式</h3>
+      <a-table :data="order.paymentRecords" :pagination="false">
+        <template #columns>
+          <a-table-column title="支付单号" data-index="paymentNo" :width="160" />
+          <a-table-column title="支付金额" :width="120" align="right">
+            <template #cell="{ record }">
+              <strong>¥{{ record.amount }}</strong>
+            </template>
+          </a-table-column>
+          <a-table-column title="支付方式" :width="100">
+            <template #cell="{ record }">
+              <a-tag color="blue">{{ record.payMethod || '线下转账' }}</a-tag>
+            </template>
+          </a-table-column>
+          <a-table-column title="转账凭证" :width="120">
+            <template #cell="{ record }">
+              <a-link v-if="record.voucher" @click="handleViewVoucher(record)">
+                <icon-file /> 查看凭证
+              </a-link>
+              <span v-else>-</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="支付时间" data-index="payTime" :width="160" />
+          <a-table-column title="审核状态" :width="120">
+            <template #cell="{ record }">
+              <a-tag :color="getVoucherAuditStatusColor(record.voucherAuditStatus)">{{ getVoucherAuditStatusText(record.voucherAuditStatus) }}</a-tag>
+            </template>
+          </a-table-column>
+          <a-table-column title="备注" :width="150" />
+          <a-table-column title="操作" :width="100" align="center">
+            <template #cell="{ record }">
+              <a-button 
+                v-if="record.voucherAuditStatus === 'rejected'" 
+                type="primary" 
+                size="small"
+                @click="handleRePay"
+              >
+                重新支付
+              </a-button>
+              <span v-else>-</span>
+            </template>
+          </a-table-column>
+        </template>
+      </a-table>
 
       <a-divider />
 
@@ -117,51 +156,37 @@
 
       <a-divider />
 
-      <a-descriptions :column="4" title="关联出库单">
-        <a-descriptions-item label="已出库商品数量">
-          {{ order.shippedQuantity || 0 }}件
+      <h3>关联售后</h3>
+      <a-descriptions :column="2" bordered size="small">
+        <a-descriptions-item label="关联售后记录">
+          <template v-if="order.afterSaleRecords && order.afterSaleRecords.length > 0">
+            <a-space direction="vertical">
+              <a-link 
+                v-for="record in order.afterSaleRecords" 
+                :key="record.id" 
+                @click="handleViewAfterSaleRecord(record)"
+              >
+                {{ record.recordNo }}
+              </a-link>
+            </a-space>
+          </template>
+          <span v-else>-</span>
         </a-descriptions-item>
-        <a-descriptions-item label="剩余待出库">
-          <span :class="order.pendingQuantity > 0 ? 'text-warning' : 'text-success'">
-            {{ order.pendingQuantity }}件
-          </span>
+        <a-descriptions-item label="关联售后订单">
+          <template v-if="order.afterSaleOrders && order.afterSaleOrders.length > 0">
+            <a-space direction="vertical">
+              <a-link 
+                v-for="orderItem in order.afterSaleOrders" 
+                :key="orderItem.id" 
+                @click="handleViewAfterSaleOrder(orderItem)"
+              >
+                {{ orderItem.orderNo }}
+              </a-link>
+            </a-space>
+          </template>
+          <span v-else>-</span>
         </a-descriptions-item>
       </a-descriptions>
-      <div class="remark-box" style="margin-top: 12px">
-        出库进度：{{ order.shippedQuantity && order.totalQuantity ? Math.round((order.shippedQuantity / order.totalQuantity) * 100) : 0 }}%
-      </div>
-      <div style="margin-top: 12px">
-        <a-link @click="handleViewAllOutbound">查看全部出库单 →</a-link>
-      </div>
-
-      <a-divider />
-
-      <template v-if="order.orderType === 'reissue'">
-        <h3>关联信息</h3>
-        <a-descriptions :column="2" bordered size="small">
-          <a-descriptions-item label="原订单编号">
-            <a-link @click="handleViewRelatedOrder(order.originalOrderNo)">{{ order.originalOrderNo || '-' }}</a-link>
-          </a-descriptions-item>
-          <a-descriptions-item label="关联售后单">
-            <a-link @click="handleViewAfterSales(order.afterSalesNo)">{{ order.afterSalesNo || '-' }}</a-link>
-          </a-descriptions-item>
-        </a-descriptions>
-      </template>
-      <template v-else-if="order.orderType === 'after_sale'">
-        <h3>关联售后单</h3>
-        <div v-if="order.afterSalesNo">
-          <a-link @click="handleViewAfterSales(order.afterSalesNo)">{{ order.afterSalesNo }}</a-link>
-        </div>
-        <a-empty v-else description="暂无关联售后单" :image="Empty.PRESENTED_IMAGE_SIMPLE" />
-      </template>
-      <template v-else>
-        <h3>关联补发订单</h3>
-        <div v-if="order.reissueOrderNo">
-          <a-link @click="handleViewReissueOrder">{{ order.reissueOrderNo }}</a-link>
-          <span style="margin-left: 8px; color: var(--color-text-3)">（货损售后补发）</span>
-        </div>
-        <a-empty v-else description="暂无关联补发订单" :image="Empty.PRESENTED_IMAGE_SIMPLE" />
-      </template>
 
       <a-divider />
 
@@ -271,6 +296,34 @@
     </a-modal>
 
     <a-modal 
+      v-model:visible="rePayModalVisible" 
+      title="重新支付" 
+      :width="600"
+      @ok="handleRePaySubmit"
+      @cancel="cancelRePay"
+    >
+      <a-form :model="rePayForm" layout="vertical">
+        <a-form-item label="转账凭证" required>
+          <a-upload
+            :custom-request="handleUploadVoucher"
+            :show-file-list="true"
+            accept=".jpg,.jpeg,.png,.pdf"
+            limit="1"
+          >
+            <a-button>
+              <template #icon><icon-upload /></template>
+              上传转账凭证
+            </a-button>
+          </a-upload>
+          <div class="form-tip">支持jpg/png/pdf格式，最大10MB</div>
+        </a-form-item>
+        <a-form-item label="付款备注">
+          <a-textarea v-model="rePayForm.remark" placeholder="请输入备注（选填）" :max-length="200" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <a-modal 
       v-model:visible="shipModalVisible" 
       :title="isViewingShipment ? '查看发货' : '发货'" 
       :width="1000"
@@ -338,17 +391,22 @@
           <a-table-column title="规格型号" data-index="specification" :width="120" />
           <a-table-column title="单位" data-index="unit" :width="60" align="center" />
           <a-table-column title="批次号" data-index="batchNo" :width="180" />
-          <a-table-column title="批次数量" :width="100" align="right">
+          <a-table-column title="批次库存" :width="100" align="right">
             <template #cell="{ record }">
               {{ record.batchQuantity }}
             </template>
           </a-table-column>
-          <a-table-column title="发货数量" :width="120" align="right">
+          <a-table-column title="剩余库存" :width="100" align="right">
+            <template #cell="{ record }">
+              <span style="color: #00b42a;">{{ record.remainingStock }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="本次发货库存" :width="120" align="right">
             <template #cell="{ record }">
               <a-input-number 
                 v-model="record.shipQuantity" 
                 :min="0" 
-                :max="record.batchQuantity"
+                :max="record.remainingStock"
                 :precision="0"
                 style="width: 100px"
                 :disabled="isViewingShipment"
@@ -358,13 +416,7 @@
           </a-table-column>
           <a-table-column title="批次备注" :width="160">
             <template #cell="{ record }">
-              <a-input 
-                v-model="record.batchRemark" 
-                placeholder="批次备注" 
-                :max-length="50"
-                size="small"
-                :disabled="isViewingShipment"
-              />
+              <span class="batch-remark">{{ record.batchRemark || '-' }}</span>
             </template>
           </a-table-column>
         </template>
@@ -396,6 +448,7 @@ const order = ref({
   paymentStatus: 'confirmed',
   stockOutStatus: 'none',
   createTime: '2024-05-18 10:30:00',
+  completeTime: '',
   customerName: '杭州西湖店',
   customerContact: '张工',
   customerPhone: '138****1234',
@@ -406,6 +459,8 @@ const order = ref({
   productAmount: '6,700.00',
   totalMatchingFee: '126.00',
   totalAmount: '6,700.00',
+  amount: '6,700.00',
+  paidAmount: '6,700.00',
   paymentMethod: '转账',
   shippedQuantity: 0,
   totalQuantity: 35,
@@ -419,38 +474,62 @@ const order = ref({
   reissueOrderNo: 'PO202405180002',
   originalOrderNo: 'SO202401150001',
   afterSalesNo: 'AS202405180001',
+  afterSaleRecords: [
+    { id: '1', recordNo: 'ASR202405180001' },
+    { id: '2', recordNo: 'ASR202405180002' },
+  ],
+  afterSaleOrders: [
+    { id: '1', orderNo: 'ASO202405180001' },
+  ],
+  paymentRecords: [
+    { 
+      paymentNo: 'PAY202405180001', 
+      amount: '6700.00', 
+      payMethod: '线下转账', 
+      voucher: 'https://neeko-copilot.bytedance.net/api/text_to_image?prompt=bank%20transfer%20receipt&image_size=landscape_4_3', 
+      payTime: '2024-05-18 11:00:00', 
+      voucherAuditStatus: 'rejected',
+      remark: '凭证信息不清晰，请重新上传'
+    },
+  ],
   items: [
     { 
       productName: '螺纹钢HRB400E Φ16 6m', 
       skuCode: 'SKU001',
+      spuName: '螺纹钢HRB400E',
       specification: 'Φ16 6m',
       unit: '吨',
       price: '300', 
       quantity: 10, 
       subtotal: '3,000',
       sharingRatio: '2.0',
+      calculatedAmount: '3,000',
       matchingFee: '60',
     },
     { 
       productName: '水泥PO42.5', 
       skuCode: 'SKU002',
+      spuName: '水泥PO42.5',
       specification: 'PO42.5',
       unit: '袋',
       price: '420', 
       quantity: 5, 
       subtotal: '2,100',
       sharingRatio: '2.0',
+      calculatedAmount: '2,100',
       matchingFee: '42',
     },
     { 
       productName: '瓷砖800x800mm', 
       skuCode: 'SKU003',
+      spuName: '瓷砖800x800',
       specification: '800x800mm',
       unit: '块',
       price: '80', 
       quantity: 20, 
       subtotal: '1,600',
       sharingRatio: '1.5',
+      calculatedAmount: '1,600',
       matchingFee: '24',
     },
   ],
@@ -469,8 +548,8 @@ const shipmentRecords = ref([
     trackingNos: ['SF123456789'],
     remark: '加急发货',
     batchItems: [
-      { id: 'SKU001_0', skuCode: 'SKU001', productName: '螺纹钢HRB400E Φ16 6m', specification: 'Φ16 6m', unit: '吨', batchNo: 'BSKU001001', batchQuantity: 3, shipQuantity: 3, batchRemark: '' },
-      { id: 'SKU003_1', skuCode: 'SKU003', productName: '瓷砖800x800mm', specification: '800x800mm', unit: '块', batchNo: 'BSKU003001', batchQuantity: 2, shipQuantity: 2, batchRemark: '加急' },
+      { id: 'SKU001_0', skuCode: 'SKU001', productName: '螺纹钢HRB400E Φ16 6m', specification: 'Φ16 6m', unit: '吨', batchNo: 'BSKU001001', batchQuantity: 3, remainingStock: 0, shipQuantity: 3, batchRemark: '原材料优质' },
+      { id: 'SKU003_1', skuCode: 'SKU003', productName: '瓷砖800x800mm', specification: '800x800mm', unit: '块', batchNo: 'BSKU003001', batchQuantity: 2, remainingStock: 0, shipQuantity: 2, batchRemark: '加急' },
     ],
   },
   {
@@ -485,9 +564,9 @@ const shipmentRecords = ref([
     trackingNos: ['DB987654321'],
     remark: '',
     batchItems: [
-      { id: 'SKU001_0', skuCode: 'SKU001', productName: '螺纹钢HRB400E Φ16 6m', specification: 'Φ16 6m', unit: '吨', batchNo: 'BSKU001002', batchQuantity: 7, shipQuantity: 7, batchRemark: '' },
-      { id: 'SKU002_0', skuCode: 'SKU002', productName: '水泥PO42.5', specification: 'PO42.5', unit: '袋', batchNo: 'BSKU002001', batchQuantity: 5, shipQuantity: 5, batchRemark: '' },
-      { id: 'SKU003_0', skuCode: 'SKU003', productName: '瓷砖800x800mm', specification: '800x800mm', unit: '块', batchNo: 'BSKU003001', batchQuantity: 18, shipQuantity: 18, batchRemark: '' },
+      { id: 'SKU001_0', skuCode: 'SKU001', productName: '螺纹钢HRB400E Φ16 6m', specification: 'Φ16 6m', unit: '吨', batchNo: 'BSKU001002', batchQuantity: 7, remainingStock: 0, shipQuantity: 7, batchRemark: '库存充足' },
+      { id: 'SKU002_0', skuCode: 'SKU002', productName: '水泥PO42.5', specification: 'PO42.5', unit: '袋', batchNo: 'BSKU002001', batchQuantity: 5, remainingStock: 0, shipQuantity: 5, batchRemark: '' },
+      { id: 'SKU003_0', skuCode: 'SKU003', productName: '瓷砖800x800mm', specification: '800x800mm', unit: '块', batchNo: 'BSKU003001', batchQuantity: 18, remainingStock: 0, shipQuantity: 18, batchRemark: '' },
     ],
   },
 ])
@@ -498,6 +577,12 @@ const orderLogs = ref([
   { operateTime: '2024-05-18 11:00:00', operator: '施工方', content: '上传支付凭证' },
   { operateTime: '2024-05-18 10:30:00', operator: '系统', content: '订单创建' },
 ])
+
+const paymentRecord = computed(() => {
+  return order.value.paymentRecords && order.value.paymentRecords.length > 0 
+    ? order.value.paymentRecords[0] 
+    : null
+})
 
 function getStatusColor(status: string) {
   const colors: Record<string, string> = {
@@ -552,9 +637,9 @@ function getStockOutStatusColor(status: string) {
 
 function getStockOutStatusText(status: string) {
   const texts: Record<string, string> = {
-    none: '未出库',
-    partial: '部分出库',
-    completed: '已出库',
+    none: '未发货',
+    partial: '部分发货',
+    completed: '已发货',
   }
   return texts[status] || status
 }
@@ -610,7 +695,10 @@ function handleCopyAddress() {
   Message.success('收货地址已复制')
 }
 
-function handleViewVoucher() {
+function handleViewVoucher(record?: any) {
+  if (record && record.voucher) {
+    order.value.paymentVoucher = record.voucher
+  }
   voucherPreviewVisible.value = true
 }
 
@@ -633,6 +721,18 @@ function handleViewRelatedOrder(orderNo: string) {
 function handleViewAfterSales(afterSalesNo: string) {
   if (afterSalesNo) {
     Message.info(`跳转至售后单详情：${afterSalesNo}`)
+  }
+}
+
+function handleViewAfterSaleRecord(record: any) {
+  if (record && record.recordNo) {
+    Message.info(`跳转至售后记录详情：${record.recordNo}`)
+  }
+}
+
+function handleViewAfterSaleOrder(orderItem: any) {
+  if (orderItem && orderItem.orderNo) {
+    Message.info(`跳转至售后订单详情：${orderItem.orderNo}`)
   }
 }
 
@@ -705,8 +805,8 @@ function handleShip() {
   shipForm.batchItems = []
   order.value.items.forEach((item: any, itemIndex: number) => {
     const batches = [
-      { batchNo: `B${item.skuCode}001`, quantity: Math.floor(item.quantity * 0.6) },
-      { batchNo: `B${item.skuCode}002`, quantity: Math.ceil(item.quantity * 0.4) },
+      { batchNo: `B${item.skuCode}001`, quantity: Math.floor(item.quantity * 0.6), remark: '原材料优质' },
+      { batchNo: `B${item.skuCode}002`, quantity: Math.ceil(item.quantity * 0.4), remark: '库存充足' },
     ]
     batches.forEach((batch: any, batchIndex: number) => {
       shipForm.batchItems.push({
@@ -717,8 +817,9 @@ function handleShip() {
         unit: item.unit || '件',
         batchNo: batch.batchNo,
         batchQuantity: batch.quantity,
+        remainingStock: batch.quantity,
         shipQuantity: 0,
-        batchRemark: '',
+        batchRemark: batch.remark || '',
       })
     })
   })
@@ -789,6 +890,45 @@ function handleViewShipment(record: any) {
 function handleShipModalCancel() {
   isViewingShipment.value = false
   shipModalVisible.value = false
+}
+
+const rePayModalVisible = ref(false)
+const rePayForm = reactive({
+  voucher: '',
+  remark: '',
+})
+
+function handleRePay() {
+  rePayForm.voucher = ''
+  rePayForm.remark = ''
+  rePayModalVisible.value = true
+}
+
+function handleRePaySubmit() {
+  if (!rePayForm.voucher) {
+    Message.warning('请上传转账凭证')
+    return
+  }
+
+  if (paymentRecord.value) {
+    paymentRecord.value.voucher = rePayForm.voucher
+    paymentRecord.value.remark = rePayForm.remark || '-'
+    paymentRecord.value.voucherAuditStatus = 'pending'
+    paymentRecord.value.payTime = new Date().toLocaleString()
+  }
+
+  orderLogs.value.unshift({
+    operateTime: new Date().toLocaleString(),
+    operator: '施工方',
+    content: '重新上传支付凭证',
+  })
+
+  rePayModalVisible.value = false
+  Message.success('重新支付提交成功，等待审核')
+}
+
+function cancelRePay() {
+  rePayModalVisible.value = false
 }
 </script>
 
@@ -880,5 +1020,10 @@ function handleShipModalCancel() {
 
 .text-success {
   color: var(--color-success);
+}
+
+.batch-remark {
+  color: var(--color-text-2);
+  font-size: 12px;
 }
 </style>

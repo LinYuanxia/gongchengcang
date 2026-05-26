@@ -3,16 +3,30 @@
     <a-card>
       <template #title>
         <span>购物车</span>
-        <span class="cart-count">（共 {{ cartItems.length }} 件商品）</span>
+        <span class="cart-count">（共 {{ filteredItems.length }} 件商品）</span>
       </template>
       <template #extra>
-        <a-button v-if="selectedItems.length > 0" status="danger" @click="handleClearSelected">
-          删除选中
-        </a-button>
+        <a-space>
+          <a-select 
+            v-model="selectedSupplier" 
+            placeholder="选择供应商" 
+            style="width: 200px"
+            allow-clear
+            @change="handleSupplierChange"
+          >
+            <a-option value="all">全部供应商</a-option>
+            <a-option v-for="supplier in suppliers" :key="supplier.id" :value="supplier.id">
+              {{ supplier.name }}
+            </a-option>
+          </a-select>
+          <a-button v-if="selectedItems.length > 0" status="danger" @click="handleClearSelected">
+            删除选中
+          </a-button>
+        </a-space>
       </template>
 
       <a-table 
-        :data="cartItems" 
+        :data="filteredItems" 
         :row-selection="rowSelection"
         v-model:selectedKeys="selectedKeys"
       >
@@ -89,6 +103,13 @@ import { Message, Modal } from '@arco-design/web-vue'
 
 const router = useRouter()
 const selectedKeys = ref<string[]>([])
+const selectedSupplier = ref<string>('all')
+
+const suppliers = ref([
+  { id: 's001', name: '华新水泥供应商' },
+  { id: 's002', name: '海螺水泥供应商' },
+  { id: 's003', name: '宝钢供应商' },
+])
 
 const cartItems = ref([
   {
@@ -129,6 +150,13 @@ const cartItems = ref([
   },
 ])
 
+const filteredItems = computed(() => {
+  if (selectedSupplier.value === 'all') {
+    return cartItems.value
+  }
+  return cartItems.value.filter(item => item.supplierId === selectedSupplier.value)
+})
+
 const rowSelection = {
   checkboxProps: {
     disabled: false,
@@ -136,11 +164,11 @@ const rowSelection = {
 }
 
 const selectedItems = computed(() => {
-  return cartItems.value.filter(item => selectedKeys.value.includes(item.id))
+  return filteredItems.value.filter(item => selectedKeys.value.includes(item.id))
 })
 
 const selectAll = computed({
-  get: () => selectedKeys.value.length === cartItems.value.length && cartItems.value.length > 0,
+  get: () => selectedKeys.value.length === filteredItems.value.length && filteredItems.value.length > 0,
   set: () => {},
 })
 
@@ -150,9 +178,13 @@ const totalPrice = computed(() => {
     .toFixed(2)
 })
 
+function handleSupplierChange() {
+  selectedKeys.value = []
+}
+
 function handleSelectAll(checked: boolean) {
   if (checked) {
-    selectedKeys.value = cartItems.value.map(item => item.id)
+    selectedKeys.value = filteredItems.value.map(item => item.id)
   } else {
     selectedKeys.value = []
   }

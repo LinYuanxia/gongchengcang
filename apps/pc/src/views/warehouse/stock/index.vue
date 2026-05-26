@@ -128,10 +128,6 @@
                 <a-radio value="return">退货出库</a-radio>
               </a-radio-group>
               <a-input-search v-model="searchForm.outKeyword" placeholder="搜索出库单号/商品" style="width: 240px" @search="handleSearch" />
-              <a-button type="primary">
-                <template #icon><icon-plus /></template>
-                新增出库单
-              </a-button>
             </a-space>
           </template>
 

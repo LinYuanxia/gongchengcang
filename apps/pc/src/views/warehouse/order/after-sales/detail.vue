@@ -238,8 +238,15 @@
         </a-descriptions-item>
       </a-descriptions>
       <a-form :model="completeForm" layout="vertical" style="margin-top: 16px">
-        <a-form-item label="完成原因" required>
-          <a-textarea v-model="completeForm.reason" placeholder="请输入完成原因" :rows="3" />
+        <a-form-item label="完成时间" required>
+          <a-date-picker
+            v-model="completeForm.completeTime"
+            placeholder="请选择完成时间"
+            style="width: 100%"
+          />
+        </a-form-item>
+        <a-form-item label="售后说明" required>
+          <a-textarea v-model="completeForm.reason" placeholder="请输入售后说明" :rows="3" />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -399,6 +406,7 @@ const auditForm = reactive({
 
 const completeModalVisible = ref(false)
 const completeForm = reactive({
+  completeTime: '',
   reason: '',
 })
 
@@ -530,22 +538,27 @@ function cancelAudit() {
 
 // --- 完成售后（销售质量售后） ---
 function handleComplete() {
+  completeForm.completeTime = new Date().toISOString().slice(0, 10)
   completeForm.reason = ''
   completeModalVisible.value = true
 }
 
 function handleCompleteSubmit() {
+  if (!completeForm.completeTime) {
+    Message.warning('请选择完成时间')
+    return
+  }
   if (!completeForm.reason) {
-    Message.warning('请填写完成原因')
+    Message.warning('请填写售后说明')
     return
   }
   order.value.status = 'completed'
-  order.value.processTime = new Date().toLocaleString()
+  order.value.processTime = completeForm.completeTime
   afterSalesLogs.value.unshift({
     operateTime: new Date().toLocaleString(),
     type: 'complete',
     operator: '仓库管理员',
-    content: `售后已完成，原因：${completeForm.reason}`,
+    content: `售后已完成，说明：${completeForm.reason}`,
   })
   Message.success('售后已完成')
   completeModalVisible.value = false

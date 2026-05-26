@@ -225,22 +225,19 @@
         </a-form-item>
 
         <a-form-item label="发票抬头" required>
-          <a-space style="width: 100%; align-items: flex-start">
-            <a-select
-              v-model="applyForm.titleId"
-              placeholder="请选择发票抬头"
-              style="width: 320px"
-              @change="onTitleChange"
-            >
-              <a-option
-                v-for="t in titleList"
-                :key="t.id"
-                :value="t.id"
-                :label="t.titleName + (t.isDefault ? ' (默认)' : '')"
-              />
-            </a-select>
-            <a-button @click="handleManageTitle">管理抬头</a-button>
-          </a-space>
+          <a-select
+            v-model="applyForm.titleId"
+            placeholder="请选择发票抬头"
+            style="width: 320px"
+            @change="onTitleChange"
+          >
+            <a-option
+              v-for="t in titleList"
+              :key="t.id"
+              :value="t.id"
+              :label="t.titleName + (t.isDefault ? ' (默认)' : '')"
+            />
+          </a-select>
         </a-form-item>
 
         <a-form-item v-if="selectedTitle" label="发票抬头信息">
@@ -381,66 +378,6 @@
       </a-form>
     </a-modal>
 
-    <a-modal
-      v-model:visible="titleModalVisible"
-      title="发票抬头管理"
-      :width="600"
-      :footer="false"
-    >
-      <div class="title-manager">
-        <a-space style="margin-bottom: 16px">
-          <a-button type="primary" size="small" @click="handleAddTitle">
-            <template #icon><icon-plus /></template>新增抬头
-          </a-button>
-        </a-space>
-
-        <a-table :data="titleList" :pagination="false" row-key="id">
-          <template #columns>
-            <a-table-column title="抬头名称" data-index="titleName" :width="160" />
-            <a-table-column title="纳税人识别号" data-index="taxNumber" :width="140" />
-            <a-table-column title="默认" :width="60" align="center">
-              <template #cell="{ record }">
-                <a-tag v-if="record.isDefault" color="green">默认</a-tag>
-              </template>
-            </a-table-column>
-            <a-table-column title="操作" :width="160">
-              <template #cell="{ record }">
-                <a-space>
-                  <a-button type="text" size="small" @click="handleEditTitle(record)">编辑</a-button>
-                  <a-button
-                    v-if="!record.isDefault"
-                    type="text" size="small"
-                    @click="handleSetDefault(record)">设为默认</a-button>
-                </a-space>
-              </template>
-            </a-table-column>
-          </template>
-        </a-table>
-      </div>
-    </a-modal>
-
-    <a-modal
-      v-model:visible="titleFormVisible"
-      :title="editingTitleId ? '编辑发票抬头' : '新增发票抬头'"
-      :width="520"
-      @ok="handleSaveTitle"
-      :ok-loading="titleSaving"
-    >
-      <a-form :model="titleForm" layout="vertical">
-        <a-form-item label="抬头名称" required>
-          <a-input v-model="titleForm.titleName" placeholder="请输入单位名称" />
-        </a-form-item>
-        <a-form-item label="纳税人识别号" required>
-          <a-input v-model="titleForm.taxNumber" placeholder="请输入纳税人识别号" />
-        </a-form-item>
-        <a-form-item label="地址电话">
-          <a-input v-model="titleForm.addressPhone" placeholder="请输入地址和电话" />
-        </a-form-item>
-        <a-form-item label="开户行及账号">
-          <a-input v-model="titleForm.bankAccount" placeholder="请输入开户行及账号" />
-        </a-form-item>
-      </a-form>
-    </a-modal>
   </div>
 </template>
 
@@ -690,16 +627,7 @@ const voidForm = ref({
   reason: '',
 })
 
-const titleModalVisible = ref(false)
-const titleFormVisible = ref(false)
-const editingTitleId = ref<string | null>(null)
-const titleSaving = ref(false)
-const titleForm = ref({
-  titleName: '',
-  taxNumber: '',
-  addressPhone: '',
-  bankAccount: '',
-})
+
 
 const stats = computed(() => {
   const total = invoices.value.length
@@ -915,71 +843,6 @@ function handlePageChange(page: number) {
   pagination.current = page
 }
 
-function handleManageTitle() {
-  titleModalVisible.value = true
-}
-
-function handleAddTitle() {
-  editingTitleId.value = null
-  titleForm.value = { titleName: '', taxNumber: '', addressPhone: '', bankAccount: '' }
-  titleFormVisible.value = true
-}
-
-function handleEditTitle(record: InvoiceTitle) {
-  editingTitleId.value = record.id
-  titleForm.value = {
-    titleName: record.titleName,
-    taxNumber: record.taxNumber,
-    addressPhone: record.addressPhone,
-    bankAccount: record.bankAccount,
-  }
-  titleFormVisible.value = true
-}
-
-function handleSaveTitle() {
-  if (!titleForm.value.titleName) {
-    Message.error('请输入抬头名称')
-    return
-  }
-  if (!titleForm.value.taxNumber) {
-    Message.error('请输入纳税人识别号')
-    return
-  }
-
-  titleSaving.value = true
-
-  setTimeout(() => {
-    if (editingTitleId.value) {
-      const target = titleList.value.find(t => t.id === editingTitleId.value)
-      if (target) {
-        target.titleName = titleForm.value.titleName
-        target.taxNumber = titleForm.value.taxNumber
-        target.addressPhone = titleForm.value.addressPhone
-        target.bankAccount = titleForm.value.bankAccount
-      }
-    } else {
-      const newTitle: InvoiceTitle = {
-        id: 't' + Date.now(),
-        titleName: titleForm.value.titleName,
-        taxNumber: titleForm.value.taxNumber,
-        addressPhone: titleForm.value.addressPhone,
-        bankAccount: titleForm.value.bankAccount,
-        isDefault: titleList.value.length === 0,
-      }
-      titleList.value.push(newTitle)
-    }
-
-    titleSaving.value = false
-    titleFormVisible.value = false
-    Message.success(editingTitleId.value ? '抬头已更新' : '抬头已新增')
-  }, 300)
-}
-
-function handleSetDefault(record: InvoiceTitle) {
-  titleList.value.forEach(t => t.isDefault = false)
-  record.isDefault = true
-  Message.success(`已将「${record.titleName}」设为默认抬头`)
-}
 </script>
 
 <style scoped lang="less">

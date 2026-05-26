@@ -812,13 +812,19 @@
         <a-form-item label="发货备注">
           <a-textarea v-model="shipForm.remark" placeholder="发货备注（选填）" :max-length="200" :rows="2" />
         </a-form-item>
+
+        <a-form-item label="请确认本次发货，是否已全部发完" required>
+          <a-radio-group v-model="shipForm.isAllShipped">
+            <a-radio :value="true">是</a-radio>
+            <a-radio :value="false">否</a-radio>
+          </a-radio-group>
+        </a-form-item>
       </a-form>
 
       <div style="text-align: right; margin-top: 16px">
         <a-space>
           <a-button @click="shipVisible = false">取消</a-button>
-          <a-button @click="handleShipPartial">本次发货</a-button>
-          <a-button type="primary" status="success" @click="handleShipAll">已全部发货</a-button>
+          <a-button type="primary" @click="handleShipConfirm">确认</a-button>
         </a-space>
       </div>
     </a-modal>
@@ -1266,7 +1272,8 @@ const shipForm = reactive({
   items: [] as any[],
   hasLogistics: true,
   logisticsList: [{ company: '', no: '' }],
-  remark: ''
+  remark: '',
+  isAllShipped: false
 })
 
 function addLogistics() {
@@ -1300,11 +1307,17 @@ function handleShip(record: any) {
   shipForm.hasLogistics = true
   shipForm.logisticsList = [{ company: '', no: '' }]
   shipForm.remark = ''
+  shipForm.isAllShipped = false
 
   shipVisible.value = true
 }
 
-function handleShipPartial() {
+function handleShipConfirm() {
+  if (shipForm.isAllShipped === undefined || shipForm.isAllShipped === null) {
+    Message.warning('请确认本次发货是否已全部发完')
+    return
+  }
+
   const hasInvalidLogistics = shipForm.hasLogistics && shipForm.logisticsList.some(l => !l.company || !l.no)
   if (hasInvalidLogistics) {
     Message.warning('请填写完整的物流信息')
@@ -1312,32 +1325,18 @@ function handleShipPartial() {
   }
 
   const order = orderList.value.find(o => o.id === currentOrder.value.id)
-  if (order) {
-    order.shipStatus = 'partial_shipped'
-    order.logs?.push({
-      time: new Date().toISOString(),
-      content: `部分发货成功，本次发货 ${shipForm.items.reduce((sum, i) => sum + i.shipQuantity, 0)} 件`,
-    })
-    Message.success('本次发货成功')
-  }
+  if (!order) return
 
-  shipVisible.value = false
-  refreshOrderList()
-}
-
-function handleShipAll() {
-  const hasInvalidLogistics = shipForm.hasLogistics && shipForm.logisticsList.some(l => !l.company || !l.no)
-  if (hasInvalidLogistics) {
-    Message.warning('请填写完整的物流信息')
+  const totalShipQuantity = shipForm.items.reduce((sum, i) => sum + (i.shipQuantity || 0), 0)
+  if (totalShipQuantity === 0) {
+    Message.warning('请填写发货数量')
     return
   }
 
-  for (const item of shipForm.items) {
-    item.shipQuantity = item.pendingShipQuantity
-  }
-
-  const order = orderList.value.find(o => o.id === currentOrder.value.id)
-  if (order) {
+  if (shipForm.isAllShipped) {
+    for (const item of shipForm.items) {
+      item.shipQuantity = item.pendingShipQuantity
+    }
     order.status = 'shipped'
     order.shipStatus = 'fully_shipped'
     order.shipTime = new Date().toLocaleString()
@@ -1346,6 +1345,13 @@ function handleShipAll() {
       content: `全部发货成功，订单状态已更新为待收货`,
     })
     Message.success('全部发货成功，订单已更新为待收货')
+  } else {
+    order.shipStatus = 'partial_shipped'
+    order.logs?.push({
+      time: new Date().toISOString(),
+      content: `部分发货成功，本次发货 ${totalShipQuantity} 件`,
+    })
+    Message.success('本次发货成功')
   }
 
   shipVisible.value = false

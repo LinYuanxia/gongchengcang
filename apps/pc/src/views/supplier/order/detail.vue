@@ -938,74 +938,37 @@
               <span style="color: #f53f3f; font-weight: 600;">¥{{ record.amount.toLocaleString() }}</span>
             </template>
           </a-table-column>
-          <a-table-column title="审核操作" :width="180">
+          <a-table-column title="状态" :width="100">
             <template #cell="{ record }">
-              <template v-if="record.status === 'pending'">
-                <a-switch
-                  v-model="record.auditPass"
-                  checked-color="#00b42a"
-                  unchecked-color="#f53f3f"
-                >
-                  <template #checked>通过</template>
-                  <template #unchecked>驳回</template>
-                </a-switch>
-              </template>
-              <template v-else>
-                <a-tag :color="record.status === 'approved' ? 'green' : 'red'">
-                  {{ record.status === 'approved' ? '已通过' : '已驳回' }}
-                </a-tag>
-              </template>
-            </template>
-          </a-table-column>
-          <a-table-column title="确认金额" :width="140">
-            <template #cell="{ record }">
-              <template v-if="record.status === 'pending' && record.auditPass">
-                <a-input-number
-                  v-model="record.confirmedAmount"
-                  :min="0"
-                  :max="record.amount"
-                  :precision="2"
-                  size="small"
-                  style="width: 100%"
-                  placeholder="确认金额"
-                />
-              </template>
-              <template v-else-if="record.status === 'approved'">
-                <span style="color: #00b42a;">¥{{ record.confirmedAmount?.toLocaleString() || record.amount.toLocaleString() }}</span>
-              </template>
-              <span v-else style="color: #86909c;">-</span>
+              <a-tag :color="record.status === 'approved' ? 'green' : record.status === 'pending' ? 'orange' : 'red'">
+                {{ record.status === 'approved' ? '已通过' : record.status === 'pending' ? '待审核' : '已驳回' }}
+              </a-tag>
             </template>
           </a-table-column>
           <a-table-column title="驳回原因" :width="150">
             <template #cell="{ record }">
-              <template v-if="record.status === 'pending' && !record.auditPass">
-                <a-input
-                  v-model="record.rejectReason"
-                  size="small"
-                  placeholder="驳回原因"
-                  :max-length="50"
-                />
-              </template>
-              <template v-else-if="record.status === 'rejected'">
+              <template v-if="record.status === 'rejected'">
                 <span style="color: #f53f3f;">{{ record.rejectReason || '-' }}</span>
               </template>
               <span v-else style="color: #86909c;">-</span>
             </template>
           </a-table-column>
-          <a-table-column title="转账时间" data-index="payTime" :width="140" />
-          <a-table-column title="操作" :width="100">
+          <a-table-column title="凭证图片" :width="120">
             <template #cell="{ record }">
-              <a-button
-                type="text"
-                size="small"
-                @click="handleViewVoucher(record)"
-                v-if="record.voucher"
-              >
-                查看凭证
-              </a-button>
-              <span v-else style="color: #86909c;">-</span>
+              <template v-if="record.voucherImage">
+                <a-image
+                  :src="record.voucherImage"
+                  :width="80"
+                  :height="60"
+                  fit="cover"
+                  style="cursor: pointer; border-radius: 4px"
+                  :preview="true"
+                />
+              </template>
+              <span v-else style="color: #86909c;">无</span>
             </template>
           </a-table-column>
+          <a-table-column title="转账时间" data-index="payTime" :width="140" />
         </template>
       </a-table>
 
@@ -1193,6 +1156,7 @@ const paymentRecords = ref([
     amount: 100000,
     status: 'approved',
     voucher: true,
+    voucherImage: 'https://picsum.photos/seed/voucher1/400/300',
     payTime: '2024-01-15 16:30:00',
     remark: '首付款50%',
   },
@@ -1201,6 +1165,7 @@ const paymentRecords = ref([
     amount: 50000,
     status: 'approved',
     voucher: true,
+    voucherImage: 'https://picsum.photos/seed/voucher2/400/300',
     payTime: '2024-01-16 10:00:00',
     remark: '进度款',
   },
@@ -1209,6 +1174,7 @@ const paymentRecords = ref([
     amount: 55000,
     status: 'pending',
     voucher: true,
+    voucherImage: 'https://picsum.photos/seed/voucher3/400/300',
     payTime: '2024-01-20 14:00:00',
     remark: '尾款-待审核',
   },
@@ -1229,7 +1195,7 @@ const hasPendingPaymentRecords = computed(() => {
 const confirmedTotalAmount = computed(() => {
   return paymentRecords.value
     .filter((r: any) => r.status === 'pending' && r.auditPass)
-    .reduce((sum: number, r: any) => sum + (r.confirmedAmount || 0), 0)
+    .reduce((sum: number, r: any) => sum + r.amount, 0)
 })
 
 const passedCount = computed(() => {
