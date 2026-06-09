@@ -1,2 +1,0 @@
-import{d as c,r as o}from"./index-rrFNVVdQ.js";const p=c("app",()=>{const t=o(!1),a=o(!1),n=o("light");function s(){t.value=!t.value}function l(e){t.value=e}function r(e){a.value=e}function u(e){n.value=e,document.body.setAttribute("arco-theme",e)}return{collapsed:t,loading:a,theme:n,toggleCollapsed:s,setCollapsed:l,setLoading:r,setTheme:u}}),f=""+new URL("avatar-B8GQRXNY.png",import.meta.url).href;export{f as _,p as u};
-//# sourceMappingURL=avatar-DAIqX23F.js.map
