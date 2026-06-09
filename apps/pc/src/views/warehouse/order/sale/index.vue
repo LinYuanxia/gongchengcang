@@ -206,8 +206,8 @@
 
     <a-modal 
       v-model:visible="confirmModalVisible" 
-      title="审核收款" 
-      :width="900"
+      title="审核支付凭证" 
+      :width="800"
       :footer="false"
     >
       <a-descriptions :column="3" bordered size="small" style="margin-bottom: 16px">
@@ -219,53 +219,112 @@
         <a-descriptions-item label="已付金额">
           <span style="color: #00b42a; font-weight: 600;">¥{{ currentOrder.paidAmount }}</span>
         </a-descriptions-item>
-        <a-descriptions-item label="支付方式">{{ currentOrder.paymentMethod || '转账' }}</a-descriptions-item>
-        <a-descriptions-item label="上传时间">{{ currentOrder.voucherUploadTime || '-' }}</a-descriptions-item>
+        <a-descriptions-item label="待付金额">
+          <span style="color: #ff7d00; font-weight: 600;">¥{{ (parseFloat(currentOrder.amount?.replace(/,/g, '') || 0) - parseFloat(currentOrder.paidAmount?.replace(/,/g, '') || 0)).toLocaleString() }}</span>
+        </a-descriptions-item>
+        <a-descriptions-item label="待审核笔数">
+          <a-tag color="orange">{{ pendingPaymentCount }} 笔</a-tag>
+        </a-descriptions-item>
       </a-descriptions>
 
       <a-divider>转账凭证记录</a-divider>
 
-      <a-table :data="paymentRecords" :pagination="false" size="small">
+      <a-table :data="paymentRecords" :pagination="false" style="margin-bottom: 16px">
         <template #columns>
-          <a-table-column title="凭证图片" :width="120">
+          <a-table-column title="凭证图片" :width="100">
             <template #cell="{ record }">
               <a-image 
                 v-if="record.voucherUrl" 
                 :src="record.voucherUrl" 
-                :width="80" 
-                :height="80"
+                :width="60" 
+                :height="60"
                 style="border-radius: 4px; cursor: pointer"
                 :preview="true"
               />
               <span v-else class="text-gray">无</span>
             </template>
           </a-table-column>
-          <a-table-column title="金额" :width="120" align="right">
+          <a-table-column title="转账金额" :width="120" align="right">
             <template #cell="{ record }">
-              <span class="price">¥{{ record.amount }}</span>
+              <span style="color: #f53f3f; font-weight: 600;">¥{{ record.amount }}</span>
             </template>
           </a-table-column>
-          <a-table-column title="备注" ellipsis>
+          <a-table-column title="审核操作" :width="120">
             <template #cell="{ record }">
-              <span v-if="record.remark">{{ record.remark }}</span>
-              <span v-else class="text-gray">-</span>
+              <template v-if="record.status === 'pending'">
+                <a-switch
+                  v-model="record.auditPass"
+                  checked-color="#00b42a"
+                  unchecked-color="#f53f3f"
+                  size="small"
+                >
+                  <template #checked>通过</template>
+                  <template #unchecked>驳回</template>
+                </a-switch>
+              </template>
+              <template v-else>
+                <a-tag :color="record.status === 'approved' ? 'green' : 'red'">
+                  {{ record.status === 'approved' ? '已通过' : '已驳回' }}
+                </a-tag>
+              </template>
             </template>
           </a-table-column>
+          <a-table-column title="确认金额" :width="140">
+            <template #cell="{ record }">
+              <template v-if="record.status === 'pending' && record.auditPass">
+                <a-input-number
+                  v-model="record.confirmedAmount"
+                  :min="0"
+                  :max="parseFloat(record.amount.replace(/,/g, ''))"
+                  :precision="2"
+                  size="small"
+                  style="width: 100%"
+                  placeholder="确认金额"
+                />
+              </template>
+              <template v-else-if="record.status === 'approved'">
+                <span style="color: #00b42a;">¥{{ record.confirmedAmount?.toLocaleString() }}</span>
+              </template>
+              <span v-else style="color: #86909c;">-</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="驳回原因" :width="160">
+            <template #cell="{ record }">
+              <template v-if="record.status === 'pending' && !record.auditPass">
+                <a-input
+                  v-model="record.rejectReason"
+                  size="small"
+                  placeholder="驳回原因"
+                  :max-length="50"
+                />
+              </template>
+              <template v-else-if="record.status === 'rejected'">
+                <span style="color: #f53f3f;">{{ record.rejectReason || '-' }}</span>
+              </template>
+              <span v-else style="color: #86909c;">-</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="上传时间" data-index="uploadTime" :width="140" />
         </template>
       </a-table>
 
-      <a-form :model="confirmForm" layout="vertical" style="margin-top: 16px">
-        <a-form-item label="审核结果" required>
+      <a-divider>支付确认</a-divider>
+
+      <a-alert type="info" style="margin-bottom: 16px">
+        <template #title>当前已确认金额：</template>
+        <span style="font-size: 20px; font-weight: 600; color: #165dff;">¥{{ confirmedTotalAmount.toLocaleString() }}</span>
+        <span style="margin-left: 16px; color: #86909c;">（共 {{ passedCount }} 笔通过审核）</span>
+      </a-alert>
+
+      <a-form :model="confirmForm" layout="vertical">
+        <a-form-item label="收款确认" required>
           <a-radio-group v-model="confirmForm.result">
-            <a-radio value="pass">通过</a-radio>
-            <a-radio value="reject">驳回</a-radio>
+            <a-radio value="partial">部分支付</a-radio>
+            <a-radio value="full">全部支付</a-radio>
           </a-radio-group>
         </a-form-item>
-        <a-form-item v-if="confirmForm.result === 'reject'" label="驳回原因" required>
-          <a-textarea v-model="confirmForm.rejectReason" placeholder="请输入驳回原因" :rows="2" />
-        </a-form-item>
-        <a-form-item label="审核备注（选填）">
-          <a-textarea v-model="confirmForm.remark" placeholder="请输入审核备注" :rows="2" />
+        <a-form-item label="备注">
+          <a-textarea v-model="confirmForm.remark" placeholder="审核备注（选填）" :max-length="200" />
         </a-form-item>
       </a-form>
 
@@ -684,9 +743,8 @@ const exportModalVisible = ref(false)
 const exportData = ref<any[]>([])
 const currentOrder = ref<any>({})
 const confirmForm = reactive({
-  result: 'pass',
+  result: 'full',
   remark: '',
-  rejectReason: '',
 })
 
 const paymentRecords = ref<any[]>([
@@ -694,9 +752,31 @@ const paymentRecords = ref<any[]>([
     id: '1',
     voucherUrl: 'https://neeko-copilot.bytedance.net/api/text_to_image?prompt=bank%20transfer%20receipt%20document&image_size=landscape_4_3',
     amount: '50,000.00',
+    uploadTime: '2024-01-15 17:30:00',
     remark: '转账凭证截图',
+    status: 'pending',
+    auditPass: true,
+    confirmedAmount: 50000,
+    rejectReason: '',
   },
 ])
+
+// 计算待审核笔数
+const pendingPaymentCount = computed(() => {
+  return paymentRecords.value.filter(r => r.status === 'pending').length
+})
+
+// 计算已确认总金额
+const confirmedTotalAmount = computed(() => {
+  return paymentRecords.value
+    .filter(r => r.status === 'approved' || (r.status === 'pending' && r.auditPass))
+    .reduce((sum, r) => sum + (r.confirmedAmount || parseFloat(r.amount.replace(/,/g, ''))), 0)
+})
+
+// 计算通过笔数
+const passedCount = computed(() => {
+  return paymentRecords.value.filter(r => r.status === 'approved' || (r.status === 'pending' && r.auditPass)).length
+})
 const shipForm = reactive({
   warehouseName: '',
   hasLogistics: true,
@@ -946,24 +1026,42 @@ function handleView(record: any) {
 
 function handleConfirmPayment(record: any) {
   currentOrder.value = record
-  confirmForm.result = 'pass'
+  confirmForm.result = 'full'
   confirmForm.remark = ''
-  confirmForm.rejectReason = ''
   confirmModalVisible.value = true
 }
 
 function handleConfirmPaymentSubmit() {
-  if (confirmForm.result === 'reject') {
-    if (!confirmForm.rejectReason) {
-      Message.warning('请填写驳回原因')
-      return
-    }
-    Message.warning('已驳回该支付凭证')
-  } else {
-    const order = orders.value.find(o => o.id === currentOrder.value.id)
-    if (order) {
+  const pendingRecords = paymentRecords.value.filter(r => r.status === 'pending')
+  const passedRecords = pendingRecords.filter(r => r.auditPass)
+  const rejectedRecords = pendingRecords.filter(r => !r.auditPass)
+
+  // 检查驳回的是否填写了原因
+  const unreasonRejected = rejectedRecords.filter(r => !r.rejectReason)
+  if (unreasonRejected.length > 0) {
+    Message.warning('请填写驳回原因')
+    return
+  }
+
+  // 更新状态
+  passedRecords.forEach(r => {
+    r.status = 'approved'
+  })
+  rejectedRecords.forEach(r => {
+    r.status = 'rejected'
+  })
+
+  const order = orders.value.find(o => o.id === currentOrder.value.id)
+  if (order) {
+    if (confirmForm.result === 'full' && passedRecords.length > 0) {
       order.paymentStatus = 'confirmed'
-      Message.success('审核通过，订单已变为待发货状态')
+      Message.success('全部支付确认完成，订单已变为待发货状态')
+    } else if (confirmForm.result === 'partial' && passedRecords.length > 0) {
+      Message.success(`部分支付确认完成，已确认 ${passedRecords.length} 笔，共 ¥${confirmedTotalAmount.value.toLocaleString()}`)
+    } else if (rejectedRecords.length > 0) {
+      Message.warning('已驳回所有支付凭证')
+    } else {
+      Message.warning('请选择审核通过的凭证')
     }
   }
   confirmModalVisible.value = false
