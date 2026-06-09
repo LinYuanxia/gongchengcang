@@ -1,2 +1,0 @@
-import{az as c,ah as u,av as e,bO as o,bl as a,bf as p,au as l,bG as m,aa as i}from"./index-CVNA4WG-.js";const b={class:"error-page"},d=c({__name:"404",setup(f){const s=m();function n(){s.push("/")}return(x,t)=>{const r=a("a-button"),_=a("a-result");return p(),u("div",b,[e(_,{status:"404",subtitle:"抱歉，您访问的页面不存在"},{extra:o(()=>[e(r,{type:"primary",onClick:n},{default:o(()=>[...t[0]||(t[0]=[l("返回首页",-1)])]),_:1})]),_:1})])}}}),C=i(d,[["__scopeId","data-v-e90f0bb6"]]);export{C as default};
-//# sourceMappingURL=404-C1fJJwpr.js.map
