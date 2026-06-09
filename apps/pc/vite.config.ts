@@ -85,7 +85,7 @@ function prdEditorPlugin(): Plugin {
 }
 
 export default defineConfig({
-  base: process.env.VITE_BASE_URL || '/gongchengcang/',
+  base: './',
   plugins: [vue(), prdEditorPlugin()],
   resolve: {
     alias: {

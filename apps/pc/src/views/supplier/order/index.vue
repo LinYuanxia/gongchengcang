@@ -695,8 +695,11 @@
       </a-table>
 
       <a-form :model="confirmForm" layout="vertical" style="margin-top: 16px">
-        <a-form-item label="订单备注">
+        <a-form-item label="获取订单备注信息">
           <a-textarea v-model="confirmForm.remark" placeholder="订单备注说明（选填）" :max-length="200" />
+        </a-form-item>
+        <a-form-item v-if="confirmForm.showRejectReason" label="驳回备注" required>
+          <a-textarea v-model="confirmForm.rejectReason" placeholder="请填写驳回订单的原因" :max-length="200" />
         </a-form-item>
       </a-form>
 
@@ -1263,7 +1266,9 @@ const paymentRecords = ref<any[]>([])
 const confirmVisible = ref(false)
 const confirmForm = reactive({
   estimatedShipDate: '',
-  remark: ''
+  remark: '',
+  showRejectReason: false,
+  rejectReason: ''
 })
 const confirmItems = ref<any[]>([])
 
@@ -1517,15 +1522,27 @@ function handleReject() {
 }
 
 function handleRejectOrder() {
+  if (!confirmForm.showRejectReason) {
+    confirmForm.showRejectReason = true
+    return
+  }
+  
+  if (!confirmForm.rejectReason) {
+    Message.warning('请填写驳回备注')
+    return
+  }
+  
   const order = orderList.value.find(o => o.id === currentOrder.value.id)
   if (order) {
     order.status = 'cancelled'
     order.logs?.push({
       time: new Date().toISOString(),
-      content: `订单已驳回`,
+      content: `订单已驳回：${confirmForm.rejectReason}`,
     })
   }
   confirmVisible.value = false
+  confirmForm.showRejectReason = false
+  confirmForm.rejectReason = ''
   refreshOrderList()
   Message.warning('订单已驳回')
 }

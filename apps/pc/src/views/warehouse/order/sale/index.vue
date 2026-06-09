@@ -307,42 +307,55 @@
 
       <a-divider>发货内容</a-divider>
       
-      <a-table :data="shipForm.batchItems" :pagination="false" row-key="id" size="small">
-        <template #columns>
-          <a-table-column title="SKU编码" data-index="skuCode" :width="120" />
-          <a-table-column title="商品名称" data-index="productName" :width="150" />
-          <a-table-column title="规格型号" data-index="specification" :width="120" />
-          <a-table-column title="单位" data-index="unit" :width="60" align="center" />
-          <a-table-column title="批次号" data-index="batchNo" :width="180" />
-          <a-table-column title="批次库存" :width="100" align="right">
-            <template #cell="{ record }">
-              {{ record.batchQuantity }}
-            </template>
-          </a-table-column>
-          <a-table-column title="剩余库存" :width="100" align="right">
-            <template #cell="{ record }">
-              <span style="color: #00b42a;">{{ record.remainingStock }}</span>
-            </template>
-          </a-table-column>
-          <a-table-column title="本次发货库存" :width="120" align="right">
-            <template #cell="{ record }">
-              <a-input-number 
-                v-model="record.shipQuantity" 
-                :min="0" 
-                :max="record.remainingStock"
-                :precision="0"
-                style="width: 100px"
-                @change="handleShipQuantityChange(record)"
-              />
-            </template>
-          </a-table-column>
-          <a-table-column title="批次备注" :width="160">
-            <template #cell="{ record }">
-              <span class="batch-remark">{{ record.batchRemark || '-' }}</span>
-            </template>
-          </a-table-column>
-        </template>
-      </a-table>
+      <div v-for="(product, productIndex) in shipForm.productItems" :key="product.skuCode" style="margin-bottom: 16px; border: 1px solid #e5e6eb; border-radius: 4px; padding: 12px;">
+        <!-- 商品头部信息 -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f2f3f5;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-weight: 600; font-size: 14px;">{{ product.productName }}</span>
+            <span style="color: #86909c; font-size: 12px;">{{ product.skuCode }}</span>
+            <span style="color: #86909c; font-size: 12px;">{{ product.specification }}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <span style="color: #86909c; font-size: 12px;">销售数量：<strong>{{ product.saleQuantity }}</strong> {{ product.unit }}</span>
+            <span style="color: #f53f3f; font-size: 12px;">待发货数量：<strong>{{ product.pendingQuantity }}</strong> {{ product.unit }}</span>
+            <span style="color: #00b42a; font-size: 12px;">本次发货：<strong>{{ product.totalShipQuantity }}</strong> {{ product.unit }}</span>
+          </div>
+        </div>
+        
+        <!-- 批次列表 -->
+        <a-table :data="product.batches" :pagination="false" row-key="id" size="small" :show-header="true">
+          <template #columns>
+            <a-table-column title="批次号" data-index="batchNo" :width="180" />
+            <a-table-column title="批次库存" :width="100" align="right">
+              <template #cell="{ record }">
+                {{ record.batchQuantity }}
+              </template>
+            </a-table-column>
+            <a-table-column title="剩余库存" :width="100" align="right">
+              <template #cell="{ record }">
+                <span style="color: #00b42a;">{{ record.remainingStock }}</span>
+              </template>
+            </a-table-column>
+            <a-table-column title="本次发货" :width="120" align="right">
+              <template #cell="{ record }">
+                <a-input-number 
+                  v-model="record.shipQuantity" 
+                  :min="0" 
+                  :max="record.remainingStock"
+                  :precision="0"
+                  style="width: 100px"
+                  @change="handleShipQuantityChange(product)"
+                />
+              </template>
+            </a-table-column>
+            <a-table-column title="批次备注" :width="160">
+              <template #cell="{ record }">
+                <span class="batch-remark">{{ record.batchRemark || '-' }}</span>
+              </template>
+            </a-table-column>
+          </template>
+        </a-table>
+      </div>
 
       <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e6eb;">
         <a-space>
@@ -652,14 +665,15 @@ const shipForm = reactive({
   trackingNos: [] as string[],
   remark: '',
   shipDate: '',
-  items: [] as any[],
-  batchItems: [] as any[],
+  productItems: [] as any[],
 })
 
 const trackingNoOptions = ref<string[]>(['SF1234567890', 'YTO9876543210', 'ZTO1122334455', 'JD5566778899'])
 
 const totalShipQuantity = computed(() => {
-  return shipForm.batchItems.reduce((sum, item) => sum + (item.shipQuantity || 0), 0)
+  return shipForm.productItems.reduce((sum: number, product: any) => {
+    return sum + product.batches.reduce((batchSum: number, batch: any) => batchSum + (batch.shipQuantity || 0), 0)
+  }, 0)
 })
 
 const stats = computed(() => {
@@ -923,39 +937,41 @@ function handleShip(record: any) {
   shipForm.logisticsCompany = ''
   shipForm.trackingNos = []
   shipForm.remark = ''
-  shipForm.items = (record.items || []).map((item: any) => ({
-    ...item,
-    pendingQuantity: item.quantity,
-    shipQuantity: 0,
-    batches: [
+  
+  shipForm.productItems = []
+  const items = record.items || []
+  items.forEach((item: any) => {
+    const batches = [
       { batchNo: `BATCH${item.skuCode}001`, quantity: Math.floor(item.quantity * 0.6), remark: '原材料优质' },
       { batchNo: `BATCH${item.skuCode}002`, quantity: Math.ceil(item.quantity * 0.4), remark: '库存充足' },
-    ],
-  }))
-  
-  shipForm.batchItems = []
-  shipForm.items.forEach((item: any) => {
-    item.batches.forEach((batch: any, index: number) => {
-      shipForm.batchItems.push({
-        id: `${item.skuCode}_${index}`,
-        skuCode: item.skuCode,
-        productName: item.productName,
-        specification: item.specification,
-        unit: item.unit,
-        batchNo: batch.batchNo,
-        batchQuantity: batch.quantity,
-        remainingStock: batch.quantity,
-        shipQuantity: 0,
-        batchRemark: batch.remark || '',
-      })
+    ]
+    
+    const batchList = batches.map((batch: any, batchIndex: number) => ({
+      id: `${item.skuCode}_${batchIndex}`,
+      batchNo: batch.batchNo,
+      batchQuantity: batch.quantity,
+      remainingStock: batch.quantity,
+      shipQuantity: 0,
+      batchRemark: batch.remark || '',
+    }))
+    
+    shipForm.productItems.push({
+      skuCode: item.skuCode,
+      productName: item.productName,
+      specification: item.specification,
+      unit: item.unit,
+      saleQuantity: item.quantity,
+      pendingQuantity: item.quantity,
+      totalShipQuantity: 0,
+      batches: batchList,
     })
   })
   
   shipModalVisible.value = true
 }
 
-function handleShipQuantityChange(record: any) {
-  console.log('发货数量变更:', record)
+function handleShipQuantityChange(product: any) {
+  product.totalShipQuantity = product.batches.reduce((sum: number, batch: any) => sum + (batch.shipQuantity || 0), 0)
 }
 
 function handleShipSubmit() {
@@ -970,7 +986,9 @@ function handleShipSubmit() {
     }
   }
   
-  const totalShip = shipForm.batchItems.reduce((sum, item) => sum + (item.shipQuantity || 0), 0)
+  const totalShip = shipForm.productItems.reduce((sum: number, product: any) => {
+    return sum + product.batches.reduce((batchSum: number, batch: any) => batchSum + (batch.shipQuantity || 0), 0)
+  }, 0)
   if (totalShip === 0) {
     Message.warning('请填写发货数量')
     return

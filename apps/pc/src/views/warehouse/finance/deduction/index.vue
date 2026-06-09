@@ -42,6 +42,12 @@
             <a-option value="deducted">已分账</a-option>
             <a-option value="pending">待分账</a-option>
           </a-select>
+          <a-select v-model="searchForm.deductStatus" placeholder="划扣状态" style="width: 140px" allow-clear>
+            <a-option value="pending">待划扣</a-option>
+            <a-option value="processing">划扣中</a-option>
+            <a-option value="success">划扣成功</a-option>
+            <a-option value="failed">划扣失败</a-option>
+          </a-select>
           <a-range-picker v-model="searchForm.dateRange" style="width: 260px" allow-clear />
         </a-space>
         <a-space>
@@ -98,6 +104,26 @@
               </a-tag>
             </template>
           </a-table-column>
+          <a-table-column title="划扣状态" :width="200">
+            <template #cell="{ record }">
+              <div>
+                <a-tag :color="getDeductStatusColor(record.deductStatus)">
+                  {{ getDeductStatusText(record.deductStatus) }}
+                </a-tag>
+                <div v-if="record.deductStatus === 'failed'" class="fail-reason">
+                  <span class="reason-text">{{ record.deductFailReason }}</span>
+                  <a-button 
+                    type="text" 
+                    size="small" 
+                    @click="handleRetryDeduct(record)"
+                    class="retry-btn"
+                  >
+                    重试划扣
+                  </a-button>
+                </div>
+              </div>
+            </template>
+          </a-table-column>
           <a-table-column title="创建时间" data-index="createTime" :width="180" />
           <a-table-column title="操作" :width="120" fixed="right">
             <template #cell="{ record }">
@@ -126,6 +152,7 @@ const pagination = reactive({
 const searchForm = reactive({
   keyword: '',
   status: '',
+  deductStatus: '',
   dateRange: [] as string[],
 })
 
@@ -140,6 +167,8 @@ const recordList = ref([
     warehouseAmount: 127314,
     deductAmount: 1286,
     status: 'deducted',
+    deductStatus: 'success',
+    deductFailReason: '',
     createTime: '2024-01-22 16:30:00',
   },
   {
@@ -152,6 +181,8 @@ const recordList = ref([
     warehouseAmount: 85635,
     deductAmount: 865,
     status: 'deducted',
+    deductStatus: 'success',
+    deductFailReason: '',
     createTime: '2024-01-21 14:20:00',
   },
   {
@@ -164,6 +195,8 @@ const recordList = ref([
     warehouseAmount: 49500,
     deductAmount: 500,
     status: 'pending',
+    deductStatus: 'processing',
+    deductFailReason: '',
     createTime: '2024-01-20 10:00:00',
   },
   {
@@ -176,6 +209,8 @@ const recordList = ref([
     warehouseAmount: 34650,
     deductAmount: 350,
     status: 'pending',
+    deductStatus: 'pending',
+    deductFailReason: '',
     createTime: '2024-01-19 09:00:00',
   },
   {
@@ -188,6 +223,8 @@ const recordList = ref([
     warehouseAmount: 198000,
     deductAmount: 2000,
     status: 'deducted',
+    deductStatus: 'failed',
+    deductFailReason: '商户虚拟账户余额不足',
     createTime: '2024-01-18 15:45:00',
   },
 ])
@@ -206,6 +243,10 @@ const filteredRecordList = computed(() => {
 
   if (searchForm.status) {
     result = result.filter(r => r.status === searchForm.status)
+  }
+
+  if (searchForm.deductStatus) {
+    result = result.filter(r => r.deductStatus === searchForm.deductStatus)
   }
 
   return result
@@ -238,9 +279,46 @@ function handleSearch() {
   pagination.total = filteredRecordList.value.length
 }
 
+function getDeductStatusColor(status: string | undefined) {
+  if (!status) return 'gray'
+  const colorMap: Record<string, string> = {
+    pending: 'gray',
+    processing: 'orange',
+    success: 'green',
+    failed: 'red',
+  }
+  return colorMap[status] || 'gray'
+}
+
+function getDeductStatusText(status: string | undefined) {
+  if (!status) return '-'
+  const textMap: Record<string, string> = {
+    pending: '待划扣',
+    processing: '划扣中',
+    success: '划扣成功',
+    failed: '划扣失败',
+  }
+  return textMap[status] || status
+}
+
+function handleRetryDeduct(record: any) {
+  record.deductStatus = 'processing'
+  setTimeout(() => {
+    const success = Math.random() > 0.3
+    if (success) {
+      record.deductStatus = 'success'
+      record.deductFailReason = ''
+    } else {
+      record.deductStatus = 'failed'
+      record.deductFailReason = '商户虚拟账户余额不足'
+    }
+  }, 1500)
+}
+
 function handleReset() {
   searchForm.keyword = ''
   searchForm.status = ''
+  searchForm.deductStatus = ''
   searchForm.dateRange = []
   pagination.current = 1
 }
@@ -290,5 +368,28 @@ function handleViewDetail(record: any) {
   font-size: 12px;
   color: var(--color-text-3);
   margin-top: 4px;
+}
+
+.fail-reason {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: #fff2f0;
+  border-radius: 4px;
+  width: fit-content;
+  
+  .reason-text {
+    font-size: 12px;
+    color: #f53f3f;
+  }
+  
+  .retry-btn {
+    color: #165dff;
+    font-size: 12px;
+    padding: 0;
+    height: auto;
+  }
 }
 </style>

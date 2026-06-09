@@ -384,43 +384,56 @@
 
       <a-divider>发货内容</a-divider>
       
-      <a-table :data="shipForm.batchItems" :pagination="false" row-key="id" size="small">
-        <template #columns>
-          <a-table-column title="SKU编码" data-index="skuCode" :width="120" />
-          <a-table-column title="商品名称" data-index="productName" :width="150" />
-          <a-table-column title="规格型号" data-index="specification" :width="120" />
-          <a-table-column title="单位" data-index="unit" :width="60" align="center" />
-          <a-table-column title="批次号" data-index="batchNo" :width="180" />
-          <a-table-column title="批次库存" :width="100" align="right">
-            <template #cell="{ record }">
-              {{ record.batchQuantity }}
-            </template>
-          </a-table-column>
-          <a-table-column title="剩余库存" :width="100" align="right">
-            <template #cell="{ record }">
-              <span style="color: #00b42a;">{{ record.remainingStock }}</span>
-            </template>
-          </a-table-column>
-          <a-table-column title="本次发货库存" :width="120" align="right">
-            <template #cell="{ record }">
-              <a-input-number 
-                v-model="record.shipQuantity" 
-                :min="0" 
-                :max="record.remainingStock"
-                :precision="0"
-                style="width: 100px"
-                :disabled="isViewingShipment"
-                @change="handleShipQuantityChange(record)"
-              />
-            </template>
-          </a-table-column>
-          <a-table-column title="批次备注" :width="160">
-            <template #cell="{ record }">
-              <span class="batch-remark">{{ record.batchRemark || '-' }}</span>
-            </template>
-          </a-table-column>
-        </template>
-      </a-table>
+      <div v-for="(product, productIndex) in shipForm.productItems" :key="product.skuCode" style="margin-bottom: 16px; border: 1px solid #e5e6eb; border-radius: 4px; padding: 12px;">
+        <!-- 商品头部信息 -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f2f3f5;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-weight: 600; font-size: 14px;">{{ product.productName }}</span>
+            <span style="color: #86909c; font-size: 12px;">{{ product.skuCode }}</span>
+            <span style="color: #86909c; font-size: 12px;">{{ product.specification }}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <span style="color: #86909c; font-size: 12px;">销售数量：<strong>{{ product.saleQuantity }}</strong> {{ product.unit }}</span>
+            <span style="color: #f53f3f; font-size: 12px;">待发货数量：<strong>{{ product.pendingQuantity }}</strong> {{ product.unit }}</span>
+            <span style="color: #00b42a; font-size: 12px;">本次发货：<strong>{{ product.totalShipQuantity }}</strong> {{ product.unit }}</span>
+          </div>
+        </div>
+        
+        <!-- 批次列表 -->
+        <a-table :data="product.batches" :pagination="false" row-key="id" size="small" :show-header="true">
+          <template #columns>
+            <a-table-column title="批次号" data-index="batchNo" :width="180" />
+            <a-table-column title="批次库存" :width="100" align="right">
+              <template #cell="{ record }">
+                {{ record.batchQuantity }}
+              </template>
+            </a-table-column>
+            <a-table-column title="剩余库存" :width="100" align="right">
+              <template #cell="{ record }">
+                <span style="color: #00b42a;">{{ record.remainingStock }}</span>
+              </template>
+            </a-table-column>
+            <a-table-column title="本次发货" :width="120" align="right">
+              <template #cell="{ record }">
+                <a-input-number 
+                  v-model="record.shipQuantity" 
+                  :min="0" 
+                  :max="record.remainingStock"
+                  :precision="0"
+                  style="width: 100px"
+                  :disabled="isViewingShipment"
+                  @change="handleShipQuantityChange(product)"
+                />
+              </template>
+            </a-table-column>
+            <a-table-column title="批次备注" :width="160">
+              <template #cell="{ record }">
+                <span class="batch-remark">{{ record.batchRemark || '-' }}</span>
+              </template>
+            </a-table-column>
+          </template>
+        </a-table>
+      </div>
 
       <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e6eb;">
         <a-space>
@@ -547,9 +560,31 @@ const shipmentRecords = ref([
     hasLogistics: true,
     trackingNos: ['SF123456789'],
     remark: '加急发货',
-    batchItems: [
-      { id: 'SKU001_0', skuCode: 'SKU001', productName: '螺纹钢HRB400E Φ16 6m', specification: 'Φ16 6m', unit: '吨', batchNo: 'BSKU001001', batchQuantity: 3, remainingStock: 0, shipQuantity: 3, batchRemark: '原材料优质' },
-      { id: 'SKU003_1', skuCode: 'SKU003', productName: '瓷砖800x800mm', specification: '800x800mm', unit: '块', batchNo: 'BSKU003001', batchQuantity: 2, remainingStock: 0, shipQuantity: 2, batchRemark: '加急' },
+    productItems: [
+      {
+        skuCode: 'SKU001',
+        productName: '螺纹钢HRB400E Φ16 6m',
+        specification: 'Φ16 6m',
+        unit: '吨',
+        saleQuantity: 10,
+        pendingQuantity: 7,
+        totalShipQuantity: 3,
+        batches: [
+          { id: 'SKU001_0', batchNo: 'BSKU001001', batchQuantity: 3, remainingStock: 0, shipQuantity: 3, batchRemark: '原材料优质' },
+        ],
+      },
+      {
+        skuCode: 'SKU003',
+        productName: '瓷砖800x800mm',
+        specification: '800x800mm',
+        unit: '块',
+        saleQuantity: 20,
+        pendingQuantity: 18,
+        totalShipQuantity: 2,
+        batches: [
+          { id: 'SKU003_1', batchNo: 'BSKU003001', batchQuantity: 2, remainingStock: 0, shipQuantity: 2, batchRemark: '加急' },
+        ],
+      },
     ],
   },
   {
@@ -563,10 +598,43 @@ const shipmentRecords = ref([
     hasLogistics: true,
     trackingNos: ['DB987654321'],
     remark: '',
-    batchItems: [
-      { id: 'SKU001_0', skuCode: 'SKU001', productName: '螺纹钢HRB400E Φ16 6m', specification: 'Φ16 6m', unit: '吨', batchNo: 'BSKU001002', batchQuantity: 7, remainingStock: 0, shipQuantity: 7, batchRemark: '库存充足' },
-      { id: 'SKU002_0', skuCode: 'SKU002', productName: '水泥PO42.5', specification: 'PO42.5', unit: '袋', batchNo: 'BSKU002001', batchQuantity: 5, remainingStock: 0, shipQuantity: 5, batchRemark: '' },
-      { id: 'SKU003_0', skuCode: 'SKU003', productName: '瓷砖800x800mm', specification: '800x800mm', unit: '块', batchNo: 'BSKU003001', batchQuantity: 18, remainingStock: 0, shipQuantity: 18, batchRemark: '' },
+    productItems: [
+      {
+        skuCode: 'SKU001',
+        productName: '螺纹钢HRB400E Φ16 6m',
+        specification: 'Φ16 6m',
+        unit: '吨',
+        saleQuantity: 10,
+        pendingQuantity: 3,
+        totalShipQuantity: 7,
+        batches: [
+          { id: 'SKU001_0', batchNo: 'BSKU001002', batchQuantity: 7, remainingStock: 0, shipQuantity: 7, batchRemark: '库存充足' },
+        ],
+      },
+      {
+        skuCode: 'SKU002',
+        productName: '水泥PO42.5',
+        specification: 'PO42.5',
+        unit: '袋',
+        saleQuantity: 5,
+        pendingQuantity: 0,
+        totalShipQuantity: 5,
+        batches: [
+          { id: 'SKU002_0', batchNo: 'BSKU002001', batchQuantity: 5, remainingStock: 0, shipQuantity: 5, batchRemark: '' },
+        ],
+      },
+      {
+        skuCode: 'SKU003',
+        productName: '瓷砖800x800mm',
+        specification: '800x800mm',
+        unit: '块',
+        saleQuantity: 20,
+        pendingQuantity: 2,
+        totalShipQuantity: 18,
+        batches: [
+          { id: 'SKU003_0', batchNo: 'BSKU003001', batchQuantity: 18, remainingStock: 0, shipQuantity: 18, batchRemark: '' },
+        ],
+      },
     ],
   },
 ])
@@ -786,11 +854,13 @@ const shipForm = reactive({
   trackingNos: [] as string[],
   remark: '',
   shipDate: '',
-  batchItems: [] as any[],
+  productItems: [] as any[],
 })
 
 const totalShipQuantity = computed(() => {
-  return shipForm.batchItems.reduce((sum: number, item: any) => sum + (item.shipQuantity || 0), 0)
+  return shipForm.productItems.reduce((sum: number, product: any) => {
+    return sum + product.batches.reduce((batchSum: number, batch: any) => batchSum + (batch.shipQuantity || 0), 0)
+  }, 0)
 })
 
 function handleShip() {
@@ -802,33 +872,39 @@ function handleShip() {
   shipForm.trackingNos = []
   shipForm.remark = ''
 
-  shipForm.batchItems = []
-  order.value.items.forEach((item: any, itemIndex: number) => {
+  shipForm.productItems = []
+  order.value.items.forEach((item: any) => {
     const batches = [
       { batchNo: `B${item.skuCode}001`, quantity: Math.floor(item.quantity * 0.6), remark: '原材料优质' },
       { batchNo: `B${item.skuCode}002`, quantity: Math.ceil(item.quantity * 0.4), remark: '库存充足' },
     ]
-    batches.forEach((batch: any, batchIndex: number) => {
-      shipForm.batchItems.push({
-        id: `${item.skuCode}_${batchIndex}`,
-        skuCode: item.skuCode,
-        productName: item.productName,
-        specification: item.specification || '',
-        unit: item.unit || '件',
-        batchNo: batch.batchNo,
-        batchQuantity: batch.quantity,
-        remainingStock: batch.quantity,
-        shipQuantity: 0,
-        batchRemark: batch.remark || '',
-      })
+    
+    const batchList = batches.map((batch: any, batchIndex: number) => ({
+      id: `${item.skuCode}_${batchIndex}`,
+      batchNo: batch.batchNo,
+      batchQuantity: batch.quantity,
+      remainingStock: batch.quantity,
+      shipQuantity: 0,
+      batchRemark: batch.remark || '',
+    }))
+    
+    shipForm.productItems.push({
+      skuCode: item.skuCode,
+      productName: item.productName,
+      specification: item.specification || '',
+      unit: item.unit || '件',
+      saleQuantity: item.quantity,
+      pendingQuantity: item.quantity,
+      totalShipQuantity: 0,
+      batches: batchList,
     })
   })
 
   shipModalVisible.value = true
 }
 
-function handleShipQuantityChange(record: any) {
-  console.log('发货数量变更:', record)
+function handleShipQuantityChange(product: any) {
+  product.totalShipQuantity = product.batches.reduce((sum: number, batch: any) => sum + (batch.shipQuantity || 0), 0)
 }
 
 function handleShipSubmit() {
@@ -843,7 +919,10 @@ function handleShipSubmit() {
     }
   }
 
-  const totalShip = shipForm.batchItems.reduce((sum: number, item: any) => sum + (item.shipQuantity || 0), 0)
+  const totalShip = shipForm.productItems.reduce((sum: number, product: any) => {
+    return sum + product.batches.reduce((batchSum: number, batch: any) => batchSum + (batch.shipQuantity || 0), 0)
+  }, 0)
+  
   if (totalShip === 0) {
     Message.warning('请填写发货数量')
     return
@@ -860,7 +939,7 @@ function handleShipSubmit() {
     hasLogistics: shipForm.hasLogistics,
     trackingNos: [...shipForm.trackingNos],
     remark: shipForm.remark || '',
-    batchItems: JSON.parse(JSON.stringify(shipForm.batchItems)),
+    productItems: JSON.parse(JSON.stringify(shipForm.productItems)),
   })
   order.value.status = 'shipping'
   order.value.stockOutStatus = 'completed'
@@ -883,7 +962,7 @@ function handleViewShipment(record: any) {
   shipForm.logisticsCompany = record.logisticsCompany || ''
   shipForm.trackingNos = record.trackingNos || []
   shipForm.remark = record.remark || ''
-  shipForm.batchItems = record.batchItems ? JSON.parse(JSON.stringify(record.batchItems)) : []
+  shipForm.productItems = record.productItems ? JSON.parse(JSON.stringify(record.productItems)) : []
   shipModalVisible.value = true
 }
 

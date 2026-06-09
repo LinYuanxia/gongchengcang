@@ -58,9 +58,7 @@
           <a-table-column title="所属供应商" data-index="supplierName" :width="160" />
           <a-table-column title="售后类型" :width="100">
             <template #cell="{ record }">
-              <a-tag :color="record.afterSalesType === 'logistics' ? 'orange' : 'red'">
-                {{ record.afterSalesType === 'logistics' ? '物流售后' : '质量售后' }}
-              </a-tag>
+              <a-tag color="orange">物流售后</a-tag>
             </template>
           </a-table-column>
           <a-table-column title="售后商品数" :width="100" align="center">
@@ -124,9 +122,7 @@
       <a-descriptions :column="2" bordered size="small">
         <a-descriptions-item label="售后单号">{{ currentOrder.afterSalesNo }}</a-descriptions-item>
         <a-descriptions-item label="售后类型">
-          <a-tag :color="currentOrder.afterSalesType === 'logistics' ? 'orange' : 'red'">
-            {{ currentOrder.afterSalesType === 'logistics' ? '物流售后' : '质量售后' }}
-          </a-tag>
+          <a-tag color="orange">物流售后</a-tag>
         </a-descriptions-item>
       </a-descriptions>
       <a-form :model="cancelForm" layout="vertical" style="margin-top: 16px">
@@ -178,9 +174,9 @@ const orders = ref([
     originalOrderNo: 'PO202405180002',
     supplierId: 'sup002',
     supplierName: '东方建材',
-    afterSalesType: 'quality',
-    reason: '质量问题',
-    status: 'approved',
+    afterSalesType: 'logistics',
+    reason: '物流延迟',
+    status: 'rejected',
     applyTime: '2024-05-18 11:00:00',
     processTime: '2024-05-18 14:00:00',
     totalStockQuantity: 0,
@@ -212,7 +208,7 @@ const orders = ref([
     originalOrderNo: 'PO202405180004',
     supplierId: 'sup001',
     supplierName: '华联建材',
-    afterSalesType: 'quality',
+    afterSalesType: 'logistics',
     reason: '规格不符',
     status: 'cancelled',
     applyTime: '2024-05-16 10:00:00',

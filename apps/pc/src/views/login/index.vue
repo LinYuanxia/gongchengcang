@@ -178,7 +178,17 @@ async function handleSubmit() {
     await userStore.getUserInfoAction()
     Message.success('登录成功')
     const redirect = route.query.redirect as string
-    router.push(redirect || '/dashboard')
+    if (redirect) {
+      router.push(redirect)
+    } else {
+      const platformHome = {
+        platform: '/dashboard',
+        supplier: '/supplier/dashboard',
+        constructor: '/construction/dashboard',
+        warehouse: '/warehouse/dashboard',
+      }
+      router.push(platformHome[currentPlatform.value] || '/dashboard')
+    }
   } catch (error: any) {
     Message.error(error.message || '登录失败')
   } finally {
