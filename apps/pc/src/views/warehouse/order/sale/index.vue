@@ -220,9 +220,7 @@
           <span style="color: #00b42a; font-weight: 600;">¥{{ currentOrder.paidAmount }}</span>
         </a-descriptions-item>
         <a-descriptions-item label="支付方式">{{ currentOrder.paymentMethod || '转账' }}</a-descriptions-item>
-        <a-descriptions-item label="待审核笔数">
-          <a-tag color="orange">{{ pendingPaymentRecords.length }} 笔</a-tag>
-        </a-descriptions-item>
+        <a-descriptions-item label="上传时间">{{ currentOrder.voucherUploadTime || '-' }}</a-descriptions-item>
       </a-descriptions>
 
       <a-divider>转账凭证记录</a-divider>
@@ -247,14 +245,6 @@
               <span class="price">¥{{ record.amount }}</span>
             </template>
           </a-table-column>
-          <a-table-column title="上传时间" data-index="uploadTime" :width="160" />
-          <a-table-column title="状态" :width="100">
-            <template #cell="{ record }">
-              <a-tag :color="getPaymentRecordStatusColor(record.status)">
-                {{ getPaymentRecordStatusText(record.status) }}
-              </a-tag>
-            </template>
-          </a-table-column>
           <a-table-column title="备注" ellipsis>
             <template #cell="{ record }">
               <span v-if="record.remark">{{ record.remark }}</span>
@@ -265,8 +255,17 @@
       </a-table>
 
       <a-form :model="confirmForm" layout="vertical" style="margin-top: 16px">
+        <a-form-item label="审核结果" required>
+          <a-radio-group v-model="confirmForm.result">
+            <a-radio value="pass">通过</a-radio>
+            <a-radio value="reject">驳回</a-radio>
+          </a-radio-group>
+        </a-form-item>
+        <a-form-item v-if="confirmForm.result === 'reject'" label="驳回原因" required>
+          <a-textarea v-model="confirmForm.rejectReason" placeholder="请输入驳回原因" :rows="2" />
+        </a-form-item>
         <a-form-item label="审核备注（选填）">
-          <a-textarea v-model="confirmForm.remark" placeholder="请输入审核备注" :rows="3" :max-length="200" />
+          <a-textarea v-model="confirmForm.remark" placeholder="请输入审核备注" :rows="2" />
         </a-form-item>
       </a-form>
 
@@ -685,33 +684,19 @@ const exportModalVisible = ref(false)
 const exportData = ref<any[]>([])
 const currentOrder = ref<any>({})
 const confirmForm = reactive({
+  result: 'pass',
   remark: '',
+  rejectReason: '',
 })
 
 const paymentRecords = ref<any[]>([
   {
     id: '1',
-    orderId: '3',
     voucherUrl: 'https://neeko-copilot.bytedance.net/api/text_to_image?prompt=bank%20transfer%20receipt%20document&image_size=landscape_4_3',
     amount: '50,000.00',
-    uploadTime: '2024-01-15 17:30:00',
-    status: 'pending',
-    remark: '第一笔转账',
-  },
-  {
-    id: '2',
-    orderId: '3',
-    voucherUrl: 'https://neeko-copilot.bytedance.net/api/text_to_image?prompt=bank%20transfer%20receipt%20document&image_size=landscape_4_3',
-    amount: '12,800.00',
-    uploadTime: '2024-01-15 17:35:00',
-    status: 'pending',
-    remark: '第二笔转账',
+    remark: '转账凭证截图',
   },
 ])
-
-const pendingPaymentRecords = computed(() => {
-  return paymentRecords.value.filter(r => r.orderId === currentOrder.value.id && r.status === 'pending')
-})
 const shipForm = reactive({
   warehouseName: '',
   hasLogistics: true,
@@ -888,24 +873,6 @@ function getStatusText(status: string) {
   return texts[status] || status
 }
 
-function getPaymentRecordStatusColor(status: string) {
-  const colors: Record<string, string> = {
-    pending: 'orange',
-    confirmed: 'green',
-    rejected: 'red',
-  }
-  return colors[status] || 'gray'
-}
-
-function getPaymentRecordStatusText(status: string) {
-  const texts: Record<string, string> = {
-    pending: '待审核',
-    confirmed: '已通过',
-    rejected: '已驳回',
-  }
-  return texts[status] || status
-}
-
 function handleSearch() {
   pagination.value.current = 1
 }
@@ -979,23 +946,25 @@ function handleView(record: any) {
 
 function handleConfirmPayment(record: any) {
   currentOrder.value = record
+  confirmForm.result = 'pass'
   confirmForm.remark = ''
+  confirmForm.rejectReason = ''
   confirmModalVisible.value = true
 }
 
 function handleConfirmPaymentSubmit() {
-  const order = orders.value.find(o => o.id === currentOrder.value.id)
-  if (order) {
-    order.paymentStatus = 'confirmed'
-    
-    // 更新支付记录状态
-    paymentRecords.value.forEach(r => {
-      if (r.orderId === currentOrder.value.id && r.status === 'pending') {
-        r.status = 'confirmed'
-      }
-    })
-    
-    Message.success('审核通过，订单已变为待发货状态')
+  if (confirmForm.result === 'reject') {
+    if (!confirmForm.rejectReason) {
+      Message.warning('请填写驳回原因')
+      return
+    }
+    Message.warning('已驳回该支付凭证')
+  } else {
+    const order = orders.value.find(o => o.id === currentOrder.value.id)
+    if (order) {
+      order.paymentStatus = 'confirmed'
+      Message.success('审核通过，订单已变为待发货状态')
+    }
   }
   confirmModalVisible.value = false
 }
