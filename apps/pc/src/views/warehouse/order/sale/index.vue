@@ -207,41 +207,75 @@
     <a-modal 
       v-model:visible="confirmModalVisible" 
       title="审核收款" 
-      :width="600"
-      @ok="handleConfirmPaymentSubmit"
-      @cancel="cancelConfirmPayment"
+      :width="900"
+      :footer="false"
     >
-      <a-descriptions :column="2" bordered size="small">
+      <a-descriptions :column="3" bordered size="small" style="margin-bottom: 16px">
         <a-descriptions-item label="订单编号">{{ currentOrder.orderNo }}</a-descriptions-item>
         <a-descriptions-item label="施工方">{{ currentOrder.customerName }}</a-descriptions-item>
         <a-descriptions-item label="订单金额">
-          <span class="price">¥{{ currentOrder.amount }}</span>
+          <span style="color: #165dff; font-weight: 600;">¥{{ currentOrder.amount }}</span>
         </a-descriptions-item>
-        <a-descriptions-item label="实付金额">
-          <span class="price">¥{{ currentOrder.paidAmount }}</span>
+        <a-descriptions-item label="已付金额">
+          <span style="color: #00b42a; font-weight: 600;">¥{{ currentOrder.paidAmount }}</span>
         </a-descriptions-item>
         <a-descriptions-item label="支付方式">{{ currentOrder.paymentMethod || '转账' }}</a-descriptions-item>
-        <a-descriptions-item label="上传时间">{{ currentOrder.voucherUploadTime || '-' }}</a-descriptions-item>
-        <a-descriptions-item label="转账凭证" :span="2">
-          <a-image 
-            v-if="currentOrder.paymentVoucher" 
-            :src="currentOrder.paymentVoucher" 
-            width="100%" 
-            style="max-height: 200px; object-fit: contain; border-radius: 4px;"
-            :preview="true"
-          />
-          <span v-else class="text-gray">暂无凭证</span>
-        </a-descriptions-item>
-        <a-descriptions-item label="凭证备注" :span="2">
-          <span v-if="currentOrder.voucherRemark">{{ currentOrder.voucherRemark }}</span>
-          <span v-else class="text-gray">无</span>
+        <a-descriptions-item label="待审核笔数">
+          <a-tag color="orange">{{ pendingPaymentRecords.length }} 笔</a-tag>
         </a-descriptions-item>
       </a-descriptions>
+
+      <a-divider>转账凭证记录</a-divider>
+
+      <a-table :data="paymentRecords" :pagination="false" size="small">
+        <template #columns>
+          <a-table-column title="凭证图片" :width="120">
+            <template #cell="{ record }">
+              <a-image 
+                v-if="record.voucherUrl" 
+                :src="record.voucherUrl" 
+                :width="80" 
+                :height="80"
+                style="border-radius: 4px; cursor: pointer"
+                :preview="true"
+              />
+              <span v-else class="text-gray">无</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="金额" :width="120" align="right">
+            <template #cell="{ record }">
+              <span class="price">¥{{ record.amount }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="上传时间" data-index="uploadTime" :width="160" />
+          <a-table-column title="状态" :width="100">
+            <template #cell="{ record }">
+              <a-tag :color="getPaymentRecordStatusColor(record.status)">
+                {{ getPaymentRecordStatusText(record.status) }}
+              </a-tag>
+            </template>
+          </a-table-column>
+          <a-table-column title="备注" ellipsis>
+            <template #cell="{ record }">
+              <span v-if="record.remark">{{ record.remark }}</span>
+              <span v-else class="text-gray">-</span>
+            </template>
+          </a-table-column>
+        </template>
+      </a-table>
+
       <a-form :model="confirmForm" layout="vertical" style="margin-top: 16px">
         <a-form-item label="审核备注（选填）">
           <a-textarea v-model="confirmForm.remark" placeholder="请输入审核备注" :rows="3" :max-length="200" />
         </a-form-item>
       </a-form>
+
+      <div style="text-align: right; margin-top: 16px">
+        <a-space>
+          <a-button @click="cancelConfirmPayment">取消</a-button>
+          <a-button type="primary" @click="handleConfirmPaymentSubmit">确认审核</a-button>
+        </a-space>
+      </div>
     </a-modal>
 
     <a-modal 
@@ -653,6 +687,31 @@ const currentOrder = ref<any>({})
 const confirmForm = reactive({
   remark: '',
 })
+
+const paymentRecords = ref<any[]>([
+  {
+    id: '1',
+    orderId: '3',
+    voucherUrl: 'https://neeko-copilot.bytedance.net/api/text_to_image?prompt=bank%20transfer%20receipt%20document&image_size=landscape_4_3',
+    amount: '50,000.00',
+    uploadTime: '2024-01-15 17:30:00',
+    status: 'pending',
+    remark: '第一笔转账',
+  },
+  {
+    id: '2',
+    orderId: '3',
+    voucherUrl: 'https://neeko-copilot.bytedance.net/api/text_to_image?prompt=bank%20transfer%20receipt%20document&image_size=landscape_4_3',
+    amount: '12,800.00',
+    uploadTime: '2024-01-15 17:35:00',
+    status: 'pending',
+    remark: '第二笔转账',
+  },
+])
+
+const pendingPaymentRecords = computed(() => {
+  return paymentRecords.value.filter(r => r.orderId === currentOrder.value.id && r.status === 'pending')
+})
 const shipForm = reactive({
   warehouseName: '',
   hasLogistics: true,
@@ -829,6 +888,24 @@ function getStatusText(status: string) {
   return texts[status] || status
 }
 
+function getPaymentRecordStatusColor(status: string) {
+  const colors: Record<string, string> = {
+    pending: 'orange',
+    confirmed: 'green',
+    rejected: 'red',
+  }
+  return colors[status] || 'gray'
+}
+
+function getPaymentRecordStatusText(status: string) {
+  const texts: Record<string, string> = {
+    pending: '待审核',
+    confirmed: '已通过',
+    rejected: '已驳回',
+  }
+  return texts[status] || status
+}
+
 function handleSearch() {
   pagination.value.current = 1
 }
@@ -910,6 +987,14 @@ function handleConfirmPaymentSubmit() {
   const order = orders.value.find(o => o.id === currentOrder.value.id)
   if (order) {
     order.paymentStatus = 'confirmed'
+    
+    // 更新支付记录状态
+    paymentRecords.value.forEach(r => {
+      if (r.orderId === currentOrder.value.id && r.status === 'pending') {
+        r.status = 'confirmed'
+      }
+    })
+    
     Message.success('审核通过，订单已变为待发货状态')
   }
   confirmModalVisible.value = false
