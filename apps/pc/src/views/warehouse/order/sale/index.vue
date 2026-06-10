@@ -204,6 +204,40 @@
       </a-table>
     </a-card>
 
+    <!-- 审核确认对话框 -->
+    <a-modal 
+      v-model:visible="auditConfirmVisible" 
+      title="确认审核结果" 
+      :width="400"
+      @ok="handleAuditConfirm"
+      @cancel="auditConfirmVisible = false"
+    >
+      <a-alert type="warning" style="margin-bottom: 16px">
+        <template #title>请确认以下审核结果：</template>
+      </a-alert>
+      
+      <a-descriptions :column="1" bordered size="small">
+        <a-descriptions-item label="通过笔数">
+          <span style="color: #00b42a; font-weight: 600;">{{ auditConfirmData.passedCount }} 笔</span>
+        </a-descriptions-item>
+        <a-descriptions-item label="驳回笔数">
+          <span style="color: #f53f3f; font-weight: 600;">{{ auditConfirmData.rejectedCount }} 笔</span>
+        </a-descriptions-item>
+        <a-descriptions-item label="确认总金额">
+          <span style="color: #165dff; font-weight: 600;">¥{{ auditConfirmData.confirmedAmount.toLocaleString() }}</span>
+        </a-descriptions-item>
+      </a-descriptions>
+      
+      <div style="margin-top: 16px; color: #86909c; font-size: 12px;">
+        <template v-if="auditConfirmData.passedCount > 0">
+          确认后，{{ auditConfirmData.passedCount }} 笔凭证将通过审核，订单将变为待发货状态
+        </template>
+        <template v-else>
+          确认后，{{ auditConfirmData.rejectedCount }} 笔凭证将被驳回
+        </template>
+      </div>
+    </a-modal>
+
     <a-modal 
       v-model:visible="confirmModalVisible" 
       title="审核支付凭证" 
@@ -724,6 +758,12 @@ const orders = ref([
 ])
 
 const confirmModalVisible = ref(false)
+const auditConfirmVisible = ref(false)
+const auditConfirmData = reactive({
+  passedCount: 0,
+  rejectedCount: 0,
+  confirmedAmount: 0,
+})
 const shipModalVisible = ref(false)
 const exportModalVisible = ref(false)
 const exportData = ref<any[]>([])
@@ -1015,6 +1055,32 @@ function handleConfirmPaymentSubmit() {
     return
   }
 
+  // 检查是否有未审核的凭证
+  const unprocessedCount = pendingRecords.length - passedRecords.length - rejectedRecords.length
+  if (pendingRecords.length > 0 && passedRecords.length === 0 && rejectedRecords.length === 0) {
+    Message.warning('请至少选择一项审核操作（通过或驳回）')
+    return
+  }
+
+  // 计算确认金额
+  const confirmedAmount = passedRecords.reduce((sum, r) => {
+    return sum + (r.confirmedAmount || parseFloat(r.amount.replace(/,/g, '')))
+  }, 0)
+
+  // 填充确认对话框数据
+  auditConfirmData.passedCount = passedRecords.length
+  auditConfirmData.rejectedCount = rejectedRecords.length
+  auditConfirmData.confirmedAmount = confirmedAmount
+
+  // 显示确认对话框
+  auditConfirmVisible.value = true
+}
+
+function handleAuditConfirm() {
+  const pendingRecords = paymentRecords.value.filter(r => r.status === 'pending')
+  const passedRecords = pendingRecords.filter(r => r.auditPass)
+  const rejectedRecords = pendingRecords.filter(r => !r.auditPass)
+
   // 更新状态
   passedRecords.forEach(r => {
     r.status = 'approved'
@@ -1030,10 +1096,11 @@ function handleConfirmPaymentSubmit() {
       Message.success(`审核完成，订单已变为待发货状态`)
     } else if (rejectedRecords.length > 0) {
       Message.warning('已驳回支付凭证，订单保持待支付状态')
-    } else {
-      Message.warning('请至少选择一项审核操作')
     }
   }
+
+  // 关闭确认对话框和审核弹窗
+  auditConfirmVisible.value = false
   confirmModalVisible.value = false
 }
 
