@@ -308,21 +308,7 @@
         </template>
       </a-table>
 
-      <a-divider>支付确认</a-divider>
-
-      <a-alert type="info" style="margin-bottom: 16px">
-        <template #title>当前已确认金额：</template>
-        <span style="font-size: 20px; font-weight: 600; color: #165dff;">¥{{ confirmedTotalAmount.toLocaleString() }}</span>
-        <span style="margin-left: 16px; color: #86909c;">（共 {{ passedCount }} 笔通过审核）</span>
-      </a-alert>
-
       <a-form :model="confirmForm" layout="vertical">
-        <a-form-item label="收款确认" required>
-          <a-radio-group v-model="confirmForm.result">
-            <a-radio value="partial">部分支付</a-radio>
-            <a-radio value="full">全部支付</a-radio>
-          </a-radio-group>
-        </a-form-item>
         <a-form-item label="备注">
           <a-textarea v-model="confirmForm.remark" placeholder="审核备注（选填）" :max-length="200" />
         </a-form-item>
@@ -743,7 +729,6 @@ const exportModalVisible = ref(false)
 const exportData = ref<any[]>([])
 const currentOrder = ref<any>({})
 const confirmForm = reactive({
-  result: 'full',
   remark: '',
 })
 
@@ -764,18 +749,6 @@ const paymentRecords = ref<any[]>([
 // 计算待审核笔数
 const pendingPaymentCount = computed(() => {
   return paymentRecords.value.filter(r => r.status === 'pending').length
-})
-
-// 计算已确认总金额
-const confirmedTotalAmount = computed(() => {
-  return paymentRecords.value
-    .filter(r => r.status === 'approved' || (r.status === 'pending' && r.auditPass))
-    .reduce((sum, r) => sum + (r.confirmedAmount || parseFloat(r.amount.replace(/,/g, ''))), 0)
-})
-
-// 计算通过笔数
-const passedCount = computed(() => {
-  return paymentRecords.value.filter(r => r.status === 'approved' || (r.status === 'pending' && r.auditPass)).length
 })
 const shipForm = reactive({
   warehouseName: '',
@@ -1026,7 +999,6 @@ function handleView(record: any) {
 
 function handleConfirmPayment(record: any) {
   currentOrder.value = record
-  confirmForm.result = 'full'
   confirmForm.remark = ''
   confirmModalVisible.value = true
 }
@@ -1053,15 +1025,13 @@ function handleConfirmPaymentSubmit() {
 
   const order = orders.value.find(o => o.id === currentOrder.value.id)
   if (order) {
-    if (confirmForm.result === 'full' && passedRecords.length > 0) {
+    if (passedRecords.length > 0) {
       order.paymentStatus = 'confirmed'
-      Message.success('全部支付确认完成，订单已变为待发货状态')
-    } else if (confirmForm.result === 'partial' && passedRecords.length > 0) {
-      Message.success(`部分支付确认完成，已确认 ${passedRecords.length} 笔，共 ¥${confirmedTotalAmount.value.toLocaleString()}`)
+      Message.success(`审核完成，订单已变为待发货状态`)
     } else if (rejectedRecords.length > 0) {
-      Message.warning('已驳回所有支付凭证')
+      Message.warning('已驳回支付凭证，订单保持待支付状态')
     } else {
-      Message.warning('请选择审核通过的凭证')
+      Message.warning('请至少选择一项审核操作')
     }
   }
   confirmModalVisible.value = false
